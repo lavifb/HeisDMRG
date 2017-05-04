@@ -2,22 +2,20 @@
 #define BLOCK_H
 
 // #include "uthash.h"
+#include "model.h"
 
 typedef struct {
-	int dModel; // single site basis size
-	double *H1; // single site Hamiltonian
-	double *Sz; // single site Sz
-	double *Sp; // single site S+
-	double J;
-	double Jz;
-} ModelParams;
-
-typedef struct {
-	int length;
-	int basis_size;
-	double **ops;
-	int num_ops;
-	ModelParams *model;
+    int length;
+    int basis_size;
+    double **ops; //TODO: Maybe restrict?
+    int num_ops;
+    ModelParams *model;
 } DMRGBlock;
+
+void freeDMRGBlock(DMRGBlock *block);
+
+DMRGBlock *enlargeBlock(const DMRGBlock *block);
+
+double **enlargeOps(const DMRGBlock *block);
 
 #endif
