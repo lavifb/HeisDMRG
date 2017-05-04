@@ -1,4 +1,5 @@
 #include "block.h"
+#include "model.h"
 #include "linalg.h"
 
 

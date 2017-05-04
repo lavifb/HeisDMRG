@@ -1,5 +1,6 @@
 #include "model.h"
 #include "linalg.h"
+#include <mkl.h>
 
 /*  Interaction part of Heisenberg Hamiltonian
     H_int = J/2 (kron(Sp1, Sm2) + kron(Sm1, Sp2)) + Jz kron(Sz1, Sz2)

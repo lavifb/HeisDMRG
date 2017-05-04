@@ -7,7 +7,8 @@
 typedef struct {
     int length;
     int basis_size;
-    double **ops; //TODO: Maybe restrict?
+    // TODO: Maybe restrict?
+    double **ops;
     int num_ops;
     ModelParams *model;
 } DMRGBlock;

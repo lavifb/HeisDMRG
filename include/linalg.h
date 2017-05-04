@@ -5,4 +5,6 @@ void kron(const double alpha, const int m, const int n, const double *restrict A
 
 double *identity(const int N);
 
+double *transformOp(const int opDim, const int newDim, const double *restrict op, const double *restrict trans);
+
 #endif LINALG_H
