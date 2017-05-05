@@ -1,5 +1,5 @@
 #include <stdio.h>
 
 int main(int argc, char *argv[]) {
-	printf("Heisenberg DMRG\n");
+    printf("Heisenberg DMRG\n");
 }

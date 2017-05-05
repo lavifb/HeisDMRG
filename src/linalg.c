@@ -1,7 +1,7 @@
 #include "linalg.h"
 // #include "dupio.h"
 #include <mkl.h>
-#include <assert.h>
+// #include <assert.h>
 
 
 /*
@@ -36,9 +36,9 @@ double *identity(const int N) {
     return Id;
 }
 
-/* Transforms matrix into new truncated basis. returns trans * op * trans^T
+/* Transforms matrix into new truncated basis. returns trans^T * op * trans
 */
-double *transformOp(const int opDim, const int newDim, const double *restrict op, const double *restrict trans) {
+double *transformOp(const int opDim, const int newDim, const double *restrict trans, const double *restrict op) {
 
     double *newOp = mkl_malloc(newDim*newDim * sizeof(double), MEM_DATA_ALIGN);
     double *temp  = mkl_malloc(newDim*opDim  * sizeof(double), MEM_DATA_ALIGN);
@@ -47,8 +47,11 @@ double *transformOp(const int opDim, const int newDim, const double *restrict op
     __assume_aligned(newOp, MEM_DATA_ALIGN);
     __assume_aligned(temp , MEM_DATA_ALIGN);
 
-    cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans  , newDim, opDim, opDim , 1.0, trans, newDim, op, opDim, 0.0, temp, newDim);
-    cblas_dgemm(CblasColMajor, CblasNoTrans, CblasConjTrans, newDim, opDim, newDim, 1.0, temp, newDim, trans, opDim, 0.0, newOp, newDim);
+    cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, newDim, opDim, opDim , 1.0, trans, opDim, op, opDim, 0.0, temp, newDim);
+    cblas_dgemm(CblasColMajor, CblasNoTrans  , CblasNoTrans, newDim, opDim, newDim, 1.0, temp, newDim, trans, newDim, 0.0, newOp, newDim);
+
+    // cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans  , newDim, opDim, opDim , 1.0, trans, newDim, op, opDim, 0.0, temp, newDim);
+    // cblas_dgemm(CblasColMajor, CblasNoTrans, CblasConjTrans, newDim, opDim, newDim, 1.0, temp, newDim, trans, opDim, 0.0, newOp, newDim);
 
     mkl_free(temp);
     return newOp;

@@ -8,12 +8,14 @@
 // }
 
 void freeDMRGBlock(DMRGBlock *block) {
-    for (int i=0; i<block->num_ops; i++) {
-        mkl_free(block->ops[i])
-    }
+    if (block) { // check that pointer is actually pointing to something
+        for (int i=0; i<block->num_ops; i++) {
+            mkl_free(block->ops[i]);
+        }
 
-    mkl_free(block->ops);
-    mkl_free(block);
+        mkl_free(block->ops);
+        mkl_free(block);
+    }
 }
 
 // TODO: use same chunk of memory every time to not reallocate on every enlargement
@@ -53,7 +55,7 @@ double **enlargeOps(const DMRGBlock *block) {
     int I_m = identiy(dim);
 
     // H_enl
-    enl_ops[0] = HeisenH_int(block->J, block->Jz, dim, dModel, 
+    enl_ops[0] = HeisenH_int(model->J, model->Jz, dim, dModel, 
                     block->ops[1], block->ops[2], model->Sz, model->Sp);
     kron(1.0, dim, dModel, block->ops[0], model->Id, enl_ops[0]);
     kron(1.0, dim, dModel, I_m, model->H1, enl_ops[0]);
@@ -68,4 +70,26 @@ double **enlargeOps(const DMRGBlock *block) {
 
     mkl_free(I_m);
     return enl_ops;
+}
+
+/*  Transform an entire set of operators at once.
+*/
+void transformOps(const int numOps, const int opDim, const int newDim, const double *restrict trans, double **ops) {
+
+    double *newOp = mkl_malloc(newDim*newDim * sizeof(double), MEM_DATA_ALIGN);
+    double *temp  = mkl_malloc(newDim*opDim  * sizeof(double), MEM_DATA_ALIGN);
+    __assume_aligned(trans, MEM_DATA_ALIGN);
+    __assume_aligned(newOp, MEM_DATA_ALIGN);
+    __assume_aligned(temp , MEM_DATA_ALIGN);
+
+    for (int i = 0; i < numOps; i++) {
+        __assume_aligned(op[i], MEM_DATA_ALIGN);
+        cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, newDim, opDim, opDim , 1.0, trans, opDim, op[i], opDim , 0.0, temp, newDim);
+        cblas_dgemm(CblasColMajor, CblasNoTrans  , CblasNoTrans, newDim, opDim, newDim, 1.0, temp, newDim, trans, newDim, 0.0, newOp, newDim);
+        op[i] = (double *)mkl_realloc(op[i], newDim*newDim * sizeof(double));
+        memcpy(op[i], newOp, newDim*newDim * sizeof(double)); // copy newOp back into op[i]
+    }
+
+    mkl_free(temp);
+    mkl_free(newOp);
 }
