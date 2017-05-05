@@ -53,7 +53,7 @@ double **enlargeOps(const DMRGBlock *block) {
     int dim     = block->basis_size;
     int enl_dim = dModel * dim;
 
-    double *I_m = identiy(dim);
+    double *I_m = identity(dim);
 
     // H_enl
     enl_ops[0] = HeisenH_int(model->J, model->Jz, dim, dModel, 

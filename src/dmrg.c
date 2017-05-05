@@ -2,9 +2,9 @@
 #include "block.h"
 #include "linalg.h"
 #include <mkl.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
+// #include <stdio.h>
+// #include <string.h>
+// #include <stdlib.h>
 
 /* Single DMRG step
    
