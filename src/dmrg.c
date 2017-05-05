@@ -24,8 +24,8 @@ void single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
         env_enl = enlargeBlock(env);
     }
 
-    int dimSys = sys_enl->basis_size;
-    int dimEnv = env_enl->basis_size;
+    int dimSys = sys_enl->dBlock;
+    int dimEnv = env_enl->dBlock;
     int dimSup = dimSys * dimEnv;
 
     double *Isys = identity(dimSys);
@@ -55,7 +55,7 @@ void single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
     }
 
     double energy = energies[0]; // record ground state energy
-    printf("Energy:           %f\n", energy);
+    printf("E/L = %f\n", energy / sys_enl->length);
 
     double *psi0 = (double *)mkl_malloc(dimSup * sizeof(double), MEM_DATA_ALIGN);
     memcpy(psi0, U, dimSup * sizeof(double)); // copy over only first eigenvalue
@@ -101,4 +101,35 @@ void single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
     mkl_free(Hs);
     mkl_free(energies);
     mkl_free(U);
+}
+
+/* Infinite DMRG Algorithm
+   
+   L: Maximum length of system
+   m: truncation dimension size
+*/
+DMRGBlock *inf_dmrg(const int L, const int m, ModelParams *model) {
+
+    int num_ops = 3;
+
+    double **ops = (double **)mkl_malloc(num_ops * sizeof(double), MEM_DATA_ALIGN);
+
+    int N = model->dModel;
+    int i;
+    for (i = 0; i < num_ops; i++) {
+        ops[i] = (double *)mkl_malloc(N*N * sizeof(double), MEM_DATA_ALIGN);
+    }
+
+    memcpy(ops[0], model->H1, N*N * sizeof(double)); // H
+    memcpy(ops[1], model->Sz, N*N * sizeof(double)); // Sz
+    memcpy(ops[2], model->Sp, N*N * sizeof(double)); // Sp
+
+    DMRGBlock *sys = createDMRGBlock(model, num_ops, ops);
+
+    while (2*sys->length < L) {
+        printf("L = %d", sys->length * 2 + 2);
+        single_step(sys, sys, m);
+    }
+
+    return sys;
 }

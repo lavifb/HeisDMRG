@@ -6,12 +6,14 @@
 
 typedef struct {
     int length;
-    int basis_size;
+    int dBlock; // dimension of basis
     // TODO: Maybe restrict?
     double **ops;
     int num_ops;
     ModelParams *model;
 } DMRGBlock;
+
+DMRGBlock *createDMRGBlock(ModelParams *model, const int num_ops, double **ops);
 
 void freeDMRGBlock(DMRGBlock *block);
 

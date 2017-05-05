@@ -19,7 +19,10 @@ clean:
 	-rm ${BIN}/*
 	-rm ${ODIR}/*
 
-src: $(patsubst $(INC)/%.h, $(ODIR)/%.o, $(wildcard $(INC)/[^_]*.h))
+src: $(patsubst $(SRC)/%.c, $(ODIR)/%.o, $(wildcard $(SRC)/[^_]*.c))
 
 ${ODIR}/%.o: ${SRC}/%.c
 	${CC} -c -I${INC}/ ${CCOPTS} ${MKL} $< -o $@
+
+proj_main: src
+	 ${CC} -I${INC}/ ${CCOPTS} ${MKL} -o ${BIN}/dqmc ${ODIR}/*

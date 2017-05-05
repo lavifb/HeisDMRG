@@ -3,9 +3,18 @@
 #include "linalg.h"
 #include <mkl.h>
 
-// void createBlock(DMRGBlock *block, int length, int basis_size) {
-//     block
-// }
+
+DMRGBlock *createDMRGBlock(ModelParams *model, const int num_ops, double **ops) {
+    DMRGBlock *block = (DMRGBlock *)mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
+
+    block->length = 1;
+    block->dBlock = model->dModel;
+    block->num_ops = num_ops;
+    block->ops = ops;
+    block->model  = model;
+
+    return block;
+}
 
 void freeDMRGBlock(DMRGBlock *block) {
     if (block) { // check that pointer is actually pointing to something
@@ -24,7 +33,7 @@ DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 
     DMRGBlock *enl_block = (DMRGBlock *)MKL_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
     enl_block->length = block->length + 1;
-    enl_block->basis_size = block->basis_size * block->model->dModel;
+    enl_block->dBlock = block->dBlock * block->model->dModel;
     enl_block->num_ops = block->num_ops;
     enl_block->model = block->model;
 
@@ -50,7 +59,7 @@ double **enlargeOps(const DMRGBlock *block) {
 
     ModelParams *model = block->model;
     int dModel  = model->dModel;
-    int dim     = block->basis_size;
+    int dim     = block->dBlock;
     int enl_dim = dModel * dim;
 
     double *I_m = identity(dim);
