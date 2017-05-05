@@ -24,15 +24,15 @@ void single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
         env_enl = enlargeBlock(env);
     }
 
-    dimSys = sys_enl->basis_size;
-    dimEnv = env_enl->basis_size;
-    dimSup = dimSys * dimEnv;
+    int dimSys = sys_enl->basis_size;
+    int dimEnv = env_enl->basis_size;
+    int dimSup = dimSys * dimEnv;
 
-    Isys = identity(dimSys);
-    Ienv = identity(dimEnv);
+    double *Isys = identity(dimSys);
+    double *Ienv = identity(dimEnv);
 
     // Superblock Hamiltonian
-    Hs = HeisenH_int(model->J, model->Jz, dimSys, dimEnv, 
+    double *Hs = HeisenH_int(model->J, model->Jz, dimSys, dimEnv, 
                     sys_enl->ops[1], env_enl->ops[2], model->Sz, model->Sp);
     kron(1.0, dimSys, dimEnv, sys_enl->ops[0], Ienv, Hs);
     kron(1.0, dimSys, dimEnv, Isys, env_enl->ops[0], Hs);
@@ -57,7 +57,7 @@ void single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
     double energy = energies[0]; // record ground state energy
     printf("Energy:           %f\n", energy);
 
-    double psi0 = (double *)mkl_malloc(dimSup * sizeof(double), MEM_DATA_ALIGN);
+    double *psi0 = (double *)mkl_malloc(dimSup * sizeof(double), MEM_DATA_ALIGN);
     memcpy(psi0, U, dimSup * sizeof(double)); // copy over only first eigenvalue
     
     // Density matrix rho
@@ -84,13 +84,14 @@ void single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
     mkl_free(rho);
     
     double truncation_err = 0;
-    for (int i = 0; i < mt; i++) {
+    int i;
+    for (i = 0; i < mt; i++) {
         truncation_err += lambs[i];
     }
     printf("Truncation Error: %f\n", truncation_err);
     mkl_free(lambs);
 
-    transformOps(sys_enl->num_ops, dimSup, mm, trans, sys_enl->num_ops);
+    transformOps(sys_enl->num_ops, dimSup, mm, trans, sys_enl->ops);
 
     // Copy new enlarged block into sys
     freeDMRGBlock(sys);

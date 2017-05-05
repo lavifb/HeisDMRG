@@ -1,7 +1,7 @@
 #include "block.h"
 #include "model.h"
 #include "linalg.h"
-
+#include <mkl.h>
 
 // void createBlock(DMRGBlock *block, int length, int basis_size) {
 //     block
@@ -9,7 +9,8 @@
 
 void freeDMRGBlock(DMRGBlock *block) {
     if (block) { // check that pointer is actually pointing to something
-        for (int i=0; i<block->num_ops; i++) {
+        int i;
+        for (i=0; i<block->num_ops; i++) {
             mkl_free(block->ops[i]);
         }
 
@@ -45,14 +46,14 @@ DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 */
 
 double **enlargeOps(const DMRGBlock *block) {
-    double **enl_ops = mkl_malloc(block->num_ops * sizeof(double *), MEM_DATA_ALIGN);
+    double **enl_ops = (double **)mkl_malloc(block->num_ops * sizeof(double *), MEM_DATA_ALIGN);
 
     ModelParams *model = block->model;
     int dModel  = model->dModel;
     int dim     = block->basis_size;
     int enl_dim = dModel * dim;
 
-    int I_m = identiy(dim);
+    double *I_m = identiy(dim);
 
     // H_enl
     enl_ops[0] = HeisenH_int(model->J, model->Jz, dim, dModel, 
@@ -76,18 +77,19 @@ double **enlargeOps(const DMRGBlock *block) {
 */
 void transformOps(const int numOps, const int opDim, const int newDim, const double *restrict trans, double **ops) {
 
-    double *newOp = mkl_malloc(newDim*newDim * sizeof(double), MEM_DATA_ALIGN);
-    double *temp  = mkl_malloc(newDim*opDim  * sizeof(double), MEM_DATA_ALIGN);
+    double *newOp = (double *)mkl_malloc(newDim*newDim * sizeof(double), MEM_DATA_ALIGN);
+    double *temp  = (double *)mkl_malloc(newDim*opDim  * sizeof(double), MEM_DATA_ALIGN);
     __assume_aligned(trans, MEM_DATA_ALIGN);
     __assume_aligned(newOp, MEM_DATA_ALIGN);
     __assume_aligned(temp , MEM_DATA_ALIGN);
 
-    for (int i = 0; i < numOps; i++) {
-        __assume_aligned(op[i], MEM_DATA_ALIGN);
-        cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, newDim, opDim, opDim , 1.0, trans, opDim, op[i], opDim , 0.0, temp, newDim);
+    int i;
+    for (i = 0; i < numOps; i++) {
+        __assume_aligned(ops[i], MEM_DATA_ALIGN);
+        cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, newDim, opDim, opDim , 1.0, trans, opDim, ops[i], opDim , 0.0, temp, newDim);
         cblas_dgemm(CblasColMajor, CblasNoTrans  , CblasNoTrans, newDim, opDim, newDim, 1.0, temp, newDim, trans, newDim, 0.0, newOp, newDim);
-        op[i] = (double *)mkl_realloc(op[i], newDim*newDim * sizeof(double));
-        memcpy(op[i], newOp, newDim*newDim * sizeof(double)); // copy newOp back into op[i]
+        ops[i] = (double *)mkl_realloc(ops[i], newDim*newDim * sizeof(double));
+        memcpy(ops[i], newOp, newDim*newDim * sizeof(double)); // copy newOp back into ops[i]
     }
 
     mkl_free(temp);
