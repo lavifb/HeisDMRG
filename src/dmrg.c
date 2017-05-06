@@ -10,12 +10,14 @@
    
    m: truncation dimension size
 */
-void single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
+void single_step(DMRGBlock *sys, DMRGBlock *env, const int m) {
 
     DMRGBlock *sys_enl, *env_enl;
     ModelParams *model = sys->model;
 
+    printf("Enlarging System Block\n");
     sys_enl = enlargeBlock(sys);
+    printf("New L = %d\n", sys_enl->length);
 
     if (sys == env) { // Don't recalculate
         env_enl = sys_enl;
@@ -33,10 +35,11 @@ void single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
 
     // Superblock Hamiltonian
     double *Hs = HeisenH_int(model->J, model->Jz, dimSys, dimEnv, 
-                    sys_enl->ops[1], env_enl->ops[2], model->Sz, model->Sp);
+                    sys_enl->ops[1], sys_enl->ops[2], env_enl->ops[1], env_enl->ops[2]);
     kron(1.0, dimSys, dimEnv, sys_enl->ops[0], Ienv, Hs);
     kron(1.0, dimSys, dimEnv, Isys, env_enl->ops[0], Hs);
 
+    print_matrix("Hs", dimSup, dimSup, Hs, dimSup);
     mkl_free(Isys);
     mkl_free(Ienv);
 
@@ -55,32 +58,45 @@ void single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
     }
 
     double energy = energies[0]; // record ground state energy
-    printf("E/L = %f\n", energy / sys_enl->length);
+    printf("Energies\n");
+    int j;
+    for(j=0; j<dimSup; j++) {
+        printf("%f\n", energies[j]);
+    }
+
+    printf("E/L = %f\n", energy / (2 * sys_enl->length));
 
     double *psi0 = (double *)mkl_malloc(dimSup * sizeof(double), MEM_DATA_ALIGN);
     memcpy(psi0, U, dimSup * sizeof(double)); // copy over only first eigenvalue
+
+    print_matrix("psi0", dimSys, dimEnv, psi0, dimSys);
     
     // Density matrix rho
-    double *rho = (double *)mkl_calloc(dimSup*dimSup, sizeof(double), MEM_DATA_ALIGN);
+    double *rho = (double *)mkl_calloc(dimSys*dimSys, sizeof(double), MEM_DATA_ALIGN);
     __assume_aligned(rho, MEM_DATA_ALIGN);
 
-    cblas_dger(CblasColMajor, dimSup, dimSup, 1.0, psi0, 1, psi0, 1, rho, dimSup);
+    // cblas_dger(CblasColMajor, dimSup, dimSup, 1.0, psi0, 1, psi0, 1, rho, dimSup);
+    // Trace out Environment to make rho
+    cblas_dgemm(CblasColMajor, CblasNoTrans, CblasConjTrans, dimSys, dimSys, dimEnv, 1.0, psi0, dimSys, psi0, dimSys, 0.0, rho, dimSys);
     mkl_free(psi0);
-    double *lambs = (double *)mkl_malloc(dimSup * sizeof(double), MEM_DATA_ALIGN);
+    double *lambs = (double *)mkl_malloc(dimSys * sizeof(double), MEM_DATA_ALIGN);
 
-    info = LAPACKE_dsyev(LAPACK_COL_MAJOR, 'V', 'U', dimSup, rho, dimSup, lambs);
+    info = LAPACKE_dsyev(LAPACK_COL_MAJOR, 'V', 'U', dimSys, rho, dimSys, lambs);
     if (info > 0) {
         printf("Failed to find eigenvalues of density matrix\n");
         exit(1);
     }
 
     // Transformation Matrix
-    int mm = (dimSup < m) ? dimSup : m; // use min(dimSup, m) 
-    double *trans = (double *)mkl_malloc(dimSup*mm * sizeof(double), MEM_DATA_ALIGN);
-    int mt = dimSup - mm; // number of truncated dimensions
+    int mm = (dimSys < m) ? dimSys : m; // use min(dimSys, m) 
+    printf("mm     = %d\n", mm);
+    printf("dimSys = %d\n", dimSys);
+    double *trans = (double *)mkl_malloc(dimSys*mm * sizeof(double), MEM_DATA_ALIGN);
+    int mt = dimSys - mm; // number of truncated dimensions
     // copy over only mm biggest eigenvalues
-    memcpy(trans, rho+(dimSup*mt) , dimSup*mm * sizeof(double));
+    memcpy(trans, rho+(dimSys*mt) , dimSys*mm * sizeof(double));
 
+    print_matrix("rho", dimSys, dimSys, rho, dimSys);
     mkl_free(rho);
     
     double truncation_err = 0;
@@ -88,19 +104,33 @@ void single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
     for (i = 0; i < mt; i++) {
         truncation_err += lambs[i];
     }
-    printf("Truncation Error: %f\n", truncation_err);
+    printf("Truncation Error: %.10e\n", truncation_err);
     mkl_free(lambs);
 
-    transformOps(sys_enl->num_ops, dimSup, mm, trans, sys_enl->ops);
+    printDMRGBlock("Pre-transform Enlarged System", sys_enl);
+    transformOps(sys_enl->num_ops, dimSys, mm, trans, sys_enl->ops);
+    // printf("Transformations Done\n");
+    printDMRGBlock("Enlarged System", sys_enl);
 
+    printDMRGBlock("Old System", sys);
     // Copy new enlarged block into sys
-    freeDMRGBlock(sys);
-    sys = sys_enl;
-    printf("\n");
+    freeDMRGBlockOps(sys);
+    memcpy(sys, sys_enl, sizeof(DMRGBlock));
+    // printf("Copied Sys\n");
+
+    printDMRGBlock("New System", sys);
 
     mkl_free(Hs);
     mkl_free(energies);
     mkl_free(U);
+    // printf("Freed matrices\n");
+
+    // freeDMRGBlock(sys_enl);
+    // // printf("Freed sys_enl\n");
+    // if (sys_enl != env_enl) {
+    //     freeDMRGBlock(env_enl);
+    // }
+    // printf("Freed env_enl\n");
 }
 
 /* Infinite DMRG Algorithm
@@ -112,7 +142,7 @@ DMRGBlock *inf_dmrg(const int L, const int m, ModelParams *model) {
 
     int num_ops = 3;
 
-    double **ops = (double **)mkl_malloc(num_ops * sizeof(double), MEM_DATA_ALIGN);
+    double **ops = (double **)mkl_malloc(num_ops * sizeof(double *), MEM_DATA_ALIGN);
 
     int N = model->dModel;
     int i;
@@ -127,8 +157,10 @@ DMRGBlock *inf_dmrg(const int L, const int m, ModelParams *model) {
     DMRGBlock *sys = createDMRGBlock(model, num_ops, ops);
 
     while (2*sys->length < L) {
-        printf("L = %d", sys->length * 2 + 2);
+        printf("\nL = %d\n", sys->length * 2 + 2);
         single_step(sys, sys, m);
+        // printDMRGBlock("New System", sys);
+        printf("Step Done\n");
     }
 
     return sys;

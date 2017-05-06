@@ -17,6 +17,10 @@ DMRGBlock *createDMRGBlock(ModelParams *model, const int num_ops, double **ops);
 
 void freeDMRGBlock(DMRGBlock *block);
 
+void freeDMRGBlockOps(DMRGBlock *block);
+
+void printDMRGBlock(const char *desc, DMRGBlock *block);
+
 DMRGBlock *enlargeBlock(const DMRGBlock *block);
 
 double **enlargeOps(const DMRGBlock *block);

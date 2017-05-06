@@ -7,4 +7,6 @@ double *identity(const int N);
 
 double *transformOp(const int opDim, const int newDim, const double *restrict trans, const double *restrict op);
 
+void print_matrix( char* desc, int m, int n, double* a, int lda );
+
 #endif

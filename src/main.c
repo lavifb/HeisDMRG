@@ -1,13 +1,14 @@
 #include "model.h"
 #include "block.h"
+#include "linalg.h"
 #include "dmrg.h"
 #include <mkl.h>
 #include <stdio.h>
 
 int main(int argc, char *argv[]) {
-    printf("Heisenberg DMRG\n\n");
+    printf("Heisenberg DMRG\n");
 
-    int L = 100;
+    int L = 3;
     int m = 5;
 
     ModelParams *model = (ModelParams *)mkl_malloc(sizeof(ModelParams), MEM_DATA_ALIGN);
@@ -28,8 +29,18 @@ int main(int argc, char *argv[]) {
     model->Sp = Sp;
     model->Id = Id;
     
-
     DMRGBlock *sys = inf_dmrg(L, m, model);
-
     freeDMRGBlock(sys);
+
+    // print_matrix("Sp", 2, 2, Sp, 2);
+    // double Sm[N*N];
+    // mkl_domatcopy('C', 'c', N, N, 1.0, Sp, N, Sm, N); // Transpose Sp1 to Sm1
+    // print_matrix("Sm1", N, N, Sm, N);
+
+    // double trans[2] = {.707106781, .707106781};
+
+    // print_matrix("trans", 1, 2, trans, 2);
+
+    // print_matrix("Transformed", 1, 1, transformOp(2, 1, trans, Sp), 1);
+
 }
