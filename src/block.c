@@ -8,6 +8,7 @@ DMRGBlock *createDMRGBlock(ModelParams *model, const int num_ops, double **ops) 
     DMRGBlock *block = (DMRGBlock *)mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
 
     block->length = 1;
+    block->side = 'L';
     block->dBlock = model->dModel;
     block->num_ops = num_ops;
     block->ops = ops;
@@ -15,6 +16,18 @@ DMRGBlock *createDMRGBlock(ModelParams *model, const int num_ops, double **ops) 
 
     return block;
 }
+
+// DMRGBlock *copyDMRGBlock(DMRGBlock *orig) {
+//     DMRGBlock *newBlock = (DMRGBlock *)mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
+
+//     newBlock->length  = orig->length;
+//     newBlock->dBlock  = orig->dBlock;
+//     newBlock->num_ops = orig->num_ops;
+//     newBlock->ops     = orig->ops;
+//     newBlock->model   = orig->model;
+
+//     return newBlock;
+// }
 
 void freeDMRGBlock(DMRGBlock *block) {
     freeDMRGBlockOps(block);
@@ -47,11 +60,12 @@ void printDMRGBlock(const char *desc, DMRGBlock *block) {
 // TODO: use same chunk of memory every time to not reallocate on every enlargement
 DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 
-    DMRGBlock *enl_block = (DMRGBlock *)MKL_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
+    DMRGBlock *enl_block = (DMRGBlock *)mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
     enl_block->length  = block->length + 1;
     enl_block->dBlock  = block->dBlock * block->model->dModel;
     enl_block->num_ops = block->num_ops;
     enl_block->model   = block->model;
+    enl_block->side    = block->side;
 
     enl_block->ops = enlargeOps(block);
 

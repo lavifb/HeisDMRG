@@ -6,6 +6,7 @@
 
 typedef struct {
     int length;
+    char side;
     int dBlock; // dimension of basis
     double **ops;
     int num_ops;

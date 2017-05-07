@@ -135,8 +135,6 @@ DMRGBlock *inf_dmrg(const int L, const int m, ModelParams *model) {
     while (2*sys->length < L) {
         printf("\nL = %d\n", sys->length * 2 + 2);
         single_step(sys, sys, m);
-        // printDMRGBlock("New System", sys);
-        // printf("Step Done\n");
     }
 
     return sys;
