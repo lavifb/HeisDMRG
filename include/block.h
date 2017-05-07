@@ -7,7 +7,6 @@
 typedef struct {
     int length;
     int dBlock; // dimension of basis
-    // TODO: Maybe restrict?
     double **ops;
     int num_ops;
     ModelParams *model;

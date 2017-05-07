@@ -79,32 +79,20 @@ double **enlargeOps(const DMRGBlock *block) {
     int enl_dim = dModel * dim;
 
     double *I_m = identity(dim);
-    // print_matrix("I_m", dim, dim, I_m, dim);
-
-    // print_matrix("Sp1", dModel, dModel, model->Sp, dModel);
-    // print_matrix("Sz1", dModel, dModel, model->Sz, dModel);
-    // print_matrix("H1 ", dModel, dModel, model->H1, dModel);
 
     // H_enl
     enl_ops[0] = HeisenH_int(model->J, model->Jz, dim, dModel, 
                     block->ops[1], block->ops[2], model->Sz, model->Sp);
-    // print_matrix("H_int", enl_dim, enl_dim, enl_ops[0], enl_dim);
-    // printf("Taking krons for H_enl\n");
     kron(1.0, dim, dModel, block->ops[0], model->Id, enl_ops[0]);
     kron(1.0, dim, dModel, I_m, model->H1, enl_ops[0]);
-    // printf("Built H_enl\n");
-
 
     // conn_Sz
     enl_ops[1] = (double *)mkl_calloc(enl_dim*enl_dim, sizeof(double), MEM_DATA_ALIGN);
     kron(1.0, dim, dModel, I_m, model->Sz, enl_ops[1]);
-    // print_matrix("conn_Sz", enl_dim, enl_dim, enl_ops[1], enl_dim);
 
     // conn_Sp
     enl_ops[2] = (double *)mkl_calloc(enl_dim*enl_dim, sizeof(double), MEM_DATA_ALIGN);
     kron(1.0, dim, dModel, I_m, model->Sp, enl_ops[2]);
-    // print_matrix("conn_Sp", enl_dim, enl_dim, enl_ops[2], enl_dim);
-    // printf("Built op_enl\n");
 
     mkl_free(I_m);
     return enl_ops;

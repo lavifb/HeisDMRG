@@ -1,15 +1,14 @@
 #include "linalg.h"
 #include <mkl.h>
-// #include <assert.h>
 
 /*
-  \brief Compute Kronecker product of two square matrices. Sets C = alpha * kron(A,B) + C
+    \brief Compute Kronecker product of two square matrices. Sets C = alpha * kron(A,B) + C
  
-  \param m 
-  \param n 
-  \param A m*m matrix
-  \param B n*n matrix
-  \param C mn*mn matrix
+    \param m 
+    \param n 
+    \param A m*m matrix
+    \param B n*n matrix
+    \param C mn*mn matrix
 */
 void kron(const double alpha, const int m, const int n, const double *restrict A, const double *restrict B, double *restrict C) {
     int ldac = m*n;
@@ -35,7 +34,8 @@ double *identity(const int N) {
     return Id;
 }
 
-/* Transforms matrix into new truncated basis. returns trans^T * op * trans
+/* 
+    Transforms matrix into new truncated basis. returns trans^T * op * trans
 */
 double *transformOp(const int opDim, const int newDim, const double *restrict trans, const double *restrict op) {
 
@@ -47,18 +47,13 @@ double *transformOp(const int opDim, const int newDim, const double *restrict tr
     __assume_aligned(temp , MEM_DATA_ALIGN);
 
     cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, newDim, opDim , opDim, 1.0, trans, opDim, op, opDim, 0.0, temp, newDim);
-    print_matrix("temp", 1, 2, temp, 1);
     cblas_dgemm(CblasColMajor, CblasNoTrans  , CblasNoTrans, newDim, newDim, opDim, 1.0, temp, newDim, trans, opDim, 0.0, newOp, newDim);
-    print_matrix("newOp", 1, 1, newOp, 1);
-
-    // cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans  , newDim, opDim, opDim , 1.0, trans, newDim, op, opDim, 0.0, temp, newDim);
-    // cblas_dgemm(CblasColMajor, CblasNoTrans, CblasConjTrans, newDim, opDim, newDim, 1.0, temp, newDim, trans, opDim, 0.0, newOp, newDim);
 
     mkl_free(temp);
     return newOp;
 }
 
-/* Print matrix from Intel examples
+/* Print matrix from Intel MKL examples
 */
 void print_matrix( char* desc, int m, int n, double* a, int lda ) {
     int i, j;
