@@ -63,21 +63,22 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
 
     __assume_aligned(Hs, MEM_DATA_ALIGN);
 
-
     // Find ground state
     double *psi0 = (double *)mkl_malloc(dimSup * sizeof(double), MEM_DATA_ALIGN);
     int info;
     int num_es_found;
     double energies[1];
-    int *ifail = (int *)mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);;
+    int *ifail = (int *)mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
     info = LAPACKE_dsyevx(LAPACK_COL_MAJOR, 'V', 'I', 'U', dimSup, Hs, dimSup, 0.0, 0.0,
             1, 1, 0.0, &num_es_found, energies, psi0, dimSup, ifail);
     if (info > 0) {
         printf("Failed to find eigenvalues of Superblock Hamiltonian\n");
         exit(1);
     }
-    mkl_free(ifail);
     mkl_free(Hs);
+    mkl_free(ifail);
+
+    print_matrix("psi0", dimSup, 1, psi0, 1);
 
     double energy = energies[0]; // record ground state energy
     printf("E/L = %6.16f\n", energy / (sys_enl->length + env_enl->length));
@@ -89,26 +90,36 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
     // Trace out Environment to make rho
     cblas_dgemm(CblasColMajor, CblasNoTrans, CblasConjTrans, dimSys, dimSys, dimEnv, 1.0, psi0, dimSys, psi0, dimSys, 0.0, rho, dimSys);
     mkl_free(psi0);
-    double *lambs = (double *)mkl_malloc(dimSys * sizeof(double), MEM_DATA_ALIGN);
-
-    info = LAPACKE_dsyev(LAPACK_COL_MAJOR, 'V', 'U', dimSys, rho, dimSys, lambs);
-    if (info > 0) {
-        printf("Failed to find eigenvalues of density matrix\n");
-        exit(1);
-    }
 
     // Transformation Matrix
     int mm = (dimSys < m) ? dimSys : m; // use min(dimSys, m) 
     double *trans = (double *)mkl_malloc(dimSys*mm * sizeof(double), MEM_DATA_ALIGN);
+    __assume_aligned(trans, MEM_DATA_ALIGN);
     int mt = dimSys - mm; // number of truncated dimensions
+
+    double *lambs = (double *)mkl_malloc(mm * sizeof(double), MEM_DATA_ALIGN);
+    int *ifail2 = (int *)mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
+    // info = LAPACKE_dsyev(LAPACK_COL_MAJOR, 'V', 'U', dimSys, rho, dimSys, lambs);
+    info = LAPACKE_dsyevx(LAPACK_COL_MAJOR, 'V', 'I', 'U', dimSys, rho, dimSys, 0.0, 0.0,
+            mt+1, dimSys, 0.0, &num_es_found, lambs, trans, dimSys, ifail);
+    if (info > 0) {
+        printf("Failed to find eigenvalues of density matrix\n");
+        exit(1);
+    }
+    printf("%d eigenvalues found\n", num_es_found);
+    print_matrix("lambs", mm, 1, lambs, 1);
+    print_matrix("Trans", dimSys, mm, trans, dimSys);
+    mkl_free(ifail2);
+
     // copy over only mm biggest eigenvalues
-    memcpy(trans, rho+(dimSys*mt) , dimSys*mm * sizeof(double));
+    // memcpy(trans, rho+(dimSys*mt) , dimSys*mm * sizeof(double));
 
     mkl_free(rho);
     
     double truncation_err = 1;
     int i;
-    for (i = mt; i < dimSys; i++) {
+    // for (i = mt; i < dimSys; i++) {
+    for (i = 0; i < mm; i++) {
         truncation_err -= lambs[i];
     }
     printf("Truncation Error: %.10e\n", truncation_err);
@@ -117,6 +128,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
     // Transform operators into new basis
     transformOps(sys_enl->num_ops, dimSys, mm, trans, sys_enl->ops);
     sys_enl->dBlock = mm; // set block basis size to transformed value
+    mkl_free(trans);
 
     // Free enlarged environment block
     if (sys_enl != env_enl) {
