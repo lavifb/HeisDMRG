@@ -61,28 +61,26 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
     mkl_free(Isys);
     mkl_free(Ienv);
 
-    double *energies = (double *)mkl_malloc(dimSup * sizeof(double), MEM_DATA_ALIGN);
+    __assume_aligned(Hs, MEM_DATA_ALIGN);
 
-    double *U = (double *)mkl_malloc(dimSup*dimSup * sizeof(double), MEM_DATA_ALIGN);
-    __assume_aligned(U, MEM_DATA_ALIGN);
-    memcpy(U, Hs, dimSup*dimSup * sizeof(double));
 
-    mkl_free(Hs);
-
+    // Find ground state
+    double *psi0 = (double *)mkl_malloc(dimSup * sizeof(double), MEM_DATA_ALIGN);
     int info;
-    info = LAPACKE_dsyev(LAPACK_COL_MAJOR, 'V', 'U', dimSup, U, dimSup, energies);
+    int num_es_found;
+    double energies[1];
+    int *ifail = (int *)mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);;
+    info = LAPACKE_dsyevx(LAPACK_COL_MAJOR, 'V', 'I', 'U', dimSup, Hs, dimSup, 0.0, 0.0,
+            1, 1, 0.0, &num_es_found, energies, psi0, dimSup, ifail);
     if (info > 0) {
         printf("Failed to find eigenvalues of Superblock Hamiltonian\n");
         exit(1);
     }
+    mkl_free(ifail);
+    mkl_free(Hs);
 
     double energy = energies[0]; // record ground state energy
-    mkl_free(energies);
     printf("E/L = %6.16f\n", energy / (sys_enl->length + env_enl->length));
-
-    double *psi0 = (double *)mkl_malloc(dimSup * sizeof(double), MEM_DATA_ALIGN);
-    memcpy(psi0, U, dimSup * sizeof(double)); // copy over only first eigenvalue
-    mkl_free(U);
 
     // Density matrix rho
     double *rho = (double *)mkl_malloc(dimSys*dimSys * sizeof(double), MEM_DATA_ALIGN);

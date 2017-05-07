@@ -36,14 +36,14 @@ int main(int argc, char *argv[]) {
     model->initOps[1] = Sz;
     model->initOps[2] = Sp;
     
-    // inf_dmrg(L, m, model);
+    inf_dmrg(L, m, model);
 
-    #define NUM_MS 4
+    #define NUM_MS 2
 
     // int ms[NUM_MS] = {10};
-    int ms[NUM_MS] = {10, 20, 30, 40};
+    int ms[NUM_MS] = {10, 20};
 
-    fin_dmrg(20, 10, NUM_MS, ms, model);
+    // fin_dmrg(20, 10, NUM_MS, ms, model);
 
     // print_matrix("Sp", 2, 2, Sp, 2);
     // double Sm[N*N];
