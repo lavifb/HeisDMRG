@@ -13,7 +13,7 @@ typedef struct {
     ModelParams *model;
 } DMRGBlock;
 
-DMRGBlock *createDMRGBlock(ModelParams *model, const int num_ops, double **ops);
+DMRGBlock *createDMRGBlock(ModelParams *model);
 
 void freeDMRGBlock(DMRGBlock *block);
 

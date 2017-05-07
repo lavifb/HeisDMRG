@@ -116,21 +116,7 @@ DMRGBlock *single_step(DMRGBlock *sys, DMRGBlock *env, const int m) {
 */
 DMRGBlock *inf_dmrg(const int L, const int m, ModelParams *model) {
 
-    int num_ops = 3;
-
-    double **ops = (double **)mkl_malloc(num_ops * sizeof(double *), MEM_DATA_ALIGN);
-
-    int N = model->dModel;
-    int i;
-    for (i = 0; i < num_ops; i++) {
-        ops[i] = (double *)mkl_malloc(N*N * sizeof(double), MEM_DATA_ALIGN);
-    }
-
-    memcpy(ops[0], model->H1, N*N * sizeof(double)); // H
-    memcpy(ops[1], model->Sz, N*N * sizeof(double)); // Sz
-    memcpy(ops[2], model->Sp, N*N * sizeof(double)); // Sp
-
-    DMRGBlock *sys = createDMRGBlock(model, num_ops, ops);
+    DMRGBlock *sys = createDMRGBlock(model);
 
     while (2*sys->length < L) {
         printf("\nL = %d\n", sys->length * 2 + 2);
@@ -152,8 +138,8 @@ DMRGBlock *inf_dmrg(const int L, const int m, ModelParams *model) {
 // DMRGBlock *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, ModelParams *model) {
 //     assert(L%2 == 0);
 
-//     DMRGBlock **saved_blocksL;
-//     DMRGBlock **saved_blocksR;
+//     DMRGBlock **saved_blocksL = (DMRGBlock **)mkl_malloc(L*sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+//     DMRGBlock **saved_blocksR = (DMRGBlock **)mkl_malloc(L*sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 
 //     return 
 // }

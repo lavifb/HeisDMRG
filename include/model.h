@@ -9,6 +9,8 @@ typedef struct {
     double *Id; // single site Identity Matrix
     double J;
     double Jz;
+    int num_ops;
+    double **initOps; // single site bloack tracked operators
 } ModelParams;
 
 double *HeisenH_int(const double J, const double Jz, const int dim1, const int dim2, 

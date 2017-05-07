@@ -17,6 +17,7 @@ int main(int argc, char *argv[]) {
     model->dModel = N;
     model->J  = 1;
     model->Jz = 1;
+    model->num_ops = 3;
 
     // One site matrices
     double H1[N*N] = {0.0, 0.0, 0.0,  0.0};
@@ -28,6 +29,12 @@ int main(int argc, char *argv[]) {
     model->Sz = Sz;
     model->Sp = Sp;
     model->Id = Id;
+
+    double *initOps[3];
+    model->initOps = initOps;
+    model->initOps[0] = H1;
+    model->initOps[1] = Sz;
+    model->initOps[2] = Sp;
     
     DMRGBlock *sys = inf_dmrg(L, m, model);
     freeDMRGBlock(sys);

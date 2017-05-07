@@ -4,15 +4,24 @@
 #include <mkl.h>
 
 
-DMRGBlock *createDMRGBlock(ModelParams *model, const int num_ops, double **ops) {
+DMRGBlock *createDMRGBlock(ModelParams *model) {
     DMRGBlock *block = (DMRGBlock *)mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
 
     block->length = 1;
     block->side = 'L';
-    block->dBlock = model->dModel;
-    block->num_ops = num_ops;
-    block->ops = ops;
+
+    int dim = model->dModel;
+    block->dBlock = dim;
+    block->num_ops = model->num_ops;
     block->model  = model;
+
+    // copy operators
+    block->ops = (double **)mkl_malloc(block->num_ops * sizeof(double *), MEM_DATA_ALIGN);
+    int i;
+    for (i = 0; i < block->num_ops; i++) {
+        block->ops[i] = (double *)mkl_malloc(dim*dim * sizeof(double), MEM_DATA_ALIGN);
+        memcpy(block->ops[i], model->initOps[i], dim*dim * sizeof(double));
+    }
 
     return block;
 }
