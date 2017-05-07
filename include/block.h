@@ -15,6 +15,8 @@ typedef struct {
 
 DMRGBlock *createDMRGBlock(ModelParams *model);
 
+DMRGBlock *copyDMRGBlock(DMRGBlock *orig);
+
 void freeDMRGBlock(DMRGBlock *block);
 
 void freeDMRGBlockOps(DMRGBlock *block);

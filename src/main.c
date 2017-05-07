@@ -36,8 +36,11 @@ int main(int argc, char *argv[]) {
     model->initOps[1] = Sz;
     model->initOps[2] = Sp;
     
-    DMRGBlock *sys = inf_dmrg(L, m, model);
-    freeDMRGBlock(sys);
+    // inf_dmrg(L, m, model);
+
+    int ms[1] = {10};
+
+    fin_dmrg(20, 10, 0, ms, model);
 
     // print_matrix("Sp", 2, 2, Sp, 2);
     // double Sm[N*N];

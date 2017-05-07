@@ -7,6 +7,25 @@
 // #include <string.h>
 // #include <stdlib.h>
 
+/* Print nice graphic of the system and environment
+*/
+void printGraphic(DMRGBlock *sys, DMRGBlock *env) {
+
+    char *sys_g = (char *)malloc((sys->length+1) * sizeof(char));
+    char *env_g = (char *)malloc((env->length+1) * sizeof(char));
+
+    memset(sys_g, '=', sys->length);
+    memset(env_g, '-', env->length);
+    sys_g[sys->length] = '\0';
+    env_g[env->length] = '\0';
+
+    if (sys->side == 'L') {
+        printf("%s**%s\n", sys_g, env_g);
+    } else {
+        printf("%s**%s\n", env_g, sys_g);
+    }
+}
+
 /* Single DMRG step
    
    m: truncation dimension size
@@ -114,7 +133,7 @@ DMRGBlock *single_step(DMRGBlock *sys, DMRGBlock *env, const int m) {
    L: Maximum length of system
    m: truncation dimension size
 */
-DMRGBlock *inf_dmrg(const int L, const int m, ModelParams *model) {
+void inf_dmrg(const int L, const int m, ModelParams *model) {
 
     DMRGBlock *sys = createDMRGBlock(model);
 
@@ -125,7 +144,7 @@ DMRGBlock *inf_dmrg(const int L, const int m, ModelParams *model) {
         sys = newSys;
     }
 
-    return sys;
+    freeDMRGBlock(sys);
 }
 
 /* Finite System DMRG Algorithm
@@ -135,11 +154,41 @@ DMRGBlock *inf_dmrg(const int L, const int m, ModelParams *model) {
    num_sweeps: number of finite system sweeps
    ms        : list of truncation sizes for the finite sweeps (size num_sweeps)
 */
-// DMRGBlock *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, ModelParams *model) {
-//     assert(L%2 == 0);
+void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, ModelParams *model) {
+    assert(L%2 == 0);
 
-//     DMRGBlock **saved_blocksL = (DMRGBlock **)mkl_malloc(L*sizeof(DMRGBlock *), MEM_DATA_ALIGN);
-//     DMRGBlock **saved_blocksR = (DMRGBlock **)mkl_malloc(L*sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+    DMRGBlock **saved_blocksL = (DMRGBlock **)mkl_calloc((L-2), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+    DMRGBlock **saved_blocksR = (DMRGBlock **)mkl_calloc((L-2), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 
-//     return 
-// }
+    DMRGBlock *sys   = createDMRGBlock(model);
+
+    saved_blocksL[0] = copyDMRGBlock(sys);
+    saved_blocksR[0] = copyDMRGBlock(sys);
+    saved_blocksR[0]->side = 'R';
+
+    // run infinite algorithm to build up system
+    while (2*sys->length < L) {
+        printGraphic(sys, sys);
+        DMRGBlock *newSys = single_step(sys, sys, m_inf);
+        freeDMRGBlock(sys);
+        sys = newSys;
+
+        saved_blocksL[sys->length-1] = copyDMRGBlock(sys);
+        saved_blocksR[sys->length-1] = copyDMRGBlock(sys);
+        saved_blocksR[sys->length-1]->side = 'R';
+    }
+
+    // TODO: finite sweeps
+
+    int i;
+    for (i = 0; i < L-2; i++) {
+        if (saved_blocksL[i]) {
+            freeDMRGBlock(saved_blocksL[i]);
+        }
+        if (saved_blocksR[i]) {
+            freeDMRGBlock(saved_blocksR[i]);
+        }
+    }
+
+    freeDMRGBlock(sys);
+}

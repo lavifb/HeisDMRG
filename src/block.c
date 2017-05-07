@@ -26,17 +26,25 @@ DMRGBlock *createDMRGBlock(ModelParams *model) {
     return block;
 }
 
-// DMRGBlock *copyDMRGBlock(DMRGBlock *orig) {
-//     DMRGBlock *newBlock = (DMRGBlock *)mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
+DMRGBlock *copyDMRGBlock(DMRGBlock *orig) {
+    DMRGBlock *newBlock = (DMRGBlock *)mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
 
-//     newBlock->length  = orig->length;
-//     newBlock->dBlock  = orig->dBlock;
-//     newBlock->num_ops = orig->num_ops;
-//     newBlock->ops     = orig->ops;
-//     newBlock->model   = orig->model;
+    newBlock->length  = orig->length;
+    int dim = orig->dBlock;
+    newBlock->dBlock  = dim;
+    newBlock->num_ops = orig->num_ops;
+    newBlock->model   = orig->model;
 
-//     return newBlock;
-// }
+    // Copy all matrices (not just pointers)
+    newBlock->ops = (double **)mkl_malloc(newBlock->num_ops * sizeof(double *), MEM_DATA_ALIGN);
+    int i;
+    for (i = 0; i < newBlock->num_ops; i++) {
+        newBlock->ops[i] = (double *)mkl_malloc(dim*dim * sizeof(double), MEM_DATA_ALIGN);
+        memcpy(newBlock->ops[i], orig->ops[i], dim*dim * sizeof(double));
+    }
+    
+    return newBlock;
+}
 
 void freeDMRGBlock(DMRGBlock *block) {
     freeDMRGBlockOps(block);
