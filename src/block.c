@@ -17,21 +17,17 @@ DMRGBlock *createDMRGBlock(ModelParams *model, const int num_ops, double **ops) 
 }
 
 void freeDMRGBlock(DMRGBlock *block) {
-    if (block) { // check that pointer is actually pointing to something
-        freeDMRGBlockOps(block);
-        mkl_free(block);
-    }
+    freeDMRGBlockOps(block);
+    mkl_free(block);
 }
 
 void freeDMRGBlockOps(DMRGBlock *block) {
-    if (block || block->ops) { // check that pointer is actually pointing to something
-        int i;
-        for (i=0; i<block->num_ops; i++) {
-            mkl_free(block->ops[i]);
-        }
-
-        mkl_free(block->ops);
+    int i;
+    for (i=0; i<block->num_ops; i++) {
+        mkl_free(block->ops[i]);
     }
+
+    mkl_free(block->ops);
 }
 
 void printDMRGBlock(const char *desc, DMRGBlock *block) {
@@ -90,7 +86,6 @@ double **enlargeOps(const DMRGBlock *block) {
     // print_matrix("H1 ", dModel, dModel, model->H1, dModel);
 
     // H_enl
-    printf("Building H_enl\n");
     enl_ops[0] = HeisenH_int(model->J, model->Jz, dim, dModel, 
                     block->ops[1], block->ops[2], model->Sz, model->Sp);
     // print_matrix("H_int", enl_dim, enl_dim, enl_ops[0], enl_dim);
