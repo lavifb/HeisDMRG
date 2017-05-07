@@ -2,6 +2,7 @@
 #include "block.h"
 #include "linalg.h"
 #include <mkl.h>
+#include <assert.h>
 // #include <stdio.h>
 // #include <string.h>
 // #include <stdlib.h>
@@ -9,8 +10,10 @@
 /* Single DMRG step
    
    m: truncation dimension size
+
+   returns enlarged system block
 */
-void single_step(DMRGBlock *sys, DMRGBlock *env, const int m) {
+DMRGBlock *single_step(DMRGBlock *sys, DMRGBlock *env, const int m) {
 
     DMRGBlock *sys_enl, *env_enl;
     ModelParams *model = sys->model;
@@ -98,18 +101,15 @@ void single_step(DMRGBlock *sys, DMRGBlock *env, const int m) {
     transformOps(sys_enl->num_ops, dimSys, mm, trans, sys_enl->ops);
     sys_enl->dBlock = mm; // set block basis size to transformed value
 
-    // Copy new enlarged block into sys
-    freeDMRGBlockOps(sys);
-    memcpy(sys, sys_enl, sizeof(DMRGBlock));
-
-    // Free enlarged blocks
-    mkl_free(sys_enl);
+    // Free enlarged environment block
     if (sys_enl != env_enl) {
         freeDMRGBlock(env_enl);
     }
+
+    return sys_enl;
 }
 
-/* Infinite DMRG Algorithm
+/* Infinite System DMRG Algorithm
    
    L: Maximum length of system
    m: truncation dimension size
@@ -134,8 +134,26 @@ DMRGBlock *inf_dmrg(const int L, const int m, ModelParams *model) {
 
     while (2*sys->length < L) {
         printf("\nL = %d\n", sys->length * 2 + 2);
-        single_step(sys, sys, m);
+        DMRGBlock *newSys = single_step(sys, sys, m);
+        freeDMRGBlock(sys);
+        sys = newSys;
     }
 
     return sys;
 }
+
+/* Finite System DMRG Algorithm
+   
+   L         : Maximum length of system
+   m_inf     : truncation dimension size for infinite algorithm for building system
+   num_sweeps: number of finite system sweeps
+   ms        : list of truncation sizes for the finite sweeps (size num_sweeps)
+*/
+// DMRGBlock *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, ModelParams *model) {
+//     assert(L%2 == 0);
+
+//     DMRGBlock **saved_blocksL;
+//     DMRGBlock **saved_blocksR;
+
+//     return 
+// }

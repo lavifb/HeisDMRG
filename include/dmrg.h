@@ -3,7 +3,7 @@
 
 #include "block.h"
 
-void single_step(DMRGBlock *sys, DMRGBlock *env, const int m);
+DMRGBlock *single_step(DMRGBlock *sys, DMRGBlock *env, const int m);
 
 DMRGBlock *inf_dmrg(const int L, const int m, ModelParams *model);
 
