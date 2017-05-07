@@ -38,9 +38,12 @@ int main(int argc, char *argv[]) {
     
     // inf_dmrg(L, m, model);
 
-    int ms[1] = {10};
+    #define NUM_MS 4
 
-    fin_dmrg(20, 10, 0, ms, model);
+    // int ms[NUM_MS] = {10};
+    int ms[NUM_MS] = {10, 20, 30, 40};
+
+    fin_dmrg(20, 10, NUM_MS, ms, model);
 
     // print_matrix("Sp", 2, 2, Sp, 2);
     // double Sm[N*N];

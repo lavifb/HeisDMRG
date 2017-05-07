@@ -30,6 +30,7 @@ DMRGBlock *copyDMRGBlock(DMRGBlock *orig) {
     DMRGBlock *newBlock = (DMRGBlock *)mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
 
     newBlock->length  = orig->length;
+    newBlock->side  = orig->side;
     int dim = orig->dBlock;
     newBlock->dBlock  = dim;
     newBlock->num_ops = orig->num_ops;
@@ -74,7 +75,6 @@ void printDMRGBlock(const char *desc, DMRGBlock *block) {
     printf("\n");
 }
 
-// TODO: use same chunk of memory every time to not reallocate on every enlargement
 DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 
     DMRGBlock *enl_block = (DMRGBlock *)mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);

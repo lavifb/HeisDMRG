@@ -32,7 +32,7 @@ void printGraphic(DMRGBlock *sys, DMRGBlock *env) {
 
    returns enlarged system block
 */
-DMRGBlock *single_step(DMRGBlock *sys, DMRGBlock *env, const int m) {
+DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
 
     DMRGBlock *sys_enl, *env_enl;
     ModelParams *model = sys->model;
@@ -78,7 +78,7 @@ DMRGBlock *single_step(DMRGBlock *sys, DMRGBlock *env, const int m) {
 
     double energy = energies[0]; // record ground state energy
     mkl_free(energies);
-    printf("E/L = %6.16f\n", energy / (2 * sys_enl->length));
+    printf("E/L = %6.16f\n", energy / (sys_enl->length + env_enl->length));
 
     double *psi0 = (double *)mkl_malloc(dimSup * sizeof(double), MEM_DATA_ALIGN);
     memcpy(psi0, U, dimSup * sizeof(double)); // copy over only first eigenvalue
@@ -157,11 +157,12 @@ void inf_dmrg(const int L, const int m, ModelParams *model) {
 void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, ModelParams *model) {
     assert(L%2 == 0);
 
-    DMRGBlock **saved_blocksL = (DMRGBlock **)mkl_calloc((L-2), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
-    DMRGBlock **saved_blocksR = (DMRGBlock **)mkl_calloc((L-2), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+    DMRGBlock **saved_blocksL = (DMRGBlock **)mkl_calloc((L-4), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+    DMRGBlock **saved_blocksR = (DMRGBlock **)mkl_calloc((L-4), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 
     DMRGBlock *sys   = createDMRGBlock(model);
 
+    // Note: saved_blocksL[i] has length i+1
     saved_blocksL[0] = copyDMRGBlock(sys);
     saved_blocksR[0] = copyDMRGBlock(sys);
     saved_blocksR[0]->side = 'R';
@@ -178,17 +179,64 @@ void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, Model
         saved_blocksR[sys->length-1]->side = 'R';
     }
 
-    // TODO: finite sweeps
-
+    // Finite Sweeps
+    DMRGBlock *env = copyDMRGBlock(sys);
     int i;
-    for (i = 0; i < L-2; i++) {
-        if (saved_blocksL[i]) {
-            freeDMRGBlock(saved_blocksL[i]);
-        }
-        if (saved_blocksR[i]) {
-            freeDMRGBlock(saved_blocksR[i]);
+    for (i = 0; i < num_sweeps; i++) {
+        int m = ms[i];
+
+        while (1) {
+            freeDMRGBlock(env);
+
+            switch (sys->side) {
+                case 'L':
+                    env = copyDMRGBlock(saved_blocksR[L - sys->length - 3]);
+                    break;
+
+                case 'R':
+                    env = copyDMRGBlock(saved_blocksL[L - sys->length - 3]);
+                    break;
+            }
+
+            // Switch sides if at the end of the chain
+            if (env->length == 1) {
+                DMRGBlock *temp = sys;
+                sys = env;
+                env = temp;
+            }
+
+            printGraphic(sys, env);
+            DMRGBlock *newSys = single_step(sys, env, m);
+            freeDMRGBlock(sys);
+            sys = newSys;
+
+            // Save new block
+            switch (sys->side) {
+                case 'L':
+                    if (saved_blocksL[sys->length-1]) { freeDMRGBlock(saved_blocksL[sys->length-1]); }
+                    saved_blocksL[sys->length-1] = copyDMRGBlock(sys);
+                    break;
+
+                case 'R':
+                    if (saved_blocksR[sys->length-1]) { freeDMRGBlock(saved_blocksR[sys->length-1]); }
+                    saved_blocksR[sys->length-1] = copyDMRGBlock(sys);
+                    break;
+            }
+
+            // Check if sweep is done
+            if (sys->side == 'L' && 2 * sys->length == L) {
+                break;
+            }
         }
     }
 
+    for (i = 0; i < L-4; i++) {
+        if (saved_blocksL[i]) { freeDMRGBlock(saved_blocksL[i]); }
+        if (saved_blocksR[i]) { freeDMRGBlock(saved_blocksR[i]); }
+    }
+    mkl_free(saved_blocksL);
+    mkl_free(saved_blocksR);
+
+    freeDMRGBlock(env);
     freeDMRGBlock(sys);
 }

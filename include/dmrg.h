@@ -5,7 +5,7 @@
 
 void printGraphic(DMRGBlock *sys, DMRGBlock *env);
 
-DMRGBlock *single_step(DMRGBlock *sys, DMRGBlock *env, const int m);
+DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m);
 
 void inf_dmrg(const int L, const int m, ModelParams *model);
 
