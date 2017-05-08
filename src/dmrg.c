@@ -84,20 +84,19 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
     mkl_free(ifail);
     mkl_free(Hs);
 
+    double energy = energies[0]; // record ground state energy
+    printf("E/L = %6.10f\n", energy / (sys_enl->length + env_enl->length));
+
     // psi0 needs to be arranged as a dimSup * dimEnv to trace out env
     // Put sys_basis on rows and env_basis on the cols by taking transpose
     // To not take transpose twice, take conj and take conjTrans on left side of dgemm bellow
     mkl_dimatcopy('C', 'R', dimEnv, dimSys, 1.0, psi0, dimEnv, dimEnv);
 
-    double energy = energies[0]; // record ground state energy
-    printf("E/L = %6.10f\n", energy / (sys_enl->length + env_enl->length));
-
     // Density matrix rho
     double *rho = (double *)mkl_malloc(dimSys*dimSys * sizeof(double), MEM_DATA_ALIGN);
     __assume_aligned(rho, MEM_DATA_ALIGN);
 
-    // Trace out Environment to make rho
-    // cblas_dgemm(CblasColMajor, CblasNoTrans, CblasConjTrans, dimSys, dimSys, dimEnv, 1.0, psi0, dimSys, psi0, dimSys, 0.0, rho, dimSys);
+    // Trace out Environment to make rho (Note transpose structure as described above)
     cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys, dimSys, dimEnv, 1.0, psi0, dimEnv, psi0, dimEnv, 0.0, rho, dimSys);
 
     mkl_free(psi0);
