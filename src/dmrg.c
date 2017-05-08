@@ -71,7 +71,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
     __assume_aligned(psi0, MEM_DATA_ALIGN);
     int info;
     int num_es_found;
-    double energies[1];
+    double *energies = (double *)mkl_malloc(dimSup * sizeof(double), MEM_DATA_ALIGN);;
     int *ifail = (int *)mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);;
     __assume_aligned(ifail, MEM_DATA_ALIGN);
     info = LAPACKE_dsyevx(LAPACK_COL_MAJOR, 'V', 'I', 'U', dimSup, Hs, dimSup, 0.0, 0.0,
@@ -80,13 +80,12 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
         printf("Failed to find eigenvalues of Superblock Hamiltonian\n");
         exit(1);
     }
-    mkl_free(Hs);
     mkl_free(ifail);
-
-    print_matrix("psi0", dimSup, 1, psi0, 1);
+    mkl_free(Hs);
 
     double energy = energies[0]; // record ground state energy
     printf("E/L = %6.10f\n", energy / (sys_enl->length + env_enl->length));
+    mkl_free(energies);
 
     // psi0 needs to be arranged as a dimSup * dimEnv to trace out env
     // Put sys_basis on rows and env_basis on the cols by taking transpose
@@ -106,31 +105,21 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
     int mm = (dimSys < m) ? dimSys : m; // use min(dimSys, m) 
     double *trans = (double *)mkl_malloc(dimSys*mm * sizeof(double), MEM_DATA_ALIGN);
     __assume_aligned(trans, MEM_DATA_ALIGN);
-    int mt = dimSys - mm; // number of truncated dimensions
 
-    double *lambs = (double *)mkl_malloc(mm * sizeof(double), MEM_DATA_ALIGN);
+    double *lambs = (double *)mkl_malloc(dimSys * sizeof(double), MEM_DATA_ALIGN);
     __assume_aligned(lambs, MEM_DATA_ALIGN);
-    int *ifail2 = (int *)mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
-    // info = LAPACKE_dsyev(LAPACK_COL_MAJOR, 'V', 'U', dimSys, rho, dimSys, lambs);
+    int *ifail2 = (int *)mkl_malloc(dimSys * sizeof(int), MEM_DATA_ALIGN);
     info = LAPACKE_dsyevx(LAPACK_COL_MAJOR, 'V', 'I', 'U', dimSys, rho, dimSys, 0.0, 0.0,
-            mt+1, dimSys, 0.0, &num_es_found, lambs, trans, dimSys, ifail);
+            dimSys-mm+1, dimSys, 0.0, &num_es_found, lambs, trans, dimSys, ifail2);
     if (info > 0) {
         printf("Failed to find eigenvalues of density matrix\n");
         exit(1);
     }
-    printf("%d eigenvalues found\n", num_es_found);
-    print_matrix("lambs", mm, 1, lambs, 1);
-    print_matrix("Trans", dimSys, mm, trans, dimSys);
     mkl_free(ifail2);
-
-    // copy over only mm biggest eigenvalues
-    // memcpy(trans, rho+(dimSys*mt) , dimSys*mm * sizeof(double));
-
     mkl_free(rho);
     
     double truncation_err = 1;
     int i;
-    // for (i = mt; i < dimSys; i++) {
     for (i = 0; i < mm; i++) {
         truncation_err -= lambs[i];
     }
