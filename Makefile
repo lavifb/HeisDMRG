@@ -3,8 +3,9 @@
 CC = icc
 
 # compiler options
-CCOPTS = -Wall -O2 -xHost -restrict -DNDEBUG -DMEM_DATA_ALIGN=64
-# CCOPTS = -Wall -O2 -xHost -g -restrict -DNDEBUG -DMEM_DATA_ALIGN=64
+CCOPTS  = -Wall -O2 -xHost -restrict -DMEM_DATA_ALIGN=64
+CCOPTSR = ${CCOPTS} -DNDEBUG
+CCOPTSD = ${CCOPTS} -g -traceback -DMKL_DISABLE_FAST_MM=1
 
 # MKL Library
 MKL = -mkl=sequential
@@ -13,17 +14,31 @@ BIN := bin
 SRC := src
 INC := include
 ODIR:= odir
+TEST:= test
 
 # SRC_FILES = $(patsubst $(PUG)/%.pug, $(TEST)/%.html, $(wildcard $(PUG)/[^_]*.pug))
+
+build: proj_main
 
 clean: 
 	-rm ${BIN}/*
 	-rm ${ODIR}/*
+	-rm ${TEST}/*
 
-src: $(patsubst $(SRC)/%.c, $(ODIR)/%.o, $(wildcard $(SRC)/[^_]*.c))
+clean-test:
+	-rm ${TEST}/*
+
+src : $(patsubst $(SRC)/%.c, $(ODIR)/%.o, $(wildcard $(SRC)/[^_]*.c))
+srcD: $(patsubst $(SRC)/%.c, $(TEST)/%.o, $(wildcard $(SRC)/[^_]*.c))
 
 ${ODIR}/%.o: ${SRC}/%.c
-	${CC} -c -I${INC}/ ${CCOPTS} ${MKL} $< -o $@
+	${CC} -c -I${INC}/ ${CCOPTSR} ${MKL} $< -o $@
+
+${TEST}/%.o: ${SRC}/%.c
+	${CC} -c -I${INC}/ ${CCOPTSD} ${MKL} $< -o $@
 
 proj_main: src
-	 ${CC} -I${INC}/ ${CCOPTS} ${MKL} -o ${BIN}/dmrg ${ODIR}/*
+	 ${CC} -I${INC}/ ${CCOPTSR} ${MKL} -o ${BIN}/dmrg ${ODIR}/*
+
+debug: clean-test srcD
+	 ${CC} -I${INC}/ ${CCOPTSD} ${MKL} -o ${TEST}/dmrg_debug ${TEST}/*

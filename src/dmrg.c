@@ -24,6 +24,9 @@ void printGraphic(DMRGBlock *sys, DMRGBlock *env) {
     } else {
         printf("%s**%s\n", env_g, sys_g);
     }
+
+    free(sys_g);
+    free(env_g);
 }
 
 /* Single DMRG step
@@ -66,10 +69,12 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
 
     // Find ground state
     double *psi0 = (double *)mkl_malloc(dimSup * sizeof(double), MEM_DATA_ALIGN);
+    __assume_aligned(psi0, MEM_DATA_ALIGN);
     int info;
     int num_es_found;
     double energies[1];
     int *ifail = (int *)mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);;
+    __assume_aligned(ifail, MEM_DATA_ALIGN);
     info = LAPACKE_dsyevx(LAPACK_COL_MAJOR, 'V', 'I', 'U', dimSup, Hs, dimSup, 0.0, 0.0,
             1, 1, 0.0, &num_es_found, energies, psi0, dimSup, ifail);
     if (info > 0) {
@@ -79,8 +84,12 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
     mkl_free(ifail);
     mkl_free(Hs);
 
+    // psi0 needs to be arranged as a dimSup * dimEnv to trace out env
+    // Put sys_basis on rows and env_basis on the cols by taking transpose
+    mkl_dimatcopy('C', 'T', dimEnv, dimSys, 1.0, psi0, dimEnv, dimSys);
+
     double energy = energies[0]; // record ground state energy
-    printf("E/L = %6.16f\n", energy / (sys_enl->length + env_enl->length));
+    printf("E/L = %6.10f\n", energy / (sys_enl->length + env_enl->length));
 
     // Density matrix rho
     double *rho = (double *)mkl_malloc(dimSys*dimSys * sizeof(double), MEM_DATA_ALIGN);
@@ -88,8 +97,10 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
 
     // Trace out Environment to make rho
     cblas_dgemm(CblasColMajor, CblasNoTrans, CblasConjTrans, dimSys, dimSys, dimEnv, 1.0, psi0, dimSys, psi0, dimSys, 0.0, rho, dimSys);
+
     mkl_free(psi0);
     double *lambs = (double *)mkl_malloc(dimSys * sizeof(double), MEM_DATA_ALIGN);
+    __assume_aligned(lambs, MEM_DATA_ALIGN);
 
     info = LAPACKE_dsyev(LAPACK_COL_MAJOR, 'V', 'U', dimSys, rho, dimSys, lambs);
     if (info > 0) {
@@ -117,6 +128,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
     // Transform operators into new basis
     transformOps(sys_enl->num_ops, dimSys, mm, trans, sys_enl->ops);
     sys_enl->dBlock = mm; // set block basis size to transformed value
+    mkl_free(trans);
 
     // Free enlarged environment block
     if (sys_enl != env_enl) {
@@ -147,7 +159,7 @@ void inf_dmrg(const int L, const int m, ModelParams *model) {
 
 /* Finite System DMRG Algorithm
    
-   L         : Maximum length of system
+   L         : Length of universe
    m_inf     : truncation dimension size for infinite algorithm for building system
    num_sweeps: number of finite system sweeps
    ms        : list of truncation sizes for the finite sweeps (size num_sweeps)
@@ -198,9 +210,9 @@ void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, Model
 
             // Switch sides if at the end of the chain
             if (env->length == 1) {
-                DMRGBlock *temp = sys;
+                DMRGBlock *tempBlock = sys;
                 sys = env;
-                env = temp;
+                env = tempBlock;
             }
 
             printGraphic(sys, env);
