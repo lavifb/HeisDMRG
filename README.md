@@ -12,7 +12,7 @@ Todo
 	- Runge-Kutta evolution
 
 - Performance improvements
-	- Symmetry to reduce dim of H
+	- Symmetry/conserved quantum nums to reduce dim of H
 	- Use sparse matrix for H
 	- Eigenstate guessing
 
