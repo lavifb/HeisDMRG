@@ -2,13 +2,13 @@
 #include <mkl.h>
 
 /*
-    \brief Compute Kronecker product of two square matrices. Sets C = alpha * kron(A,B) + C
+    Compute Kronecker product of two square matrices. Sets C = alpha * kron(A,B) + C
  
-    \param m 
-    \param n 
-    \param A m*m matrix
-    \param B n*n matrix
-    \param C mn*mn matrix
+    m: size of matrix A
+    n: size of matrix B
+    A: m*m matrix
+    B: n*n matrix
+    C: mn*mn matrix
 */
 void kron(const double alpha, const int m, const int n, const double *restrict A, const double *restrict B, double *restrict C) {
     int ldac = m*n;
