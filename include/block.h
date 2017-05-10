@@ -5,12 +5,12 @@
 #include "model.h"
 
 typedef struct {
-    int length;
-    char side;
-    int dBlock; // dimension of basis
-    double **ops;
-    int num_ops;
-    ModelParams *model;
+	int length;
+	char side;
+	int dBlock; // dimension of basis
+	double **ops;
+	int num_ops;
+	ModelParams *model;
 } DMRGBlock;
 
 DMRGBlock *createDMRGBlock(ModelParams *model);
