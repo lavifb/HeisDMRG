@@ -7,10 +7,14 @@
 typedef struct {
 	int length;
 	char side;
-	int dBlock; // dimension of basis
+	int d_block; // dimension of basis
 	double **ops;
 	int num_ops;
 	ModelParams *model;
+
+	int num_qns;	// number of quantum numbers
+	int **qns;  	// list of quantum numbers for single site 
+	            	// each initqns[i] has size d_model)
 } DMRGBlock;
 
 DMRGBlock *createDMRGBlock(ModelParams *model);
@@ -26,6 +30,8 @@ void printDMRGBlock(const char *desc, DMRGBlock *block);
 DMRGBlock *enlargeBlock(const DMRGBlock *block);
 
 double **enlargeOps(const DMRGBlock *block);
+
+int **enlargeQns(const DMRGBlock *block);
 
 void transformOps(const int numOps, const int opDim, const int newDim, const double *restrict trans, double **ops);
 

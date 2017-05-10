@@ -10,17 +10,25 @@ DMRGBlock *createDMRGBlock(ModelParams *model) {
 	block->length = 1;
 	block->side = 'L';
 
-	int dim = model->dModel;
-	block->dBlock = dim;
+	int dim = model->d_model;
+	block->d_block = dim;
 	block->num_ops = model->num_ops;
-	block->model  = model;
+	block->num_qns = model->num_qns;
+	block->model   = model;
 
+	int i;
 	// copy operators
 	block->ops = (double **)mkl_malloc(block->num_ops * sizeof(double *), MEM_DATA_ALIGN);
-	int i;
 	for (i = 0; i < block->num_ops; i++) {
 		block->ops[i] = (double *)mkl_malloc(dim*dim * sizeof(double), MEM_DATA_ALIGN);
-		memcpy(block->ops[i], model->initOps[i], dim*dim * sizeof(double));
+		memcpy(block->ops[i], model->init_ops[i], dim*dim * sizeof(double));
+	}
+
+	// copy qns
+	block->qns = (int **)mkl_malloc(block->num_qns * sizeof(int *), MEM_DATA_ALIGN);
+	for (i = 0; i < block->num_qns; i++) {
+		block->qns[i] = (int *)mkl_malloc(dim * sizeof(int), MEM_DATA_ALIGN);
+		memcpy(block->qns[i], model->init_qns[i], dim * sizeof(int));
 	}
 
 	return block;
@@ -31,17 +39,24 @@ DMRGBlock *copyDMRGBlock(DMRGBlock *orig) {
 
 	newBlock->length  = orig->length;
 	newBlock->side  = orig->side;
-	int dim = orig->dBlock;
-	newBlock->dBlock  = dim;
+	int dim = orig->d_block;
+	newBlock->d_block = dim;
 	newBlock->num_ops = orig->num_ops;
+	newBlock->num_qns    = orig->num_qns;
 	newBlock->model   = orig->model;
 
+	int i;
 	// Copy all matrices (not just pointers)
 	newBlock->ops = (double **)mkl_malloc(newBlock->num_ops * sizeof(double *), MEM_DATA_ALIGN);
-	int i;
 	for (i = 0; i < newBlock->num_ops; i++) {
 		newBlock->ops[i] = (double *)mkl_malloc(dim*dim * sizeof(double), MEM_DATA_ALIGN);
 		memcpy(newBlock->ops[i], orig->ops[i], dim*dim * sizeof(double));
+	}
+
+	newBlock->qns = (int **)mkl_malloc(newBlock->num_qns * sizeof(int *), MEM_DATA_ALIGN);
+	for (i = 0; i < newBlock->num_qns; i++) {
+		newBlock->qns[i] = (int *)mkl_malloc(dim * sizeof(int), MEM_DATA_ALIGN);
+		memcpy(newBlock->qns[i], orig->qns[i], dim * sizeof(int));
 	}
 	
 	return newBlock;
@@ -65,12 +80,12 @@ void printDMRGBlock(const char *desc, DMRGBlock *block) {
 	printf("\n----------\n %s\n", desc);
 
 	printf("length: %d\n", block->length);
-	printf("dBlock: %d\n", block->dBlock);
+	printf("d_block: %d\n", block->d_block);
 	printf("num_ops: %d\n", block->num_ops);
 
-	print_matrix("H", block->dBlock, block->dBlock, block->ops[0], block->dBlock);
-	print_matrix("conn_Sz", block->dBlock, block->dBlock, block->ops[1], block->dBlock);
-	print_matrix("conn_Sp", block->dBlock, block->dBlock, block->ops[2], block->dBlock);
+	print_matrix("H", block->d_block, block->d_block, block->ops[0], block->d_block);
+	print_matrix("conn_Sz", block->d_block, block->d_block, block->ops[1], block->d_block);
+	print_matrix("conn_Sp", block->d_block, block->d_block, block->ops[2], block->d_block);
 
 	printf("\n");
 }
@@ -79,12 +94,15 @@ DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 
 	DMRGBlock *enl_block = (DMRGBlock *)mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
 	enl_block->length  = block->length + 1;
-	enl_block->dBlock  = block->dBlock * block->model->dModel;
+	enl_block->d_block  = block->d_block * block->model->d_model;
 	enl_block->num_ops = block->num_ops;
 	enl_block->model   = block->model;
 	enl_block->side    = block->side;
+	enl_block->num_qns = block->num_qns;
 
 	enl_block->ops = enlargeOps(block);
+
+	enl_block->qns = enlargeQns(block);
 
 	return enl_block;
 }
@@ -105,28 +123,51 @@ double **enlargeOps(const DMRGBlock *block) {
 	double **enl_ops = (double **)mkl_malloc(block->num_ops * sizeof(double *), MEM_DATA_ALIGN);
 
 	ModelParams *model = block->model;
-	int dModel  = model->dModel;
-	int dim     = block->dBlock;
-	int enl_dim = dModel * dim;
+	int d_model	= model->d_model;
+	int d_block	= block->d_block;
+	int d_enl  	= d_model * d_block;
 
-	double *I_m = identity(dim);
+	double *I_m = identity(d_block);
 
 	// H_enl
-	enl_ops[0] = HeisenH_int(model->J, model->Jz, dim, dModel, 
+	enl_ops[0] = HeisenH_int(model->J, model->Jz, d_block, d_model, 
 					block->ops[1], block->ops[2], model->Sz, model->Sp);
-	kron(1.0, dim, dModel, block->ops[0], model->Id, enl_ops[0]);
-	kron(1.0, dim, dModel, I_m, model->H1, enl_ops[0]);
+	kron(1.0, d_block, d_model, block->ops[0], model->Id, enl_ops[0]);
+	kron(1.0, d_block, d_model, I_m, model->H1, enl_ops[0]);
 
 	// conn_Sz
-	enl_ops[1] = (double *)mkl_calloc(enl_dim*enl_dim, sizeof(double), MEM_DATA_ALIGN);
-	kron(1.0, dim, dModel, I_m, model->Sz, enl_ops[1]);
+	enl_ops[1] = (double *)mkl_calloc(d_enl*d_enl, sizeof(double), MEM_DATA_ALIGN);
+	kron(1.0, d_block, d_model, I_m, model->Sz, enl_ops[1]);
 
 	// conn_Sp
-	enl_ops[2] = (double *)mkl_calloc(enl_dim*enl_dim, sizeof(double), MEM_DATA_ALIGN);
-	kron(1.0, dim, dModel, I_m, model->Sp, enl_ops[2]);
+	enl_ops[2] = (double *)mkl_calloc(d_enl*d_enl, sizeof(double), MEM_DATA_ALIGN);
+	kron(1.0, d_block, d_model, I_m, model->Sp, enl_ops[2]);
 
 	mkl_free(I_m);
 	return enl_ops;
+}
+
+/* Returns qns for enlarged block
+*/
+int **enlargeQns(const DMRGBlock *block) {
+	int **enl_qns = (int **)mkl_malloc(block->num_qns * sizeof(int *), MEM_DATA_ALIGN);
+
+	int d_model	= block->model->d_model;
+	int d_block	= block->d_block;
+	int d_enl = d_block * d_model;
+
+	int i, j, k;
+	for (i = 0; i < block->num_qns; i++) {
+		enl_qns[i] = (int *)mkl_malloc(d_enl * sizeof(int), MEM_DATA_ALIGN);
+		for (j = 0; j < d_block; j++) {
+			for (k = 0; k < d_model; k++) {
+				// TODO: Make this more general. In general qns don't just add. 
+				enl_qns[i][j*d_model + k] = block->qns[i][j] + block->model->init_qns[i][k];
+			}
+		}
+	}
+	
+	return enl_qns;
 }
 
 /*  Transform an entire set of operators at once.

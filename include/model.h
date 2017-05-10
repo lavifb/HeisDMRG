@@ -2,7 +2,7 @@
 #define MODEL_H
 
 typedef struct {
-	int dModel; // single site basis size
+	int d_model; // single site basis size
 	double *H1; // single site Hamiltonian
 	double *Sz; // single site Sz
 	double *Sp; // single site S+
@@ -10,11 +10,11 @@ typedef struct {
 	double J;
 	double Jz;
 	int num_ops;
-	double **initOps; // single site block tracked operators
-	
-	int num_qns;	// number of quantum numbers
-	int **initqns;	// list of quantum numbers for single site 
-					// each initqns[i] has size dModel)
+	double **init_ops; // single site block tracked operators
+
+	int num_qns;   	// number of quantum numbers
+	int **init_qns;	// list of quantum numbers for single site 
+	               	// each initqns[i] has size d_model)
 } ModelParams;
 
 double *HeisenH_int(const double J, const double Jz, const int dim1, const int dim2, 

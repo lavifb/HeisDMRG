@@ -48,8 +48,8 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
 		env_enl = enlargeBlock(env);
 	}
 
-	int dimSys = sys_enl->dBlock;
-	int dimEnv = env_enl->dBlock;
+	int dimSys = sys_enl->d_block;
+	int dimEnv = env_enl->d_block;
 	int dimSup = dimSys * dimEnv;
 
 	double *Isys = identity(dimSys);
@@ -128,7 +128,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m) {
 
 	// Transform operators into new basis
 	transformOps(sys_enl->num_ops, dimSys, mm, trans, sys_enl->ops);
-	sys_enl->dBlock = mm; // set block basis size to transformed value
+	sys_enl->d_block = mm; // set block basis size to transformed value
 	mkl_free(trans);
 
 	// Free enlarged environment block
@@ -171,7 +171,7 @@ void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, Model
 	DMRGBlock **saved_blocksL = (DMRGBlock **)mkl_calloc((L-4), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 	DMRGBlock **saved_blocksR = (DMRGBlock **)mkl_calloc((L-4), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 
-	DMRGBlock *sys   = createDMRGBlock(model);
+	DMRGBlock *sys = createDMRGBlock(model);
 
 	// Note: saved_blocksL[i] has length i+1
 	saved_blocksL[0] = copyDMRGBlock(sys);

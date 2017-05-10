@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
 	ModelParams *model = (ModelParams *)mkl_malloc(sizeof(ModelParams), MEM_DATA_ALIGN);
 
 	#define N 2
-	model->dModel = N;
+	model->d_model = N;
 	model->J  = 1;
 	model->Jz = 1;
 	model->num_ops = 3;
@@ -30,11 +30,13 @@ int main(int argc, char *argv[]) {
 	model->Sp = Sp;
 	model->Id = Id;
 
-	double *initOps[3];
-	model->initOps = initOps;
-	model->initOps[0] = H1;
-	model->initOps[1] = Sz;
-	model->initOps[2] = Sp;
+	double *init_ops[3];
+	model->init_ops = init_ops;
+	model->init_ops[0] = H1;
+	model->init_ops[1] = Sz;
+	model->init_ops[2] = Sp;
+
+	model->num_qns = 0;
 	
 	// inf_dmrg(L, m, model);
 
