@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
 	model->init_ops[2] = Sp;
 
 	model->num_qns = 0;
-	
+
 	// inf_dmrg(L, m, model);
 
 	#define NUM_MS 4
@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
 	int ms[NUM_MS] = {10, 20, 30, 40};
 	// int ms[1] = {5};
 
-	fin_dmrg(20, 10, NUM_MS, ms, model);
+	// fin_dmrg(20, 10, NUM_MS, ms, model);
 	// fin_dmrg(10, 5, 1, ms, model);
 
 	// print_matrix("Sp", 2, 2, Sp, 2);
@@ -59,5 +59,4 @@ int main(int argc, char *argv[]) {
 	// print_matrix("trans", 1, 2, trans, 2);
 
 	// print_matrix("Transformed", 1, 1, transformOp(2, 1, trans, Sp), 1);
-
 }

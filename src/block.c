@@ -2,6 +2,7 @@
 #include "model.h"
 #include "linalg.h"
 #include <mkl.h>
+#include <assert.h>
 
 
 DMRGBlock *createDMRGBlock(ModelParams *model) {
@@ -63,17 +64,19 @@ DMRGBlock *copyDMRGBlock(DMRGBlock *orig) {
 }
 
 void freeDMRGBlock(DMRGBlock *block) {
-	freeDMRGBlockOps(block);
-	mkl_free(block);
-}
-
-void freeDMRGBlockOps(DMRGBlock *block) {
+	
 	int i;
 	for (i=0; i<block->num_ops; i++) {
 		mkl_free(block->ops[i]);
 	}
-
 	mkl_free(block->ops);
+
+	for (i=0; i<block->num_qns; i++) {
+		mkl_free(block->qns[i]);
+	}
+	mkl_free(block->qns);
+
+	mkl_free(block);
 }
 
 void printDMRGBlock(const char *desc, DMRGBlock *block) {
@@ -191,4 +194,43 @@ void transformOps(const int numOps, const int opDim, const int newDim, const dou
 
 	mkl_free(temp);
 	mkl_free(newOp);
+}
+
+/*	Create hashtable to track indexes of basis vectors corresponding to qns (called a sector)
+*/
+sector_t **sectorize(const DMRGBlock *block) {
+
+	sector_t **secs = (sector_t **)mkl_malloc(block->num_qns * sizeof(sector_t), MEM_DATA_ALIGN);
+
+	int i, j;
+	for (i = 0; i < block->num_qns; i++) {
+		secs[i] = NULL; // Initialize uthash
+	}
+
+	for (j = 0; j < block->d_block; j++) {
+		for (i = 0; i < block->num_qns; i++) {
+			sector_t *qn_sec;
+			int id = block->qns[i][j];
+
+			HASH_FIND_INT(secs[i], &id, qn_sec);
+
+			if (qn_sec == NULL) { // create new entry in hashtable
+				qn_sec = (sector_t *)mkl_malloc(sizeof(sector_t), MEM_DATA_ALIGN);
+				qn_sec->id = id;
+				qn_sec->num_ind = 1;
+				qn_sec->inds[0] = j;
+				HASH_ADD_INT(secs[i], id, qn_sec);
+			} else { // add to entry
+				assert(qn_sec->num_ind < HASH_IND_SIZE);
+				qn_sec->inds[qn_sec->num_ind] = j;
+				qn_sec->num_ind++;
+			}
+		}
+	}
+
+	return secs;
+}
+
+void freeSectors(sector_t **secs) {
+
 }
