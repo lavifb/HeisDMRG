@@ -53,6 +53,28 @@ double *transformOp(const int opDim, const int newDim, const double *restrict tr
 	return newOp;
 }
 
+/*  Restrict square matrix to only indexes 
+
+	m       : dimension of op
+	op      : m*m matrix
+	num_ind : number of indexes provided. Also dimension of output
+	inds    : list of indexes
+*/
+double *restrictOp(const int m, double *op, const int num_ind, const int *inds) {
+
+	double *op_r = (double *)mkl_malloc(num_ind*num_ind * sizeof(double), MEM_DATA_ALIGN);
+
+	int i, j;
+	for (i = 0; i < num_ind; i++) {
+		for (j = 0; j < num_ind; j++) {
+			int op_i = inds[i]*m + inds[j];
+			op_r[i*num_ind + j] = op[op_i];
+		}
+	}
+
+	return op_r;
+}
+
 /* Print matrix from Intel MKL examples
 */
 void print_matrix( char* desc, int m, int n, double* a, int lda ) {
