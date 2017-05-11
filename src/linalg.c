@@ -75,6 +75,25 @@ double *restrictOp(const int m, double *op, const int num_ind, const int *inds) 
 	return op_r;
 }
 
+/*  Restrict vector to only indexes 
+
+	m       : dimension of v
+	v       : input vector
+	num_ind : number of indexes provided. Also dimension of output
+	inds    : list of indexes
+*/
+double *restrictVec(const int m, double *v, const int num_ind, const int *inds) {
+
+	double *v_r = (double *)mkl_malloc(num_ind * sizeof(double), MEM_DATA_ALIGN);
+
+	int i;
+	for (i = 0; i < num_ind; i++) {
+		v_r[i] = v[inds[i]];
+	}
+
+	return v_r;
+}
+
 /* Print matrix from Intel MKL examples
 */
 void print_matrix( char* desc, int m, int n, double* a, int lda ) {

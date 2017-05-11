@@ -3,6 +3,8 @@ DMRG Code
 
 Uses Intel MKL Library
 
+Thanks to http://troydhanson.github.io/uthash/ for easy to use hashtable.
+
 
 Todo
 ----
@@ -22,6 +24,6 @@ Todo
 	- Full Hamiltonian
 
 
----
+-----
 
 Written by Lavi Blumberg <lavi@stanford.edu>
