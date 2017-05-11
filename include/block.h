@@ -10,18 +10,15 @@ typedef struct {
 	int d_block; // dimension of basis
 	double **ops;
 	int num_ops;
+	int *mzs;	// 2*mz quantum number for each state
 	ModelParams *model;
-
-	int num_qns;	// number of quantum numbers
-	int **qns;  	// list of quantum numbers for single site 
-	            	// each initqns[i] has size d_model)
 } DMRGBlock;
 
 #define HASH_IND_SIZE 128
 
 typedef struct {
 	int id;                 	// qn storing indexes key for uthash.
-	int num_ind;            	// number of stored 
+	int num_ind;            	// number of stored qns
 	int inds[HASH_IND_SIZE];	// indexes with quantum number id
 	UT_hash_handle hh;      	// makes this structure hashable
 } sector_t;
@@ -38,10 +35,8 @@ DMRGBlock *enlargeBlock(const DMRGBlock *block);
 
 double **enlargeOps(const DMRGBlock *block);
 
-int **enlargeQns(const DMRGBlock *block);
-
 void transformOps(const int numOps, const int opDim, const int newDim, const double *restrict trans, double **ops);
 
-sector_t **sectorize(const DMRGBlock *block);
+sector_t *sectorize(const DMRGBlock *block);
 
 #endif

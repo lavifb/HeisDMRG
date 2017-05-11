@@ -9,12 +9,9 @@ typedef struct {
 	double *Id; // single site Identity Matrix
 	double J;
 	double Jz;
+	int *init_mzs;	// 2*mz quantum number for each state
 	int num_ops;
 	double **init_ops; // single site block tracked operators
-
-	int num_qns;   	// number of quantum numbers
-	int **init_qns;	// list of quantum numbers for single site 
-	               	// each initqns[i] has size d_model)
 } ModelParams;
 
 double *HeisenH_int(const double J, const double Jz, const int dim1, const int dim2, 

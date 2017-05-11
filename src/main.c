@@ -25,6 +25,8 @@ int main(int argc, char *argv[]) {
 	double Sp[N*N] = {0.0, 0.0, 1.0,  0.0};
 	double Id[N*N] = {1.0, 0.0, 0.0,  1.0};
 
+	int mzs[N] = {1, -1};
+
 	model->H1 = H1;
 	model->Sz = Sz;
 	model->Sp = Sp;
@@ -36,7 +38,7 @@ int main(int argc, char *argv[]) {
 	model->init_ops[1] = Sz;
 	model->init_ops[2] = Sp;
 
-	model->num_qns = 0;
+	model->init_mzs = mzs;
 
 	// inf_dmrg(L, m, model);
 
