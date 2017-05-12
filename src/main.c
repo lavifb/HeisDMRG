@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
 	// fin_dmrg(20, 10, NUM_MS, ms, model);
 	// fin_dmrg(10, 5, 1, ms, model);
 
-	double as[] = {2.4, 3, 0.1, -4.3, 2.8};
+	double as[] = {2.42, 3.0, 0.1, -4.3, 2.8};
 
 	int *inds = dsort2(5, as);
 

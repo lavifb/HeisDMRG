@@ -100,7 +100,7 @@ int dcmp(const void *pa, const void *pb){
     double a = **(double **)pa;
     double b = **(double **)pb;
 
-    return b - a;
+    return b - a > 0 ? 1 : -1;
 }
 
 /* Sort in descending order. Returns indexes in sorted order
