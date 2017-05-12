@@ -1,5 +1,6 @@
 #include "linalg.h"
 #include <mkl.h>
+#include <stdlib.h>
 
 /*
 	Compute Kronecker product of two square matrices. Sets C = alpha * kron(A,B) + C
@@ -60,7 +61,7 @@ double *transformOp(const int opDim, const int newDim, const double *restrict tr
 	num_ind : number of indexes provided. Also dimension of output
 	inds    : list of indexes
 */
-double *restrictOp(const int m, double *op, const int num_ind, const int *inds) {
+double *restrictOp(const int m, const double *op, const int num_ind, const int *inds) {
 
 	double *op_r = (double *)mkl_malloc(num_ind*num_ind * sizeof(double), MEM_DATA_ALIGN);
 
@@ -82,7 +83,7 @@ double *restrictOp(const int m, double *op, const int num_ind, const int *inds) 
 	num_ind : number of indexes provided. Also dimension of output
 	inds    : list of indexes
 */
-double *restrictVec(const int m, double *v, const int num_ind, const int *inds) {
+double *restrictVec(const int m, const double *v, const int num_ind, const int *inds) {
 
 	double *v_r = (double *)mkl_malloc(num_ind * sizeof(double), MEM_DATA_ALIGN);
 
@@ -92,6 +93,41 @@ double *restrictVec(const int m, double *v, const int num_ind, const int *inds) 
 	}
 
 	return v_r;
+}
+
+// Pointer comparison for sort below
+int dcmp(const void *pa, const void *pb){
+    double a = **(double **)pa;
+    double b = **(double **)pb;
+
+    return b - a;
+}
+
+/* Sort in descending order. Returns indexes in sorted order
+*/
+int *dsort2(const int n, double *a) {
+
+	double **ais = (double **)mkl_malloc(n * sizeof(double *), MEM_DATA_ALIGN);
+	double *temp = (double *)mkl_malloc(n * sizeof(double), MEM_DATA_ALIGN);
+	memcpy(temp, a, n * sizeof(double));
+
+	int i;
+	for(i = 0; i < n; i++) {
+		ais[i] = &temp[i];
+	}
+
+	double *ai0 = ais[0];
+	qsort(ais, n, sizeof(ais[0]), dcmp);
+	
+	int *inds = (int *)mkl_malloc(n * sizeof(int), MEM_DATA_ALIGN);
+	for(i = 0; i < n; i++) {
+		inds[i] = (int) (ais[i] - ai0);
+		a[i] = *ais[i];
+	}
+
+	mkl_free(temp);
+	mkl_free(ais);
+	return inds;
 }
 
 /* Print matrix from Intel MKL examples

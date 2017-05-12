@@ -1,6 +1,7 @@
 #include "dmrg.h"
 #include "block.h"
 #include "linalg.h"
+#include "uthash.h"
 #include <mkl.h>
 #include <mkl_scalapack.h>
 #include <assert.h>
@@ -86,7 +87,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		sector_t *sup_sec = (sector_t *)mkl_malloc(sizeof(sector_t), MEM_DATA_ALIGN);
 		sup_sec->id = sys_mz;
 		sup_sec->num_ind = 0;
-		HASH_ADD_INT(sup_sectors, sys_mz, );
+		HASH_ADD_INT(sup_sectors, id, sup_sec);
 
 		int *sys_inds = sys_enl_sec->inds;
 		int env_mz = target_mz - sys_mz;
@@ -147,13 +148,13 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		int env_mz = target_mz - mz;
 		int n_sec = sec->num_ind;
 
-		psi0_sec = restrictVec(num_restr_ind, psi0_r, n_sec, sec->inds);
+		double *psi0_sec = restrictVec(num_restr_ind, psi0_r, n_sec, sec->inds);
 
-		sector_t *sys_enl_mz, env_enl_mz;
-		HASH_FIND_INT(sys_enl_sec, &mz    , sys_enl_mz);
-		HASH_FIND_INT(env_enl_sec, &env_mz, env_enl_mz);
-		int dimSys_sec = sys_enl_sec->num_ind;
-		int dimEnv_sec = env_enl_sec->num_ind;
+		sector_t *sys_enl_mz, *env_enl_mz;
+		HASH_FIND_INT(sys_enl_sectors, &mz    , sys_enl_mz);
+		HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_mz);
+		int dimSys_sec = sys_enl_mz->num_ind;
+		int dimEnv_sec = env_enl_mz->num_ind;
 
 		// psi0 needs to be arranged as a dimSys * dimEnv to trace out env
 		// Put sys_basis on rows and env_basis on the cols by taking transpose
@@ -165,8 +166,8 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		__assume_aligned(rho_sec, MEM_DATA_ALIGN);
 		// Trace out Environment to make rho (Note transpose structure as described above)
 		cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys_sec, dimSys_sec, dimEnv_sec, 
-					1.0, psi0, dimEnv_sec, psi0_sec, dimEnv_sec, 0.0, rho_sec, dimSys_sec);
-		mkl_free(psi0);
+					1.0, psi0_sec, dimEnv_sec, psi0_sec, dimEnv_sec, 0.0, rho_sec, dimSys_sec);
+		mkl_free(psi0_sec);
 
 		// TODO: diagonalize rho_sec and add to list of eignvalues
 		//			Then, sort and pick out first mm eigenvectors to make trans.
@@ -176,7 +177,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 
 		int mm_sec = (dimSys_sec < mm) ? dimSys_sec : mm;
 		double *trans_sec = (double *)mkl_malloc(dimSys_sec*mm_sec * sizeof(double), MEM_DATA_ALIGN);
-		__assume_aligned(trans, MEM_DATA_ALIGN);
+		__assume_aligned(trans_sec, MEM_DATA_ALIGN);
 		int *ifail_sec = (int *)mkl_malloc(dimSys_sec * sizeof(int), MEM_DATA_ALIGN);
 		info = LAPACKE_dsyevx(LAPACK_COL_MAJOR, 'V', 'I', 'U', dimSys_sec, rho_sec, dimSys_sec, 0.0, 0.0,
 				dimSys_sec-mm_sec+1, dimSys_sec, 0.0, &num_es_found, lambs+lamb_i, trans_sec, dimSys_sec, ifail_sec);
@@ -201,25 +202,21 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		mkl_free(trans_sec);
 	}
 
-	int i;
-	// key for rearranging trans_full into sorted trans
-	int *sorted_inds = (int *)mkl_malloc(dimSys * sizeof(int), MEM_DATA_ALIGN);
-	for (i = 0; i < dimSys; i++) {
-		sorted_inds[i] = i;
-	}
-
 	double *trans = (double *)mkl_calloc(dimSys*mm, sizeof(double), MEM_DATA_ALIGN);
 	__assume_aligned(trans, MEM_DATA_ALIGN);
 
-	dlasrt2('D', dimSys, lambs, sorted_inds, info);
+	char SORT_DESCENDING = 'D';
+
+	int *sorted_inds = dsort2(dimSys, lambs);
 	if (info < 0) {
 		printf("Failed to sort eigenvalues\n");
 		exit(1);
 	}
 
 	// copy to trans in right order
+	int i;
 	for (i = 0; i < mm; i++) {
-		memcpy(trans+(i*dimSys), trans_full+(sorted_inds[i]*dimSys), dimSys);
+		memcpy(&trans[i*dimSys], &trans_full[sorted_inds[i]*dimSys], dimSys * sizeof(double));
 	}
 
 	mkl_free(trans_full);

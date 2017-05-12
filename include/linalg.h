@@ -9,7 +9,9 @@ double *transformOp(const int opDim, const int newDim, const double *restrict tr
 
 double *restrictOp(const int m, const double *op, const int num_ind, const int *inds);
 
-double *restrictVec(const int m, double *v, const int num_ind, const int *inds);
+double *restrictVec(const int m, const double *v, const int num_ind, const int *inds);
+
+int *dsort2(const int n, double *a);
 
 void print_matrix( char* desc, int m, int n, double* a, int lda );
 
