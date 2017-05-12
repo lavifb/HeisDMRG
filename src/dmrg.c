@@ -92,6 +92,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		int *sys_inds = sys_enl_sec->inds;
 		int env_mz = target_mz - sys_mz;
 
+		// pick out env_enl_sector with mz = env_mz
 		sector_t *env_enl_sec;
 		HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_sec);
 		if (env_enl_sec != NULL) {
@@ -101,7 +102,8 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 					// save restriced index and save into sup_sectors
 					sup_sec->inds[sup_sec->num_ind] = num_restr_ind;
 					sup_sec->num_ind++;
-					restr_basis_inds[num_restr_ind] = i*dimEnv + j;
+					restr_basis_inds[num_restr_ind] = sys_enl_sec->inds[i]*dimEnv + env_enl_sec->inds[j];
+					num_restr_ind++;
 				}
 			}
 		}
@@ -121,7 +123,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	double *energies = (double *)mkl_malloc(num_restr_ind * sizeof(double), MEM_DATA_ALIGN);;
 	int *ifail = (int *)mkl_malloc(num_restr_ind * sizeof(int), MEM_DATA_ALIGN);;
 	__assume_aligned(ifail, MEM_DATA_ALIGN);
-	printf("Look for psi0 in Hs_r\n");
+
 	info = LAPACKE_dsyevx(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
 			0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, ifail);
 	if (info > 0) {
@@ -130,7 +132,6 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	}
 	mkl_free(ifail);
 	mkl_free(Hs_r);
-	printf("Found psi0 in Hs_r\n");
 
 	double energy = energies[0]; // record ground state energy
 	printf("E/L = %6.10f\n", energy / (sys_enl->length + env_enl->length));
@@ -193,7 +194,9 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		for (i = 0; i < mm_sec; i++) {
 			for (j = 0; j < dimSys_sec; j++) {
 				// copy value using proper index basis
-				trans_full[lamb_i*dimSys + sys_enl_sec->inds[j]] = trans_sec[i*dimSys_sec + j];
+				int full_j = sys_enl_mz->inds[j];
+				double sec_val = trans_sec[i*dimSys_sec + j];
+				trans_full[lamb_i*dimSys + sys_enl_mz->inds[j]] = trans_sec[i*dimSys_sec + j];
 			}
 			lamb_i++;
 		}
