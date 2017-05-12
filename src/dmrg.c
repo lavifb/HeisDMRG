@@ -121,6 +121,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	double *energies = (double *)mkl_malloc(num_restr_ind * sizeof(double), MEM_DATA_ALIGN);;
 	int *ifail = (int *)mkl_malloc(num_restr_ind * sizeof(int), MEM_DATA_ALIGN);;
 	__assume_aligned(ifail, MEM_DATA_ALIGN);
+	printf("Look for psi0 in Hs_r\n");
 	info = LAPACKE_dsyevx(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
 			0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, ifail);
 	if (info > 0) {
@@ -129,6 +130,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	}
 	mkl_free(ifail);
 	mkl_free(Hs_r);
+	printf("Found psi0 in Hs_r\n");
 
 	double energy = energies[0]; // record ground state energy
 	printf("E/L = %6.10f\n", energy / (sys_enl->length + env_enl->length));
@@ -172,15 +174,13 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		// TODO: diagonalize rho_sec and add to list of eignvalues
 		//			Then, sort and pick out first mm eigenvectors to make trans.
 
-		// double *lambs_sec = (double *)mkl_malloc(dimSys_sec * sizeof(double), MEM_DATA_ALIGN);
-		// __assume_aligned(lambs_sec, MEM_DATA_ALIGN);
 
 		int mm_sec = (dimSys_sec < mm) ? dimSys_sec : mm;
 		double *trans_sec = (double *)mkl_malloc(dimSys_sec*mm_sec * sizeof(double), MEM_DATA_ALIGN);
 		__assume_aligned(trans_sec, MEM_DATA_ALIGN);
 		int *ifail_sec = (int *)mkl_malloc(dimSys_sec * sizeof(int), MEM_DATA_ALIGN);
 		info = LAPACKE_dsyevx(LAPACK_COL_MAJOR, 'V', 'I', 'U', dimSys_sec, rho_sec, dimSys_sec, 0.0, 0.0,
-				dimSys_sec-mm_sec+1, dimSys_sec, 0.0, &num_es_found, lambs+lamb_i, trans_sec, dimSys_sec, ifail_sec);
+				dimSys_sec-mm_sec+1, dimSys_sec, 0.0, &num_es_found, &lambs[lamb_i], trans_sec, dimSys_sec, ifail_sec);
 		if (info > 0) {
 			printf("Failed to find eigenvalues of density matrix\n");
 			exit(1);
@@ -208,10 +208,6 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	char SORT_DESCENDING = 'D';
 
 	int *sorted_inds = dsort2(dimSys, lambs);
-	if (info < 0) {
-		printf("Failed to sort eigenvalues\n");
-		exit(1);
-	}
 
 	// copy to trans in right order
 	int i;
