@@ -111,6 +111,12 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 
 	double *Hs_r = restrictOp(dimSup, Hs, num_restr_ind, restr_basis_inds);
 	mkl_free(Hs);
+	printf("restr_basis_inds = ");
+	int l;
+	for (l = 0; l < num_restr_ind; l++) {
+		printf("%d ", restr_basis_inds[l]);
+	} printf("\n");
+
 	mkl_free(restr_basis_inds);
 
 	__assume_aligned(Hs_r, MEM_DATA_ALIGN);
@@ -145,6 +151,9 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	int lamb_i = 0;
 	double *lambs = (double *)mkl_malloc(dimSys * sizeof(double), MEM_DATA_ALIGN);
 
+	// state mzs to eventually truncate and put into sys_enl->mzs
+	int *sys_mzs_full = (int *)mkl_malloc(dimSys * sizeof(int), MEM_DATA_ALIGN);
+
 	sector_t *sec;
 	for(sec=sup_sectors; sec != NULL; sec=sec->hh.next) {
 		int mz = sec->id;
@@ -159,12 +168,12 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		int dimSys_sec = sys_enl_mz->num_ind;
 		int dimEnv_sec = env_enl_mz->num_ind;
 
-		// psi0 needs to be arranged as a dimSys * dimEnv to trace out env
+		// psi0_sec needs to be arranged as a dimSys * dimEnv to trace out env
 		// Put sys_basis on rows and env_basis on the cols by taking transpose
 		// To not take transpose twice, take conj and take conjTrans on left side of dgemm bellow
 		mkl_dimatcopy('C', 'R', dimEnv_sec, dimSys_sec, 1.0, psi0_sec, dimEnv_sec, dimEnv_sec);
 
-		// Density matrix rho
+		// Density matrix rho_sec
 		double *rho_sec = (double *)mkl_malloc(dimSys_sec*dimSys_sec * sizeof(double), MEM_DATA_ALIGN);
 		__assume_aligned(rho_sec, MEM_DATA_ALIGN);
 		// Trace out Environment to make rho (Note transpose structure as described above)
@@ -172,10 +181,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 					1.0, psi0_sec, dimEnv_sec, psi0_sec, dimEnv_sec, 0.0, rho_sec, dimSys_sec);
 		mkl_free(psi0_sec);
 
-		// TODO: diagonalize rho_sec and add to list of eignvalues
-		//			Then, sort and pick out first mm eigenvectors to make trans.
-
-
+		// diagonalize rho_sec and add to list of eignvalues
 		int mm_sec = (dimSys_sec < mm) ? dimSys_sec : mm;
 		double *trans_sec = (double *)mkl_malloc(dimSys_sec*mm_sec * sizeof(double), MEM_DATA_ALIGN);
 		__assume_aligned(trans_sec, MEM_DATA_ALIGN);
@@ -198,6 +204,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 				double sec_val = trans_sec[i*dimSys_sec + j];
 				trans_full[lamb_i*dimSys + sys_enl_mz->inds[j]] = trans_sec[i*dimSys_sec + j];
 			}
+			sys_mzs_full[lamb_i] = mz;
 			lamb_i++;
 		}
 		
@@ -212,12 +219,20 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 
 	int *sorted_inds = dsort2(dimSys, lambs);
 
+	// printf("rho for sec = %d\n", mz);
+	// print_matrix("rho", dimSys_sec, dimSys_sec, rho_sec, dimSys_sec);
+	// print_matrix("lambs", dimSys, 1, lambs, dimSys);
+
 	// copy to trans in right order
 	int i;
 	for (i = 0; i < mm; i++) {
 		memcpy(&trans[i*dimSys], &trans_full[sorted_inds[i]*dimSys], dimSys * sizeof(double));
+		sys_enl->mzs[i] = sys_mzs_full[sorted_inds[i]];
 	}
 
+	// print_matrix("trans", dimSys, mm, trans, dimSys);
+
+	mkl_free(sys_mzs_full);
 	mkl_free(trans_full);
 	
 	double truncation_err = 1;

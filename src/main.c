@@ -8,7 +8,7 @@
 int main(int argc, char *argv[]) {
 	printf("Heisenberg DMRG\n");
 
-	int L = 100;
+	int L = 5;
 	int m = 5;
 
 	ModelParams *model = (ModelParams *)mkl_malloc(sizeof(ModelParams), MEM_DATA_ALIGN);
