@@ -217,6 +217,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 
 	mkl_free(psi0_r);
 	freeSector(sup_sectors);
+	assert(lamb_i == dimSys);
 
 	double *trans = (double *)mkl_calloc(dimSys*mm, sizeof(double), MEM_DATA_ALIGN);
 	__assume_aligned(trans, MEM_DATA_ALIGN);
