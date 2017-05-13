@@ -83,7 +83,11 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 
 		int sys_mz = sys_enl_sec->id;
 
-		sector_t *sup_sec = (sector_t *)mkl_malloc(sizeof(sector_t), MEM_DATA_ALIGN);
+		sector_t *sup_sec;
+		HASH_FIND_INT(sup_sectors, &sys_mz, sup_sec);
+		assert(sup_sec == NULL);
+
+		sup_sec = (sector_t *)mkl_malloc(sizeof(sector_t), MEM_DATA_ALIGN);
 		sup_sec->id = sys_mz;
 		sup_sec->num_ind = 0;
 		HASH_ADD_INT(sup_sectors, id, sup_sec);
@@ -159,6 +163,10 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		sector_t *sys_enl_mz, *env_enl_mz;
 		HASH_FIND_INT(sys_enl_sectors, &mz    , sys_enl_mz);
 		HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_mz);
+		assert(sys_enl_mz != NULL);
+		if (env_enl_mz == NULL) {
+			continue;
+		}
 		int dimSys_sec = sys_enl_mz->num_ind;
 		int dimEnv_sec = env_enl_mz->num_ind;
 		assert(dimSys_sec * dimEnv_sec == n_sec);
