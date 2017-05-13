@@ -217,17 +217,20 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 
 	mkl_free(psi0_r);
 	freeSector(sup_sectors);
-	assert(lamb_i == dimSys);
+
+	// Some dimensions may already be dropped
+	int newDimSys = lamb_i;
+	assert(newDimSys <= dimSys);
 
 	double *trans = (double *)mkl_calloc(dimSys*mm, sizeof(double), MEM_DATA_ALIGN);
 	__assume_aligned(trans, MEM_DATA_ALIGN);
 
-	int *sorted_inds = dsort2(dimSys, lambs);
+	assert(mm <= newDimSys);
+	int *sorted_inds = dsort2(newDimSys, lambs);
 
 	// copy to trans in right order
 	int i;
 	for (i = 0; i < mm; i++) {
-		assert(sorted_inds[i]*dimSys < dimSys*dimSys);
 		memcpy(&trans[i*dimSys], &trans_full[sorted_inds[i]*dimSys], dimSys * sizeof(double));
 		sys_enl->mzs[i] = sys_mzs_full[sorted_inds[i]];
 	}
