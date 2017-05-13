@@ -1,5 +1,6 @@
 #include "dmrg.h"
 #include "block.h"
+#include "sector.h"
 #include "linalg.h"
 #include "uthash.h"
 #include <mkl.h>
@@ -84,15 +85,9 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		int sys_mz = sys_enl_sec->id;
 
 		sector_t *sup_sec;
-		HASH_FIND_INT(sup_sectors, &sys_mz, sup_sec);
-		assert(sup_sec == NULL);
-
-		sup_sec = (sector_t *)mkl_malloc(sizeof(sector_t), MEM_DATA_ALIGN);
-		sup_sec->id = sys_mz;
-		sup_sec->num_ind = 0;
+		sup_sec = createSector(sys_mz);
 		HASH_ADD_INT(sup_sectors, id, sup_sec);
 
-		int *sys_inds = sys_enl_sec->inds;
 		int env_mz = target_mz - sys_mz;
 
 		// pick out env_enl_sector with mz = env_mz
@@ -103,8 +98,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 			for (i = 0; i < sys_enl_sec->num_ind; i++) {
 				for (j = 0; j < env_enl_sec->num_ind; j++) {
 					// save restriced index and save into sup_sectors
-					sup_sec->inds[sup_sec->num_ind] = num_restr_ind;
-					sup_sec->num_ind++;
+					sectorPush(sup_sec, num_restr_ind);
 					assert(num_restr_ind < dimSup);
 					restr_basis_inds[num_restr_ind] = sys_enl_sec->inds[i]*dimEnv + env_enl_sec->inds[j];
 					num_restr_ind++;
