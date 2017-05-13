@@ -290,8 +290,8 @@ void inf_dmrg(const int L, const int m, ModelParams *model) {
 void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, ModelParams *model) {
 	assert(L%2 == 0);
 
-	DMRGBlock **saved_blocksL = (DMRGBlock **)mkl_calloc((L-4), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
-	DMRGBlock **saved_blocksR = (DMRGBlock **)mkl_calloc((L-4), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+	DMRGBlock **saved_blocksL = (DMRGBlock **)mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+	DMRGBlock **saved_blocksR = (DMRGBlock **)mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 
 	DMRGBlock *sys = createDMRGBlock(model);
 
