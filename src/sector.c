@@ -21,9 +21,9 @@ sector_t *createSector(const int id) {
 */
 void sectorPush(sector_t *sec, const int i) {
 
-	if(sec->num_ind == sec->inds_size) {
+	if(sec->num_ind >= sec->inds_size) {
 		sec->inds_size *= 2;
-		mkl_realloc(sec->inds, sec->inds_size * sizeof(int));
+		sec->inds = mkl_realloc(sec->inds, sec->inds_size * sizeof(int));
 	}
 
 	sec->inds[sec->num_ind] = i;
