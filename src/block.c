@@ -94,7 +94,7 @@ DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 
 	enl_block->mzs = (int *)mkl_malloc(enl_block->d_block * sizeof(int), MEM_DATA_ALIGN);
 	int i, j;
-	for (i = 0; i < enl_block->d_block; i++) {
+	for (i = 0; i < block->d_block; i++) {
 		for (j = 0; j < d_model; j++) {
 			enl_block->mzs[i*d_model + j] = block->mzs[i] + block->model->init_mzs[j];
 		}

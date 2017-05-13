@@ -55,5 +55,5 @@ int main(int argc, char *argv[]) {
 	// fin_dmrg(20, 10, NUM_MS, ms, model);
 	// fin_dmrg(10, 5, 1, ms, model);
 
-	free(model);
+	mkl_free(model);
 }
