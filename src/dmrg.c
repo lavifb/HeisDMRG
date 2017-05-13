@@ -77,9 +77,8 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	int num_restr_ind = 0;
 	int *restr_basis_inds = (int *)mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
 
-	sector_t *sys_enl_sec;
-
 	// loop over sys_enl_sectors
+	sector_t *sys_enl_sec;
 	for(sys_enl_sec=sys_enl_sectors; sys_enl_sec != NULL; sys_enl_sec=sys_enl_sec->hh.next) {
 
 		int sys_mz = sys_enl_sec->id;
@@ -102,6 +101,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 					// save restriced index and save into sup_sectors
 					sup_sec->inds[sup_sec->num_ind] = num_restr_ind;
 					sup_sec->num_ind++;
+					assert(num_restr_ind < dimSup);
 					restr_basis_inds[num_restr_ind] = sys_enl_sec->inds[i]*dimEnv + env_enl_sec->inds[j];
 					num_restr_ind++;
 				}
@@ -111,12 +111,6 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 
 	double *Hs_r = restrictOp(dimSup, Hs, num_restr_ind, restr_basis_inds);
 	mkl_free(Hs);
-	printf("restr_basis_inds = ");
-	int l;
-	for (l = 0; l < num_restr_ind; l++) {
-		printf("%d ", restr_basis_inds[l]);
-	} printf("\n");
-
 	mkl_free(restr_basis_inds);
 
 	__assume_aligned(Hs_r, MEM_DATA_ALIGN);
@@ -167,6 +161,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_mz);
 		int dimSys_sec = sys_enl_mz->num_ind;
 		int dimEnv_sec = env_enl_mz->num_ind;
+		assert(dimSys_sec * dimEnv_sec == n_sec);
 
 		// psi0_sec needs to be arranged as a dimSys * dimEnv to trace out env
 		// Put sys_basis on rows and env_basis on the cols by taking transpose
@@ -181,11 +176,12 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 					1.0, psi0_sec, dimEnv_sec, psi0_sec, dimEnv_sec, 0.0, rho_sec, dimSys_sec);
 		mkl_free(psi0_sec);
 
-		// diagonalize rho_sec and add to list of eignvalues
+		// diagonalize rho_sec and add to list of eigenvalues
 		int mm_sec = (dimSys_sec < mm) ? dimSys_sec : mm;
 		double *trans_sec = (double *)mkl_malloc(dimSys_sec*mm_sec * sizeof(double), MEM_DATA_ALIGN);
 		__assume_aligned(trans_sec, MEM_DATA_ALIGN);
 		int *ifail_sec = (int *)mkl_malloc(dimSys_sec * sizeof(int), MEM_DATA_ALIGN);
+		assert(lamb_i + mm_sec - 1 < dimSys);
 		info = LAPACKE_dsyevx(LAPACK_COL_MAJOR, 'V', 'I', 'U', dimSys_sec, rho_sec, dimSys_sec, 0.0, 0.0,
 				dimSys_sec-mm_sec+1, dimSys_sec, 0.0, &num_es_found, &lambs[lamb_i], trans_sec, dimSys_sec, ifail_sec);
 		if (info > 0) {
@@ -200,10 +196,9 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		for (i = 0; i < mm_sec; i++) {
 			for (j = 0; j < dimSys_sec; j++) {
 				// copy value using proper index basis
-				int full_j = sys_enl_mz->inds[j];
-				double sec_val = trans_sec[i*dimSys_sec + j];
 				trans_full[lamb_i*dimSys + sys_enl_mz->inds[j]] = trans_sec[i*dimSys_sec + j];
 			}
+			// keep track of mzs for the enlarged block
 			sys_mzs_full[lamb_i] = mz;
 			lamb_i++;
 		}
@@ -212,25 +207,21 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		mkl_free(trans_sec);
 	}
 
+	mkl_free(psi0_r);
+	freeSector(sup_sectors);
+
 	double *trans = (double *)mkl_calloc(dimSys*mm, sizeof(double), MEM_DATA_ALIGN);
 	__assume_aligned(trans, MEM_DATA_ALIGN);
 
-	char SORT_DESCENDING = 'D';
-
 	int *sorted_inds = dsort2(dimSys, lambs);
-
-	// printf("rho for sec = %d\n", mz);
-	// print_matrix("rho", dimSys_sec, dimSys_sec, rho_sec, dimSys_sec);
-	// print_matrix("lambs", dimSys, 1, lambs, dimSys);
 
 	// copy to trans in right order
 	int i;
 	for (i = 0; i < mm; i++) {
+		assert(sorted_inds[i]*dimSys < dimSys*dimSys);
 		memcpy(&trans[i*dimSys], &trans_full[sorted_inds[i]*dimSys], dimSys * sizeof(double));
 		sys_enl->mzs[i] = sys_mzs_full[sorted_inds[i]];
 	}
-
-	// print_matrix("trans", dimSys, mm, trans, dimSys);
 
 	mkl_free(sys_mzs_full);
 	mkl_free(trans_full);
@@ -248,9 +239,11 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	sys_enl->d_block = mm; // set block basis size to transformed value
 	mkl_free(trans);
 
+	freeSector(sys_enl_sectors);
 	// Free enlarged environment block
 	if (sys_enl != env_enl) {
 		freeDMRGBlock(env_enl);
+		freeSector(env_enl_sectors);
 	}
 
 	return sys_enl;

@@ -23,13 +23,6 @@ typedef struct {
 	UT_hash_handle hh;      	// makes this structure hashable
 } sector_t;
 
-typedef struct {
-	int id;           	// qn storing indexes key for uthash.
-	int d_op;         	// size of matrix
-	double *op;       	// operator matrix of size d_op*d_op
-	UT_hash_handle hh;	// makes this structure hashable
-} op_sector_t;
-
 DMRGBlock *createDMRGBlock(ModelParams *model);
 
 DMRGBlock *copyDMRGBlock(DMRGBlock *orig);
@@ -45,5 +38,7 @@ double **enlargeOps(const DMRGBlock *block);
 void transformOps(const int numOps, const int opDim, const int newDim, const double *restrict trans, double **ops);
 
 sector_t *sectorize(const DMRGBlock *block);
+
+void freeSector(sector_t *sectors);
 
 #endif

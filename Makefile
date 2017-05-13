@@ -3,9 +3,9 @@
 CC = icc
 
 # compiler options
-CCOPTS  = -Wall -O2 -xHost -restrict -DMEM_DATA_ALIGN=64
-CCOPTSR = ${CCOPTS} -DNDEBUG
-CCOPTSD = ${CCOPTS} -g -traceback -DMKL_DISABLE_FAST_MM=1
+CCOPTS  = -Wall -xHost -restrict -DMEM_DATA_ALIGN=64
+CCOPTSR = ${CCOPTS} -DNDEBUG -O2
+CCOPTSD = ${CCOPTS} -g -O0 -DMKL_DISABLE_FAST_MM=1
 
 # MKL Library
 MKL = -mkl=sequential

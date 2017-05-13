@@ -194,3 +194,15 @@ sector_t *sectorize(const DMRGBlock *block) {
 
 	return secs;
 }
+
+/*	free sector hashtable
+*/
+void freeSector(sector_t *sectors) {
+
+	sector_t *sec, *tmp;
+
+	HASH_ITER(hh, sectors, sec, tmp) {
+		HASH_DEL(sectors, sec);  // delete from hash
+		mkl_free(sec);           // free sector
+	}
+}
