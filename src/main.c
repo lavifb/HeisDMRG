@@ -8,8 +8,8 @@
 int main(int argc, char *argv[]) {
 	printf("Heisenberg DMRG\n");
 
-	int L = 100;
-	int m = 5;
+	int L = 1000;
+	int m = 30;
 
 	ModelParams *model = (ModelParams *)mkl_malloc(sizeof(ModelParams), MEM_DATA_ALIGN);
 
@@ -44,15 +44,15 @@ int main(int argc, char *argv[]) {
 
 	model->init_mzs = mzs;
 
-	// inf_dmrg(L, m, model);
+	inf_dmrg(L, m, model);
 
 	#define NUM_MS 4
 
 	// int ms[NUM_MS] = {20};
-	int ms[NUM_MS] = {10, 20, 20, 20};
+	// int ms[NUM_MS] = {10, 20, 30, 30};
 	// int ms[1] = {5};
 
-	fin_dmrg(20, 10, NUM_MS, ms, model);
+	// fin_dmrg(20, 10, NUM_MS, ms, model);
 	// fin_dmrg(10, 5, 1, ms, model);
 
 	mkl_free(model);

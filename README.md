@@ -9,12 +9,13 @@ Thanks to http://troydhanson.github.io/uthash/ for easy to use hashtable.
 Todo
 ----
 
+- Get Correlation matrix
+
 - Time dependent code
 	- Trotter evolution
 	- Runge-Kutta evolution
 
 - Performance improvements
-	- Symmetry/conserved quantum nums to reduce dim of H
 	- Use sparse matrix for H
 	- Eigenstate guessing
 
