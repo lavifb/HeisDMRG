@@ -367,3 +367,76 @@ void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, Model
 	freeDMRGBlock(env);
 	freeDMRGBlock(sys);
 }
+
+/* Finite System DMRG Algorithm with reflection symmetry in ground state.
+
+   Reflection symmentry means assuming both left and right sides of the system
+   are the same so sweeps are only necessary in one direction, halving compute time.
+   
+   L         : Length of universe
+   m_inf     : truncation dimension size for infinite algorithm for building system
+   num_sweeps: number of finite system sweeps
+   ms        : list of truncation sizes for the finite sweeps (size num_sweeps)
+*/
+void fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, ModelParams *model) {
+	assert(L%2 == 0);
+
+	DMRGBlock **saved_blocks = (DMRGBlock **)mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+
+	DMRGBlock *sys = createDMRGBlock(model);
+
+	// Note: saved_blocks[i] has length i+1
+	saved_blocks[0] = copyDMRGBlock(sys);
+
+	// run infinite algorithm to build up system
+	while (2*sys->length < L) {
+		printGraphic(sys, sys);
+		DMRGBlock *newSys = single_step(sys, sys, m_inf, 0);
+		freeDMRGBlock(sys);
+		sys = newSys;
+
+		saved_blocks[sys->length-1] = copyDMRGBlock(sys);
+	}
+
+	// Finite Sweeps
+	DMRGBlock *env = copyDMRGBlock(sys);
+	int i;
+	for (i = 0; i < num_sweeps; i++) {
+		int m = ms[i];
+
+		while (1) {
+			freeDMRGBlock(env);
+
+			env = copyDMRGBlock(saved_blocks[L - sys->length - 3]);
+
+			// Switch sys and env if at the end of the chain
+			if (env->length == 1) {
+				DMRGBlock *tempBlock = sys;
+				sys = env;
+				env = tempBlock;
+			}
+
+			printGraphic(sys, env);
+			DMRGBlock *newSys = single_step(sys, env, m, 0);
+			freeDMRGBlock(sys);
+			sys = newSys;
+
+			// Save new block
+			if (saved_blocks[sys->length-1]) { freeDMRGBlock(saved_blocks[sys->length-1]); }
+			saved_blocks[sys->length-1] = copyDMRGBlock(sys);
+
+			// Check if sweep is done
+			if (2 * sys->length == L) {
+				break;
+			}
+		}
+	}
+
+	for (i = 0; i < L-4; i++) {
+		if (saved_blocks[i]) { freeDMRGBlock(saved_blocks[i]); }
+	}
+	mkl_free(saved_blocks);
+
+	freeDMRGBlock(env);
+	freeDMRGBlock(sys);
+}
