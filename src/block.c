@@ -5,11 +5,13 @@
 #include <assert.h>
 
 
-DMRGBlock *createDMRGBlock(ModelParams *model) {
+DMRGBlock *createDMRGBlock(ModelParams *model, int fullLength) {
 	DMRGBlock *block = (DMRGBlock *)mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
 
 	block->length = 1;
+	block->fullLength = fullLength;
 	block->side = 'L';
+	block->meas = 'N';
 
 	int dim = model->d_model;
 	block->d_block = dim;
@@ -36,6 +38,7 @@ DMRGBlock *copyDMRGBlock(DMRGBlock *orig) {
 	newBlock->length  = orig->length;
 	newBlock->fullLength = orig->fullLength;
 	newBlock->side  = orig->side;
+	newBlock->meas  = orig->meas;
 	int dim = orig->d_block;
 	newBlock->d_block = dim;
 	newBlock->num_ops = orig->num_ops;
@@ -91,8 +94,12 @@ DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 	enl_block->num_ops = block->num_ops;
 	enl_block->model   = block->model;
 	enl_block->side    = block->side;
+	enl_block->meas    = block->meas;
 
 	enl_block->ops = enlargeOps(block);
+	if (enl_block->meas == 'M') { // measurement block
+		enl_block->num_ops++;
+	}
 
 	enl_block->mzs = (int *)mkl_malloc(enl_block->d_block * sizeof(int), MEM_DATA_ALIGN);
 	int i, j;
@@ -118,7 +125,14 @@ DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 */
 
 double **enlargeOps(const DMRGBlock *block) {
-	double **enl_ops = (double **)mkl_malloc(block->num_ops * sizeof(double *), MEM_DATA_ALIGN);
+
+	int numOps = block->num_ops;
+
+	if (block->meas == 'M') { 
+		numOps++; // add new s_i block
+	}
+
+	double **enl_ops = (double **)mkl_malloc(numOps * sizeof(double *), MEM_DATA_ALIGN);
 
 	ModelParams *model = block->model;
 	int d_model	= model->d_model;
@@ -141,11 +155,19 @@ double **enlargeOps(const DMRGBlock *block) {
 	enl_ops[2] = (double *)mkl_calloc(d_enl*d_enl, sizeof(double), MEM_DATA_ALIGN);
 	kron(1.0, d_block, d_model, I_m, model->Sp, enl_ops[2]);
 
-	if (block->num_ops > 3) { // this is a measurement block
-		// TODO: Measurement block enlarge operators
+	int i;
+	for (i = 3; i < block->num_ops; i++) { // loop over measurement ops
 		// S_i ops
+		enl_ops[i] = (double *)mkl_calloc(d_enl*d_enl, sizeof(double), MEM_DATA_ALIGN);
+		kron(1.0, d_block, d_model, block->ops[i], model->Id, enl_ops[i]);
 
-		// S_i S_j correlator
+		// TODO: S_i S_j corrs for arbitary i and j
+	}
+
+	if (block->meas == 'M') {
+		enl_ops[block->num_ops] = (double *)mkl_malloc(d_enl*d_enl * sizeof(double), MEM_DATA_ALIGN);
+		// New S_i is same as conn_Sz
+		memcpy(enl_ops[block->num_ops], enl_ops[1], d_enl*d_enl * sizeof(double));
 	}
 
 	mkl_free(I_m);

@@ -262,7 +262,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 */
 void inf_dmrg(const int L, const int m, ModelParams *model) {
 
-	DMRGBlock *sys = createDMRGBlock(model);
+	DMRGBlock *sys = createDMRGBlock(model, L);
 
 	while (2*sys->length < L) {
 		printf("\nL = %d\n", sys->length * 2 + 2);
@@ -287,7 +287,7 @@ void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, Model
 	DMRGBlock **saved_blocksL = (DMRGBlock **)mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 	DMRGBlock **saved_blocksR = (DMRGBlock **)mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 
-	DMRGBlock *sys = createDMRGBlock(model);
+	DMRGBlock *sys = createDMRGBlock(model, L);
 
 	// Note: saved_blocksL[i] has length i+1
 	saved_blocksL[0] = copyDMRGBlock(sys);
@@ -383,7 +383,7 @@ void fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, Mode
 
 	DMRGBlock **saved_blocks = (DMRGBlock **)mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 
-	DMRGBlock *sys = createDMRGBlock(model);
+	DMRGBlock *sys = createDMRGBlock(model, L);
 
 	// Note: saved_blocks[i] has length i+1
 	saved_blocks[0] = copyDMRGBlock(sys);

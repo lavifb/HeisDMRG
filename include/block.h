@@ -7,15 +7,16 @@
 typedef struct {
 	int length;
 	int fullLength;
-	char side;
+	char side;  	// 'L' if left block and 'R' if right block
+	char meas;  	// 'N' is normal block and 'M' if measurements are tracked
 	int d_block;	// dimension of basis
-	double **ops;
 	int num_ops;
+	double **ops;
 	int *mzs;		// 2*mz quantum number for each state
 	ModelParams *model;
 } DMRGBlock;
 
-DMRGBlock *createDMRGBlock(ModelParams *model);
+DMRGBlock *createDMRGBlock(ModelParams *model, int fullLength);
 
 DMRGBlock *copyDMRGBlock(DMRGBlock *orig);
 
