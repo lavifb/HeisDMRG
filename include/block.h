@@ -6,11 +6,12 @@
 
 typedef struct {
 	int length;
+	int fullLength;
 	char side;
-	int d_block; // dimension of basis
+	int d_block;	// dimension of basis
 	double **ops;
 	int num_ops;
-	int *mzs;	// 2*mz quantum number for each state
+	int *mzs;		// 2*mz quantum number for each state
 	ModelParams *model;
 } DMRGBlock;
 

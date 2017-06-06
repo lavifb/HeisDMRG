@@ -34,6 +34,7 @@ DMRGBlock *copyDMRGBlock(DMRGBlock *orig) {
 	DMRGBlock *newBlock = (DMRGBlock *)mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
 
 	newBlock->length  = orig->length;
+	newBlock->fullLength = orig->fullLength;
 	newBlock->side  = orig->side;
 	int dim = orig->d_block;
 	newBlock->d_block = dim;
@@ -84,6 +85,7 @@ DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 
 	DMRGBlock *enl_block = (DMRGBlock *)mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
 	enl_block->length  = block->length + 1;
+	enl_block->fullLength = block->fullLength;
 	int d_model = block->model->d_model;
 	enl_block->d_block = block->d_block * d_model;
 	enl_block->num_ops = block->num_ops;
@@ -138,6 +140,13 @@ double **enlargeOps(const DMRGBlock *block) {
 	// conn_Sp
 	enl_ops[2] = (double *)mkl_calloc(d_enl*d_enl, sizeof(double), MEM_DATA_ALIGN);
 	kron(1.0, d_block, d_model, I_m, model->Sp, enl_ops[2]);
+
+	if (block->num_ops > 3) { // this is a measurement block
+		// TODO: Measurement block enlarge operators
+		// S_i ops
+
+		// S_i S_j correlator
+	}
 
 	mkl_free(I_m);
 	return enl_ops;
