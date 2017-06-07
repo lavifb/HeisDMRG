@@ -343,11 +343,11 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	mkl_free(ifail);
 	mkl_free(Hs_r);
 
-	meas_data_t *meas = (meas_data_t *)mkl_malloc(sizeof(meas_data_t), MEM_DATA_ALIGN);
+	meas_data_t *meas = createMeas(sys_enl->num_ops - 3);
 	meas->energy = energies[0] / (sys_enl->length + env_enl->length);
 	mkl_free(energies);
 
-	meas->num_sites = sys_enl->num_ops - 3;
+	// meas->num_sites = sys_enl->num_ops - 3;
 
 	double **measSOps  = (double **)mkl_malloc(meas->num_sites * sizeof(double *), MEM_DATA_ALIGN);
 	double **measSSOps = (double **)mkl_malloc(meas->num_sites * sizeof(double *), MEM_DATA_ALIGN);

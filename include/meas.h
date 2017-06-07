@@ -9,8 +9,10 @@ typedef struct {
 	double* Szs;  			// single site spins <S_i>
 	double* SSs;  			// spin-spin corr <S_i S_j> where j is a middle spin
 
-	double* truncation_error;
+	// double* truncation_error;
 } meas_data_t;
+
+meas_data_t *createMeas(int num_sites);
 
 void freeMeas(meas_data_t *meas);
 
