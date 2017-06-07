@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
 
 	#define NUM_MS 5
 
-	// int ms[NUM_MS] = {20};
+	// int ms[NUM_MS] = {50};
 	int ms[NUM_MS] = {10, 30, 30, 40, 50};
 	// int ms[1] = {5};
 

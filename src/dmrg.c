@@ -347,57 +347,42 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	meas->energy = energies[0] / (sys_enl->length + env_enl->length);
 	mkl_free(energies);
 
-	// meas->num_sites = sys_enl->num_ops - 3;
-
-	double **measSOps  = (double **)mkl_malloc(meas->num_sites * sizeof(double *), MEM_DATA_ALIGN);
-	double **measSSOps = (double **)mkl_malloc(meas->num_sites * sizeof(double *), MEM_DATA_ALIGN);
+	printf("\n\n%d sites\n\n", meas->num_sites);
 
 	int i;
-	for (i = 3; i<sys_enl->num_ops; i++) {
+	printf("<S_i>\n");
+	for (i = 0; i<meas->num_sites; i++) {
 		double* supOp = (double *)mkl_calloc(dimSup*dimSup, sizeof(double), MEM_DATA_ALIGN);
-		kron(1.0, dimSys, dimEnv, sys_enl->ops[i], Ienv, supOp);
+		kron(1.0, dimSys, dimEnv, sys_enl->ops[i+3], Ienv, supOp);
 
 		restrictOp(dimSup, supOp, num_restr_ind, restr_basis_inds);
-		measSOps[i-3] = supOp;
+		transformOps(1, num_restr_ind, 1, psi0_r, &supOp);
+
+		meas->Szs[i] = *supOp;
+		mkl_free(supOp);
+		printf("%6.12f\n", meas->Szs[i]);
 	}
 
 	// <S_i S_j>
-	for (i = 3; i<sys_enl->num_ops; i++) {
+	printf("\n<S_i S_j>\n");
+	for (i = 0; i<meas->num_sites; i++) {
 		double* SSop = (double *)mkl_calloc(dimSys*dimSys, sizeof(double), MEM_DATA_ALIGN);
-		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, 1.0, sys_enl->ops[i], dimSys, sys_enl->ops[1], dimSys, 0.0, SSop, dimSys);
+		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, 1.0, sys_enl->ops[i+3], dimSys, sys_enl->ops[1], dimSys, 0.0, SSop, dimSys);
 		double* supOp = (double *)mkl_calloc(dimSup*dimSup, sizeof(double), MEM_DATA_ALIGN);
 
 		kron(1.0, dimSys, dimEnv, SSop, Ienv, supOp);
+		mkl_free(SSop);
 
 		restrictOp(dimSup, supOp, num_restr_ind, restr_basis_inds);
-		measSSOps[i-3] = supOp;
+		transformOps(1, num_restr_ind, 1, psi0_r, &supOp);
+
+		meas->SSs[i] = *supOp;
+		mkl_free(supOp);
+		printf("%6.12f\n", meas->SSs[i]);
 	}
 
 	mkl_free(restr_basis_inds);
 	mkl_free(Ienv);
-
-	transformOps(meas->num_sites, num_restr_ind, 1, psi0_r, measSOps);
-	transformOps(meas->num_sites, num_restr_ind, 1, psi0_r, measSSOps);
-
-	printf("\n\n%d sites\n\n", meas->num_sites);
-
-	printf("<S_i>\n");
-	for (i = 0; i<meas->num_sites; i++) {
-		meas->Szs[i] = *measSOps[i];
-		printf("%6.12f\n", meas->Szs[i]);
-		mkl_free(measSOps[i]);
-	}
-
-	printf("\n<S_i S_j>\n");
-	for (i = 0; i<meas->num_sites; i++) {
-		meas->SSs[i] = *measSSOps[i];
-		printf("%6.12f\n", meas->SSs[i]);
-		mkl_free(measSSOps[i]);
-	}
-
-	mkl_free(measSOps);
-	mkl_free(measSSOps);
-
 	mkl_free(psi0_r);
 
 	return meas;
@@ -548,6 +533,8 @@ void fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, Mode
 	}
 	printf("\n\n");
 
+	meas_data_t *meas;
+
 	// Finite Sweeps
 	DMRGBlock *env = copyDMRGBlock(sys);
 	int i;
@@ -574,9 +561,9 @@ void fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, Mode
 
 			// measure and finish run
 			if (sys->meas == 'M' && 2 * sys->length == L-2) {
-				meas_data_t *meas = meas_step(sys, env, m, 0);
+				meas = meas_step(sys, env, m, 0);
 				freeMeas(meas);
-				return;
+				break;
 			}
 
 			// printGraphic(sys, env);
