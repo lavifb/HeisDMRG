@@ -383,13 +383,20 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 
 	printf("<S_i>\n");
 	for (i = 0; i<meas->num_sites; i++) {
-		printf("%6.12f\n", *measSOps[i]);
+		meas->Szs[i] = *measSOps[i];
+		printf("%6.12f\n", meas->Szs[i]);
+		mkl_free(measSOps[i]);
 	}
 
 	printf("\n<S_i S_j>\n");
 	for (i = 0; i<meas->num_sites; i++) {
-		printf("%6.12f\n", *measSSOps[i]);
+		meas->SSs[i] = *measSSOps[i];
+		printf("%6.12f\n", meas->SSs[i]);
+		mkl_free(measSSOps[i]);
 	}
+
+	mkl_free(measSOps);
+	mkl_free(measSSOps);
 
 	mkl_free(psi0_r);
 
