@@ -11,6 +11,8 @@ double *restrictOp(const int m, const double *op, const int num_ind, const int *
 
 double *restrictVec(const int m, const double *v, const int num_ind, const int *inds);
 
+double *unrestrictVec(const int m, const double *v_r, const int num_ind, const int *inds);
+
 int *dsort2(const int n, double *a);
 
 void print_matrix( char* desc, int m, int n, double* a, int lda );

@@ -95,6 +95,25 @@ double *restrictVec(const int m, const double *v, const int num_ind, const int *
 	return v_r;
 }
 
+/*  Unrestrict vector 
+
+	m       : dimension of v
+	v_r     : input restricted vector
+	num_ind : number of indexes provided. Also dimension of output
+	inds    : list of indexes
+*/
+double *unrestrictVec(const int m, const double *v_r, const int num_ind, const int *inds) {
+
+	double *v = (double *)mkl_calloc(m, sizeof(double), MEM_DATA_ALIGN);
+
+	int i;
+	for (i = 0; i < num_ind; i++) {
+		v[inds[i]] = v_r[i];
+	}
+
+	return v;
+}
+
 // Pointer comparison for sort below
 int dcmp(const void *pa, const void *pb){
     double a = **(double **)pa;

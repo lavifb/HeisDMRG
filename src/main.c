@@ -46,13 +46,13 @@ int main(int argc, char *argv[]) {
 
 	// inf_dmrg(L, m, model);
 
-	#define NUM_MS 8
+	#define NUM_MS 1
 
-	// int ms[NUM_MS] = {20};
-	int ms[NUM_MS] = {10, 10, 10, 30, 30, 40, 40, 40};
+	int ms[NUM_MS] = {20};
+	// int ms[NUM_MS] = {10, 30, 30, 40, 50};
 	// int ms[1] = {5};
 
-	fin_dmrgR(20, 10, NUM_MS, ms, model);
+	fin_dmrgR(40, 10, NUM_MS, ms, model);
 	// fin_dmrg(10, 5, 1, ms, model);
 
 	mkl_free(model);
