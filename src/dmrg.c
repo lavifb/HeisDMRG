@@ -577,7 +577,7 @@ void fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, Mode
 
 			// Check if sweep is done
 			if (2 * sys->length == L) {
-				printf("\n\n");
+				printf("\nDone with sweep %d/%d\n\n", i+1, num_sweeps);
 				break;
 			}
 		}
