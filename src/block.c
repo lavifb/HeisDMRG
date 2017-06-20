@@ -5,7 +5,7 @@
 #include <assert.h>
 
 
-DMRGBlock *createDMRGBlock(ModelParams *model) {
+DMRGBlock *createDMRGBlock(model_t *model) {
 	DMRGBlock *block = (DMRGBlock *)mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
 
 	block->length = 1;
@@ -118,7 +118,7 @@ DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 double **enlargeOps(const DMRGBlock *block) {
 	double **enl_ops = (double **)mkl_malloc(block->num_ops * sizeof(double *), MEM_DATA_ALIGN);
 
-	ModelParams *model = block->model;
+	model_t *model = block->model;
 	int d_model	= model->d_model;
 	int d_block	= block->d_block;
 	int d_enl  	= d_model * d_block;

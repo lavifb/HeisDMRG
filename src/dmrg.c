@@ -42,7 +42,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 
 	DMRGBlock *sys_enl, *env_enl;
 	sector_t *sys_enl_sectors, *env_enl_sectors;
-	ModelParams *model = sys->model;
+	model_t *model = sys->model;
 
 	sys_enl = enlargeBlock(sys);
 	sys_enl_sectors = sectorize(sys_enl);
@@ -260,7 +260,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
    L: Maximum length of system
    m: truncation dimension size
 */
-void inf_dmrg(const int L, const int m, ModelParams *model) {
+void inf_dmrg(const int L, const int m, model_t *model) {
 
 	DMRGBlock *sys = createDMRGBlock(model);
 
@@ -281,7 +281,7 @@ void inf_dmrg(const int L, const int m, ModelParams *model) {
    num_sweeps: number of finite system sweeps
    ms        : list of truncation sizes for the finite sweeps (size num_sweeps)
 */
-void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, ModelParams *model) {
+void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model) {
 	assert(L%2 == 0);
 
 	DMRGBlock **saved_blocksL = (DMRGBlock **)mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
@@ -378,7 +378,7 @@ void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, Model
    num_sweeps: number of finite system sweeps
    ms        : list of truncation sizes for the finite sweeps (size num_sweeps)
 */
-void fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, ModelParams *model) {
+void fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model) {
 	assert(L%2 == 0);
 
 	DMRGBlock **saved_blocks = (DMRGBlock **)mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);

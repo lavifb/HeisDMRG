@@ -12,7 +12,7 @@ typedef struct {
 	int *init_mzs;	// 2*mz quantum number for each state
 	int num_ops;
 	double **init_ops; // single site block tracked operators
-} ModelParams;
+} model_t;
 
 double *HeisenH_int(const double J, const double Jz, const int dim1, const int dim2, 
 					const double *restrict Sz1, const double *restrict Sp1, 

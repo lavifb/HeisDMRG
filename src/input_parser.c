@@ -86,3 +86,17 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 
 	return 0;
 }
+
+void printSimParams(const sim_params_t *params) {
+
+	printf( "L = %d         \n"
+			"minf = %d      \n"
+			"num_sweeps = %d\n"
+			"ms = ", params->L, params->minf, params->num_ms);
+
+	int i;
+	for (i = 0; i < params->num_ms-1; i++) {
+		printf("%d, ", params->ms[i]);
+	} printf("%d\n", params->ms[params->num_ms-1]);
+
+}

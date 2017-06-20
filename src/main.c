@@ -16,6 +16,8 @@ int main(int argc, char *argv[]) {
 	printf("Loading input file '%s'.\n", argv[1]);
 
 	sim_params_t params = {};
+	model_t sim_model;
+	params.model = &sim_model;
 
 	int status;
 	status = parseInputFile(argv[1], &params);
@@ -31,27 +33,14 @@ int main(int argc, char *argv[]) {
 
 	printf( "\n\n"
 			"Heisenberg DMRG\n"
-			"******************************\n"
-			"               \n"
-			"L = %d         \n"
-			"minf = %d      \n"
-			"num_sweeps = %d\n"
-			"ms = ", params.L, params.minf, params.num_ms);
+			"******************************\n\n");
 
-	int i;
-	for (i = 0; i < params.num_ms-1; i++) {
-		printf("%d, ", params.ms[i]);
-	} printf("%d\n", params.ms[params.num_ms-1]);
+	printSimParams(&params);
 
-	printf("\n");
-	printf("******************************\n\n");
+	printf( "\n"
+			"******************************\n\n");
 
-
-
-	// int L = 1000;
-	// int m = 30;
-
-	ModelParams *model = (ModelParams *)mkl_malloc(sizeof(ModelParams), MEM_DATA_ALIGN);
+	model_t *model = params.model;
 
 	#define N 2
 	model->d_model = N;
@@ -95,5 +84,4 @@ int main(int argc, char *argv[]) {
 	// fin_dmrgR(20, 10, NUM_MS, ms, model);
 	// fin_dmrg(10, 5, 1, ms, model);
 
-	mkl_free(model);
 }
