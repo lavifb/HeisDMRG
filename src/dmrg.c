@@ -14,8 +14,8 @@
 */
 void printGraphic(DMRGBlock *sys, DMRGBlock *env) {
 
-	char *sys_g = (char *)malloc((sys->length+1) * sizeof(char));
-	char *env_g = (char *)malloc((env->length+1) * sizeof(char));
+	char *sys_g = (char *)malloc((sys->length +1) * sizeof(char));
+	char *env_g = (char *)malloc((env->length +1) * sizeof(char));
 
 	memset(sys_g, '=', sys->length);
 	memset(env_g, '-', env->length);
@@ -210,7 +210,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	}
 
 	mkl_free(psi0_r);
-	freeSector(sup_sectors);
+	freeSectors(sup_sectors);
 
 	// Some dimensions may already be dropped
 	int newDimSys = lamb_i;
@@ -245,11 +245,11 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	sys_enl->d_block = mm; // set block basis size to transformed value
 	mkl_free(trans);
 
-	freeSector(sys_enl_sectors);
+	freeSectors(sys_enl_sectors);
 	// Free enlarged environment block
-	if (sys_enl != env_enl) {
+	if (sys != env) {
 		freeDMRGBlock(env_enl);
-		freeSector(env_enl_sectors);
+		freeSectors(env_enl_sectors);
 	}
 
 	return sys_enl;
@@ -390,7 +390,7 @@ void fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, Mode
 
 	// run infinite algorithm to build up system
 	while (2*sys->length < L) {
-		printGraphic(sys, sys);
+		// printGraphic(sys, sys);
 		DMRGBlock *newSys = single_step(sys, sys, m_inf, 0);
 		freeDMRGBlock(sys);
 		sys = newSys;
@@ -416,7 +416,7 @@ void fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, Mode
 				env = tempBlock;
 			}
 
-			printGraphic(sys, env);
+			// printGraphic(sys, env);
 			DMRGBlock *newSys = single_step(sys, env, m, 0);
 			freeDMRGBlock(sys);
 			sys = newSys;

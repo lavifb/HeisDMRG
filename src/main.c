@@ -2,14 +2,54 @@
 #include "block.h"
 #include "linalg.h"
 #include "dmrg.h"
+#include "input_parser.h"
 #include <mkl.h>
 #include <stdio.h>
 
 int main(int argc, char *argv[]) {
-	printf("Heisenberg DMRG\n");
 
-	int L = 1000;
-	int m = 30;
+	if (argc < 2) {
+		printf("No input file specified!\n");
+		return -1;
+	}
+
+	printf("Loading input file '%s'.\n", argv[1]);
+
+	sim_params_t params = {};
+
+	int status;
+	status = parseInputFile(argv[1], &params);
+	if (status < 0) {
+		printf("Error parsing input file...\n");
+		return status;
+	}
+
+	int L    = params.L;
+	int minf = params.minf;
+	int *ms  = params.ms;
+
+
+	printf( "\n\n"
+			"Heisenberg DMRG\n"
+			"******************************\n"
+			"               \n"
+			"L = %d         \n"
+			"minf = %d      \n"
+			"num_sweeps = %d\n"
+			"ms = ", params.L, params.minf, params.num_ms);
+
+	int i;
+	for (i = 0; i < params.num_ms-1; i++) {
+		printf("%d, ", params.ms[i]);
+	} printf("%d\n", params.ms[params.num_ms-1]);
+
+	printf("\n");
+	printf("******************************\n\n");
+
+
+
+	// int L = 1000;
+	// int m = 30;
 
 	ModelParams *model = (ModelParams *)mkl_malloc(sizeof(ModelParams), MEM_DATA_ALIGN);
 
@@ -46,13 +86,13 @@ int main(int argc, char *argv[]) {
 
 	// inf_dmrg(L, m, model);
 
-	#define NUM_MS 8
+	// #define NUM_MS 1
 
-	// int ms[NUM_MS] = {20};
-	int ms[NUM_MS] = {10, 10, 10, 30, 30, 40, 40, 40};
+	// int ms[NUM_MS] = {10};
+	// int ms[NUM_MS] = {10, 10, 10, 30, 30, 40, 40, 40};
 	// int ms[1] = {5};
 
-	fin_dmrgR(20, 10, NUM_MS, ms, model);
+	// fin_dmrgR(20, 10, NUM_MS, ms, model);
 	// fin_dmrg(10, 5, 1, ms, model);
 
 	mkl_free(model);

@@ -3,10 +3,10 @@
 
 typedef struct {
 	int d_model; // single site basis size
-	double *H1; // single site Hamiltonian
-	double *Sz; // single site Sz
-	double *Sp; // single site S+
-	double *Id; // single site Identity Matrix
+	double *H1;  // single site Hamiltonian
+	double *Sz;  // single site Sz
+	double *Sp;  // single site S+
+	double *Id;  // single site Identity Matrix
 	double J;
 	double Jz;
 	int *init_mzs;	// 2*mz quantum number for each state
