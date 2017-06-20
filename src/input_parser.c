@@ -47,6 +47,10 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 			vals[num_vals] = strtok(NULL, delim);
 		}
 
+		if (num_vals == 0) {
+			continue;
+		}
+
 		// Store parameter values
 		if (strcmp(paramName, "L") == 0) {
 			int L = atoi(vals[0]);

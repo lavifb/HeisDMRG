@@ -50,13 +50,13 @@ int main(int argc, char *argv[]) {
 
 	// One site matrices
 	double H1[N*N] = {0.0, 0.0, 
-	                  0.0,  0.0};
+	                  0.0, 0.0};
 	double Sz[N*N] = {0.5, 0.0, 
-	                  0.0, -0.5};
+	                  0.0,-0.5};
 	double Sp[N*N] = {0.0, 0.0, 
-	                  1.0,  0.0};
+	                  1.0, 0.0};
 	double Id[N*N] = {1.0, 0.0, 
-	                  0.0,  1.0};
+	                  0.0, 1.0};
 
 	int mzs[N] = {1, -1};
 
