@@ -219,4 +219,8 @@ void printSimParams(const sim_params_t *params) {
 		printf("%d, ", params->ms[i]);
 	} printf("%d\n", params->ms[params->num_ms-1]);
 
+	printf( "\n"
+			"J  = % .4f\n"
+			"Jz = % .4f\n", params->model->J, params->model->Jz);
+
 }
