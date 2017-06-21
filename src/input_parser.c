@@ -13,7 +13,8 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 		return -1;
 	}
 
-	char line[1024];
+	#define MAXLINE 1024
+	char line[MAXLINE];
 	while (fgets(line, sizeof(line), fd) != NULL) {
 
 		// end line at comment char #
@@ -25,7 +26,40 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 		// delimiter characters
 		const char *delim = " =:,;\t\r\n";
 
-		char *paramName = strtok(line, delim);
+		// where to read params from
+		char *rline = line;
+
+		// check for matrix
+		char matline[MAXLINE];
+		matline[MAXLINE-1] = '\0';
+		
+		char *mat_start = strpbrk(line, "{[(");
+		if (mat_start != NULL) {
+			
+			*mat_start = ' ';
+			strncpy(matline, line, MAXLINE-1);
+			
+			char *mat_end = strpbrk(matline, "}])");
+			while (mat_end == NULL) {
+				fgets(line, sizeof(line), fd);
+				if (line == NULL) {
+					printf("Failed to find closing matrix brace.\n");
+					return -1;
+				}
+				// printf("%s\n", line);
+				char *hash_comment = strchr(line, '#');
+				if (hash_comment != NULL) {
+					*hash_comment = '\0';
+				}
+				strncat(matline, line, MAXLINE-1);
+				mat_end = strpbrk(matline, "}])");
+			}
+			
+			*mat_end = '\0';
+			rline = matline;
+		}
+
+		char *paramName = strtok(rline, delim);
 		if (paramName == NULL) {
 			continue;
 		}
@@ -33,13 +67,6 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 		char *vals[1024];
 		int num_vals = 0;
 
-		/*
-		// check for matrix
-		char *mat_start = strchr(line, '{');
-		if (mat_start != NULL) {
-			
-		}
-		*/
 		vals[num_vals] = strtok(NULL, delim);
 
 		while (vals[num_vals]) {
@@ -81,6 +108,42 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 				return -2;
 			}
 			params->minf = minf;
+		} else if (strcmp(paramName, "H1") == 0) {
+			double *H1 = mkl_malloc(num_vals * sizeof(double), MEM_DATA_ALIGN);
+
+			int i;
+			for (i = 0; i < num_vals; i++) {
+				H1[i] = atof(vals[i]);
+				if (isnan(H1[i])) {
+					printf("Parameter 'H1' must be all floats.\n");
+					return -2;
+				}
+			}
+			params->model->H1 = H1;
+		} else if (strcmp(paramName, "Sz") == 0) {
+			double *Sz = mkl_malloc(num_vals * sizeof(double), MEM_DATA_ALIGN);
+
+			int i;
+			for (i = 0; i < num_vals; i++) {
+				Sz[i] = atof(vals[i]);
+				if (isnan(Sz[i])) {
+					printf("Parameter 'Sz' must be all floats.\n");
+					return -2;
+				}
+			}
+			params->model->Sz = Sz;
+		} else if (strcmp(paramName, "Sp") == 0) {
+			double *Sp = mkl_malloc(num_vals * sizeof(double), MEM_DATA_ALIGN);
+
+			int i;
+			for (i = 0; i < num_vals; i++) {
+				Sp[i] = atof(vals[i]);
+				if (isnan(Sp[i])) {
+					printf("Parameter 'Sp' must be all floats.\n");
+					return -2;
+				}
+			}
+			params->model->Sp = Sp;
 		}
 
 

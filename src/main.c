@@ -49,29 +49,34 @@ int main(int argc, char *argv[]) {
 	model->num_ops = 3;
 
 	// One site matrices
-	double H1[N*N] = {0.0, 0.0, 
-	                  0.0, 0.0};
-	double Sz[N*N] = {0.5, 0.0, 
-	                  0.0,-0.5};
-	double Sp[N*N] = {0.0, 0.0, 
-	                  1.0, 0.0};
-	double Id[N*N] = {1.0, 0.0, 
-	                  0.0, 1.0};
+	// double H1[N*N] = {0.0, 0.0, 
+	//                   0.0, 0.0};
+	// double Sz[N*N] = {0.5, 0.0, 
+	//                   0.0,-0.5};
+	// double Sp[N*N] = {0.0, 0.0, 
+	//                   1.0, 0.0};
+	// double Id[N*N] = {1.0, 0.0, 
+	//                   0.0, 1.0};
 
 	int mzs[N] = {1, -1};
 
-	model->H1 = H1;
-	model->Sz = Sz;
-	model->Sp = Sp;
-	model->Id = Id;
+	// model->H1 = H1;
+	// model->Sz = Sz;
+	// model->Sp = Sp;
+	model->Id = identity(2);
 
 	double *init_ops[3];
 	model->init_ops = init_ops;
-	model->init_ops[0] = H1;
-	model->init_ops[1] = Sz;
-	model->init_ops[2] = Sp;
+	model->init_ops[0] = model->H1;
+	model->init_ops[1] = model->Sz;
+	model->init_ops[2] = model->Sp;
 
 	model->init_mzs = mzs;
+
+	print_matrix("H1", 2, 2, model->H1, 2);
+	print_matrix("Sz", 2, 2, model->Sz, 2);
+	print_matrix("Sp", 2, 2, model->Sp, 2);
+	print_matrix("Id", 2, 2, model->Id, 2);
 
 	// inf_dmrg(L, m, model);
 
@@ -84,4 +89,11 @@ int main(int argc, char *argv[]) {
 	// fin_dmrgR(20, 10, NUM_MS, ms, model);
 	// fin_dmrg(10, 5, 1, ms, model);
 
+
+	mkl_free(model->H1);
+	mkl_free(model->Sz);
+	mkl_free(model->Sp);
+	mkl_free(model->Id);
+
+	return 0;
 }
