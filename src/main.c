@@ -9,15 +9,14 @@
 int main(int argc, char *argv[]) {
 
 	if (argc < 2) {
-		printf("No input file specified!\n");
+		errprintf("No input file specified!\n");
 		return -1;
 	}
 
-	printf("Loading input file '%s'.\n", argv[1]);
+	printf("Loading input file '%s'.\n\n", argv[1]);
 
 	sim_params_t params = {};
-	model_t sim_model;
-	params.model = &sim_model;
+	params.model = newNullModel();
 
 	int status;
 	status = parseInputFile(argv[1], &params);
@@ -26,12 +25,7 @@ int main(int argc, char *argv[]) {
 		return status;
 	}
 
-	int L    = params.L;
-	int minf = params.minf;
-	int *ms  = params.ms;
-
-
-	printf( "\n\n"
+	printf( "\n"
 			"Heisenberg DMRG\n"
 			"******************************\n\n");
 
@@ -41,59 +35,18 @@ int main(int argc, char *argv[]) {
 			"******************************\n\n");
 
 	model_t *model = params.model;
-
-	#define N 2
-	model->d_model = N;
-	model->J  = 1;
-	model->Jz = 1;
-	model->num_ops = 3;
-
-	// One site matrices
-	// double H1[N*N] = {0.0, 0.0, 
-	//                   0.0, 0.0};
-	// double Sz[N*N] = {0.5, 0.0, 
-	//                   0.0,-0.5};
-	// double Sp[N*N] = {0.0, 0.0, 
-	//                   1.0, 0.0};
-	// double Id[N*N] = {1.0, 0.0, 
-	//                   0.0, 1.0};
-
-	int mzs[N] = {1, -1};
-
-	// model->H1 = H1;
-	// model->Sz = Sz;
-	// model->Sp = Sp;
-	model->Id = identity(2);
-
-	double *init_ops[3];
-	model->init_ops = init_ops;
-	model->init_ops[0] = model->H1;
-	model->init_ops[1] = model->Sz;
-	model->init_ops[2] = model->Sp;
-
-	model->init_mzs = mzs;
-
-	print_matrix("H1", 2, 2, model->H1, 2);
-	print_matrix("Sz", 2, 2, model->Sz, 2);
-	print_matrix("Sp", 2, 2, model->Sp, 2);
-	print_matrix("Id", 2, 2, model->Id, 2);
+	compileParams(model);
 
 	// inf_dmrg(L, m, model);
 
-	// #define NUM_MS 1
-
-	// int ms[NUM_MS] = {10};
 	// int ms[NUM_MS] = {10, 10, 10, 30, 30, 40, 40, 40};
 	// int ms[1] = {5};
 
 	// fin_dmrgR(20, 10, NUM_MS, ms, model);
+	fin_dmrgR(params.L, params.minf, params.num_ms, params.ms, model);
 	// fin_dmrg(10, 5, 1, ms, model);
 
-
-	mkl_free(model->H1);
-	mkl_free(model->Sz);
-	mkl_free(model->Sp);
-	mkl_free(model->Id);
+	freeModel(model);
 
 	return 0;
 }

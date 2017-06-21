@@ -14,6 +14,13 @@ typedef struct {
 	double **init_ops; // single site block tracked operators
 } model_t;
 
+
+void compileParams(model_t *model);
+
+model_t *newNullModel();
+
+void freeModel(model_t *model);
+
 double *HeisenH_int(const double J, const double Jz, const int dim1, const int dim2, 
 					const double *restrict Sz1, const double *restrict Sp1, 
 					const double *restrict Sz2, const double *restrict Sp2);

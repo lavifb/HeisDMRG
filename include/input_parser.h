@@ -13,6 +13,12 @@ typedef struct {
 
 } sim_params_t;
 
+// ANSI colors for print output
+#define TERM_RED     "\x1b[31m"
+#define TERM_RESET   "\x1b[0m"
+
+#define errprintf(M, ...) printf( TERM_RED "[ERROR] " M TERM_RESET , ##__VA_ARGS__)
+
 int parseInputFile(const char *filename, sim_params_t *params);
 
 void printSimParams(const sim_params_t *params);
