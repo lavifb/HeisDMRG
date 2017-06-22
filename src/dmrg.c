@@ -15,8 +15,8 @@
 */
 void printGraphic(DMRGBlock *sys, DMRGBlock *env) {
 
-	char *sys_g = (char *)malloc((sys->length+1) * sizeof(char));
-	char *env_g = (char *)malloc((env->length+1) * sizeof(char));
+	char *sys_g = (char *)malloc((sys->length +1) * sizeof(char));
+	char *env_g = (char *)malloc((env->length +1) * sizeof(char));
 
 	memset(sys_g, '=', sys->length);
 	memset(env_g, '-', env->length);
@@ -43,7 +43,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 
 	DMRGBlock *sys_enl, *env_enl;
 	sector_t *sys_enl_sectors, *env_enl_sectors;
-	ModelParams *model = sys->model;
+	model_t *model = sys->model;
 
 	sys_enl = enlargeBlock(sys);
 	sys_enl_sectors = sectorize(sys_enl);
@@ -211,7 +211,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	}
 
 	mkl_free(psi0_r);
-	freeSector(sup_sectors);
+	freeSectors(sup_sectors);
 
 	// Some dimensions may already be dropped
 	int newDimSys = lamb_i;
@@ -246,11 +246,11 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	sys_enl->d_block = mm; // set block basis size to transformed value
 	mkl_free(trans);
 
-	freeSector(sys_enl_sectors);
+	freeSectors(sys_enl_sectors);
 	// Free enlarged environment block
-	if (sys_enl != env_enl) {
+	if (sys != env) {
 		freeDMRGBlock(env_enl);
-		freeSector(env_enl_sectors);
+		freeSectors(env_enl_sectors);
 	}
 
 	return sys_enl;
@@ -265,7 +265,7 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 
 	DMRGBlock *sys_enl, *env_enl;
 	sector_t *sys_enl_sectors, *env_enl_sectors;
-	ModelParams *model = sys->model;
+	model_t *model = sys->model;
 
 	sys_enl = enlargeBlock(sys);
 	sys_enl_sectors = sectorize(sys_enl);
@@ -393,7 +393,7 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
    L: Maximum length of system
    m: truncation dimension size
 */
-void inf_dmrg(const int L, const int m, ModelParams *model) {
+void inf_dmrg(const int L, const int m, model_t *model) {
 	// TODO: measurement (copy from fin_dmrgR)
 	DMRGBlock *sys = createDMRGBlock(model, L);
 
@@ -414,7 +414,7 @@ void inf_dmrg(const int L, const int m, ModelParams *model) {
    num_sweeps: number of finite system sweeps
    ms        : list of truncation sizes for the finite sweeps (size num_sweeps)
 */
-void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, ModelParams *model) {
+void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model) {
 	// TODO: measurement (copy from fin_dmrgR)
 	assert(L%2 == 0);
 
@@ -512,7 +512,7 @@ void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, Model
    num_sweeps: number of finite system sweeps
    ms        : list of truncation sizes for the finite sweeps (size num_sweeps)
 */
-void fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, ModelParams *model) {
+void fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model) {
 	assert(L%2 == 0);
 
 	DMRGBlock **saved_blocks = (DMRGBlock **)mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
@@ -524,7 +524,7 @@ void fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, Mode
 
 	// run infinite algorithm to build up system
 	while (2*sys->length < L) {
-		printGraphic(sys, sys);
+		// printGraphic(sys, sys);
 		DMRGBlock *newSys = single_step(sys, sys, m_inf, 0);
 		freeDMRGBlock(sys);
 		sys = newSys;

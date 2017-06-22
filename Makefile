@@ -21,12 +21,12 @@ TEST:= test
 build: proj_main
 
 clean: 
-	-rm ${BIN}/*
+	-rm -rf ${BIN}/*
 	-rm ${ODIR}/*
-	-rm ${TEST}/*
+	-rm -rf ${TEST}/*
 
 clean-test:
-	-rm ${TEST}/*
+	-rm -rf ${TEST}/*
 
 src : $(patsubst $(SRC)/%.c, $(ODIR)/%.o, $(wildcard $(SRC)/[^_]*.c))
 srcD: $(patsubst $(SRC)/%.c, $(TEST)/%.o, $(wildcard $(SRC)/[^_]*.c))

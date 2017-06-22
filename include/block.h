@@ -13,10 +13,10 @@ typedef struct {
 	int num_ops;
 	double **ops;
 	int *mzs;		// 2*mz quantum number for each state
-	ModelParams *model;
+	model_t *model;
 } DMRGBlock;
 
-DMRGBlock *createDMRGBlock(ModelParams *model, int fullLength);
+DMRGBlock *createDMRGBlock(model_t *model, int fullLength);
 
 DMRGBlock *copyDMRGBlock(DMRGBlock *orig);
 

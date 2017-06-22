@@ -2,59 +2,51 @@
 #include "block.h"
 #include "linalg.h"
 #include "dmrg.h"
+#include "input_parser.h"
 #include <mkl.h>
 #include <stdio.h>
 
 int main(int argc, char *argv[]) {
-	printf("Heisenberg DMRG\n");
 
-	int L = 1000;
-	int m = 30;
+	if (argc < 2) {
+		errprintf("No input file specified!\n");
+		return -1;
+	}
 
-	ModelParams *model = (ModelParams *)mkl_malloc(sizeof(ModelParams), MEM_DATA_ALIGN);
+	printf("Loading input file '%s'.\n\n", argv[1]);
 
-	#define N 2
-	model->d_model = N;
-	model->J  = 1;
-	model->Jz = 1;
-	model->num_ops = 3;
+	sim_params_t params = {};
+	params.model = newNullModel();
 
-	// One site matrices
-	double H1[N*N] = {0.0, 0.0, 
-	                  0.0,  0.0};
-	double Sz[N*N] = {0.5, 0.0, 
-	                  0.0, -0.5};
-	double Sp[N*N] = {0.0, 0.0, 
-	                  1.0,  0.0};
-	double Id[N*N] = {1.0, 0.0, 
-	                  0.0,  1.0};
+	int status;
+	status = parseInputFile(argv[1], &params);
+	if (status < 0) {
+		printf("Error parsing input file...\n");
+		return status;
+	}
 
-	int mzs[N] = {1, -1};
+	printf( "\n"
+			"Heisenberg DMRG\n"
+			"******************************\n\n");
 
-	model->H1 = H1;
-	model->Sz = Sz;
-	model->Sp = Sp;
-	model->Id = Id;
+	printSimParams(&params);
 
-	double *init_ops[3];
-	model->init_ops = init_ops;
-	model->init_ops[0] = H1;
-	model->init_ops[1] = Sz;
-	model->init_ops[2] = Sp;
+	printf( "\n"
+			"******************************\n\n");
 
-	model->init_mzs = mzs;
+	model_t *model = params.model;
+	compileParams(model);
 
 	// inf_dmrg(L, m, model);
 
-	// #define NUM_MS 8
-	#define NUM_MS 8
-
-	// int ms[NUM_MS] = {10, 30, 30, 30, 40, 40, 50, 50};
-	int ms[NUM_MS] = {20, 20, 20, 20, 30, 30, 50, 50};
+	// int ms[NUM_MS] = {10, 10, 10, 30, 30, 40, 40, 40};
 	// int ms[1] = {5};
 
-	fin_dmrgR(160, 10, NUM_MS, ms, model);
+	// fin_dmrgR(20, 10, NUM_MS, ms, model);
+	fin_dmrgR(params.L, params.minf, params.num_ms, params.ms, model);
 	// fin_dmrg(10, 5, 1, ms, model);
 
-	mkl_free(model);
+	freeModel(model);
+
+	return 0;
 }
