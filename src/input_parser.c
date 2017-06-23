@@ -209,7 +209,10 @@ int validateParams(const sim_params_t *params) {
 
 void printSimParams(const sim_params_t *params) {
 
-	printf( "L = %d         \n"
+	printf( "\n"
+			"Heisenberg DMRG\n"
+			"******************************\n\n"
+			"L = %d         \n"
 			"minf = %d      \n"
 			"num_sweeps = %d\n"
 			"ms = ", params->L, params->minf, params->num_ms);
@@ -221,6 +224,9 @@ void printSimParams(const sim_params_t *params) {
 
 	printf( "\n"
 			"J  = % .4f\n"
-			"Jz = % .4f\n", params->model->J, params->model->Jz);
+			"Jz = % .4f\n"
+			"\n"
+			"******************************\n\n"
+			, params->model->J, params->model->Jz);
 
 }

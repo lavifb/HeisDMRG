@@ -255,7 +255,8 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 
 	return sys_enl;
 }
-/* DMRG step that records measurements
+/* DMRG step that records measurements.
+   Use on the last half sweep to measure operators as the system builds.
    
    m: truncation dimension size
 
@@ -439,6 +440,9 @@ void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, model
 		saved_blocksR[sys->length-1] = copyDMRGBlock(sys);
 		saved_blocksR[sys->length-1]->side = 'R';
 	}
+	printf("\n\n");
+
+	meas_data_t *meas;
 
 	// Finite Sweeps
 	DMRGBlock *env = copyDMRGBlock(sys);
@@ -464,9 +468,21 @@ void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, model
 				DMRGBlock *tempBlock = sys;
 				sys = env;
 				env = tempBlock;
+
+				if (sys->side ==  'L' && i == num_sweeps - 1) {
+					sys->meas = 'M';
+					printf("Measurement Time!! \n");
+				}
 			}
 
-			printGraphic(sys, env);
+			// measure and finish run
+			if (sys->meas == 'M' && 2 * sys->length == L-2) {
+				meas = meas_step(sys, env, m, 0);
+				freeMeas(meas);
+				break;
+			}
+
+			// printGraphic(sys, env);
 			DMRGBlock *newSys = single_step(sys, env, m, 0);
 			freeDMRGBlock(sys);
 			sys = newSys;
@@ -486,6 +502,7 @@ void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, model
 
 			// Check if sweep is done
 			if (sys->side == 'L' && 2 * sys->length == L) {
+				printf("\nDone with sweep %d/%d\n\n", i+1, num_sweeps);
 				break;
 			}
 		}
@@ -504,7 +521,7 @@ void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, model
 
 /* Finite System DMRG Algorithm with reflection symmetry in ground state.
 
-   Reflection symmentry means assuming both left and right sides of the system
+   Reflection symmetry means assuming both left and right sides of the system
    are the same so sweeps are only necessary in one direction, halving compute time.
    
    L         : Length of universe
@@ -555,7 +572,6 @@ void fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, mode
 				if (i == num_sweeps - 1) {
 					sys->meas = 'M';
 					printf("Measurement Time!! \n");
-					
 				}
 			}
 
