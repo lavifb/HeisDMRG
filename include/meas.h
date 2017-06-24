@@ -16,4 +16,6 @@ meas_data_t *createMeas(int num_sites);
 
 void freeMeas(meas_data_t *meas);
 
+int outputMeasData(const char* path, meas_data_t *meas);
+
 #endif

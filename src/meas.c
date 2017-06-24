@@ -21,3 +21,10 @@ void freeMeas(meas_data_t *meas) {
 
 	mkl_free(meas);
 }
+
+/*  Write measure data to files in path
+*/
+int outputMeasData(const char* path, meas_data_t *meas) {
+
+	return 0;
+}

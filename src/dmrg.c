@@ -415,7 +415,7 @@ void inf_dmrg(const int L, const int m, model_t *model) {
    num_sweeps: number of finite system sweeps
    ms        : list of truncation sizes for the finite sweeps (size num_sweeps)
 */
-void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model) {
+meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model) {
 	// TODO: measurement (copy from fin_dmrgR)
 	assert(L%2 == 0);
 
@@ -529,7 +529,7 @@ void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, model
    num_sweeps: number of finite system sweeps
    ms        : list of truncation sizes for the finite sweeps (size num_sweeps)
 */
-void fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model) {
+meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model) {
 	assert(L%2 == 0);
 
 	DMRGBlock **saved_blocks = (DMRGBlock **)mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);

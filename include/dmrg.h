@@ -12,8 +12,8 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 
 void inf_dmrg(const int L, const int m, model_t *model);
 
-void fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model);
+meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model);
 
-void fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model);
+meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model);
 
 #endif
