@@ -517,6 +517,8 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 
 	freeDMRGBlock(env);
 	freeDMRGBlock(sys);
+
+	return meas;
 }
 
 /* Finite System DMRG Algorithm with reflection symmetry in ground state.
@@ -606,4 +608,6 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 
 	freeDMRGBlock(env);
 	freeDMRGBlock(sys);
+
+	return meas;
 }

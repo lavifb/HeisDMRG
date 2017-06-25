@@ -2,6 +2,7 @@
 #define INPUT_PARSE_H
 
 #include "model.h"
+#include <stdio.h>
 
 typedef struct {
 	int L;       // length of DMRG chain
@@ -21,6 +22,6 @@ typedef struct {
 
 int parseInputFile(const char *filename, sim_params_t *params);
 
-void printSimParams(const sim_params_t *params);
+void printSimParams(FILE *stream, const sim_params_t *params);
 
 #endif

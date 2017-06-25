@@ -207,9 +207,10 @@ int validateParams(const sim_params_t *params) {
 	return 0;
 }
 
-void printSimParams(const sim_params_t *params) {
+void printSimParams(FILE *stream, const sim_params_t *params) {
 
-	printf( "\n"
+	fprintf(stream, 
+			"\n"
 			"Heisenberg DMRG\n"
 			"******************************\n\n"
 			"L = %d         \n"
@@ -219,10 +220,11 @@ void printSimParams(const sim_params_t *params) {
 
 	int i;
 	for (i = 0; i < params->num_ms-1; i++) {
-		printf("%d, ", params->ms[i]);
-	} printf("%d\n", params->ms[params->num_ms-1]);
+		fprintf(stream, "%d, ", params->ms[i]);
+	} fprintf(stream, "%d\n", params->ms[params->num_ms-1]);
 
-	printf( "\n"
+	fprintf(stream, 
+			"\n"
 			"J  = % .4f\n"
 			"Jz = % .4f\n"
 			"\n"

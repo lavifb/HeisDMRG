@@ -1,6 +1,8 @@
 #ifndef MEAS_H
 #define MEAS_H
 
+#include <stdio.h>
+
 typedef struct {
 	int L;
 	double energy;

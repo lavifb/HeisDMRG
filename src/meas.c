@@ -1,5 +1,7 @@
 #include "meas.h"
+#include "input_parser.h"
 #include <mkl.h>
+#include <stdio.h>
 
 meas_data_t *createMeas(int num_sites) {
 
@@ -25,6 +27,42 @@ void freeMeas(meas_data_t *meas) {
 /*  Write measure data to files in path
 */
 int outputMeasData(const char* path, meas_data_t *meas) {
+	
+	// log file
+	char log_filename[1024];
+	sprintf(log_filename, "%soutput.log", path); 
+
+	FILE *log_f = fopen(log_filename, "w");
+	if (log_f == NULL) {
+		errprintf("Cannot open file '%s'.\n", log_filename);
+		return -1;
+	}
+
+	fclose(log_f);
+
+	// S_i file
+	char Si_filename[1024];
+	sprintf(Si_filename, "%soutput.log", path); 
+
+	FILE *si_f = fopen(Si_filename, "w");
+	if (si_f == NULL) {
+		errprintf("Cannot open file '%s'.\n", Si_filename);
+		return -1;
+	}
+
+	fclose(si_f);
+
+	// S_i S_j file
+	char SS_filename[1024];
+	sprintf(SS_filename, "%soutput.log", path); 
+
+	FILE *ss_f = fopen(SS_filename, "w");
+	if (ss_f == NULL) {
+		errprintf("Cannot open file '%s'.\n", SS_filename);
+		return -1;
+	}
+
+	fclose(ss_f);
 
 	return 0;
 }

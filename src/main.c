@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
 		return status;
 	}
 
-	printSimParams(&params);
+	printSimParams(stdout, &params);
 
 	model_t *model = params.model;
 	compileParams(model);
