@@ -1,0 +1,20 @@
+L   :	20 
+minf:	10					# <-- use to comment
+ms  :	10, 10, 20
+
+# dimension of single site Hilbert space
+d_model: 2
+
+# One Site Matrices
+H1  : [ 1  0 
+		0  1 ]
+
+Sz  : [ .5  0 
+		0  -.5 ]
+
+Sp  : [ 0  1 
+		0  0 ]
+
+# Heisenberg Variables
+J 	:	1
+Jz	:	1
