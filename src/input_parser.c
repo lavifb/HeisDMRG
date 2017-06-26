@@ -235,7 +235,7 @@ void printSimParams(FILE *stream, const sim_params_t *params) {
 
 	if (params->runtime > 0) {
 		fprintf(stream,
-			"CPU Runtime: %.2f seconds\n"
+			"CPU Runtime: %.3f seconds\n"
 			, params->runtime );
 	}
 

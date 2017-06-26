@@ -51,6 +51,8 @@ int main(int argc, char *argv[]) {
 
 	printSimParams(stdout, &params);
 
+	// outputMeasData("test-", meas);
+
 	freeMeas(meas);
 
 	freeModel(model);
