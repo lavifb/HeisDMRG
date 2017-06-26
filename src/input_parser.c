@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 int parseInputFile(const char *filename, sim_params_t *params) {
 
@@ -228,7 +229,17 @@ void printSimParams(FILE *stream, const sim_params_t *params) {
 			"J  = % .4f\n"
 			"Jz = % .4f\n"
 			"\n"
-			"******************************\n\n"
-			, params->model->J, params->model->Jz);
+			"Start Time : %s"
+			, params->model->J, params->model->Jz,
+			asctime(localtime(params->start_time)));
 
+	if (params->runtime > 0) {
+		fprintf(stream,
+			"CPU Runtime: %.2f seconds\n"
+			, params->runtime );
+	}
+
+	fprintf(stream,
+			"\n"
+			"******************************\n\n");
 }

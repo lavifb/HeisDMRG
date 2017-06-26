@@ -3,6 +3,7 @@
 
 #include "model.h"
 #include <stdio.h>
+#include <time.h>
 
 typedef struct {
 	int L;       // length of DMRG chain
@@ -11,6 +12,9 @@ typedef struct {
 	int *ms;     // truncation dimension size for each sweep
 
 	model_t *model; // model params for the simulation
+
+	time_t *start_time;
+	double runtime;
 
 } sim_params_t;
 
