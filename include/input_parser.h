@@ -28,4 +28,6 @@ int parseInputFile(const char *filename, sim_params_t *params);
 
 void printSimParams(FILE *stream, const sim_params_t *params);
 
+void freeParams(sim_params_t *params);
+
 #endif

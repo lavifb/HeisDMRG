@@ -478,7 +478,6 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 			// measure and finish run
 			if (sys->meas == 'M' && 2 * sys->length == L-2) {
 				meas = meas_step(sys, env, m, 0);
-				freeMeas(meas);
 				break;
 			}
 
@@ -580,7 +579,6 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 			// measure and finish run
 			if (sys->meas == 'M' && 2 * sys->length == L-2) {
 				meas = meas_step(sys, env, m, 0);
-				freeMeas(meas);
 				break;
 			}
 

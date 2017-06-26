@@ -51,7 +51,10 @@ int main(int argc, char *argv[]) {
 
 	printSimParams(stdout, &params);
 
+	freeMeas(meas);
+
 	freeModel(model);
+	freeParams(&params);
 
 	return 0;
 }

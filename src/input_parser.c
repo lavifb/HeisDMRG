@@ -243,3 +243,9 @@ void printSimParams(FILE *stream, const sim_params_t *params) {
 			"\n"
 			"******************************\n\n");
 }
+
+void freeParams(sim_params_t *params) {
+
+	mkl_free(params->ms);
+	mkl_free(params->start_time);
+}
