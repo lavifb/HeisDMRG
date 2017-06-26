@@ -247,5 +247,4 @@ void printSimParams(FILE *stream, const sim_params_t *params) {
 void freeParams(sim_params_t *params) {
 
 	mkl_free(params->ms);
-	mkl_free(params->start_time);
 }

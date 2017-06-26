@@ -1,6 +1,6 @@
 L   :	20 
 minf:	10					# <-- use to comment
-ms  :	10, 10, 20
+ms  :	10, 10
 
 # dimension of single site Hilbert space
 d_model: 2

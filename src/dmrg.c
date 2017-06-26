@@ -321,6 +321,13 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		}
 	}
 
+	freeSectors(sys_enl_sectors);
+	// Free enlarged environment block
+	if (sys != env) {
+		freeDMRGBlock(env_enl);
+		freeSectors(env_enl_sectors);
+	}
+
 	double *Hs_r = restrictOp(dimSup, Hs, num_restr_ind, restr_basis_inds);
 	mkl_free(Hs);
 
@@ -356,11 +363,12 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		double* supOp = (double *)mkl_calloc(dimSup*dimSup, sizeof(double), MEM_DATA_ALIGN);
 		kron(1.0, dimSys, dimEnv, sys_enl->ops[i+3], Ienv, supOp);
 
-		restrictOp(dimSup, supOp, num_restr_ind, restr_basis_inds);
-		transformOps(1, num_restr_ind, 1, psi0_r, &supOp);
-
-		meas->Szs[i] = *supOp;
+		double *supOp_r = restrictOp(dimSup, supOp, num_restr_ind, restr_basis_inds);
 		mkl_free(supOp);
+		transformOps(1, num_restr_ind, 1, psi0_r, &supOp_r);
+
+		meas->Szs[i] = *supOp_r;
+		mkl_free(supOp_r);
 		printf("%6.12f\n", meas->Szs[i]);
 	}
 
@@ -374,14 +382,16 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		kron(1.0, dimSys, dimEnv, SSop, Ienv, supOp);
 		mkl_free(SSop);
 
-		restrictOp(dimSup, supOp, num_restr_ind, restr_basis_inds);
-		transformOps(1, num_restr_ind, 1, psi0_r, &supOp);
-
-		meas->SSs[i] = *supOp;
+		double *supOp_r = restrictOp(dimSup, supOp, num_restr_ind, restr_basis_inds);
 		mkl_free(supOp);
+		transformOps(1, num_restr_ind, 1, psi0_r, &supOp_r);
+
+		meas->SSs[i] = *supOp_r;
+		mkl_free(supOp_r);
 		printf("%6.12f\n", meas->SSs[i]);
 	}
 
+	freeDMRGBlock(sys_enl);
 	mkl_free(restr_basis_inds);
 	mkl_free(Ienv);
 	mkl_free(psi0_r);
@@ -416,8 +426,6 @@ void inf_dmrg(const int L, const int m, model_t *model) {
    ms        : list of truncation sizes for the finite sweeps (size num_sweeps)
 */
 meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model) {
-	// TODO: measurement (copy from fin_dmrgR)
-	assert(L%2 == 0);
 
 	DMRGBlock **saved_blocksL = (DMRGBlock **)mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 	DMRGBlock **saved_blocksR = (DMRGBlock **)mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
@@ -469,15 +477,16 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 				sys = env;
 				env = tempBlock;
 
-				if (sys->side ==  'L' && i == num_sweeps - 1) {
+				if (sys->side == 'L' && i == num_sweeps - 1) {
 					sys->meas = 'M';
-					printf("Measurement Time!! \n");
+					printf("\nKeeping track of measurements...\n");
 				}
 			}
 
 			// measure and finish run
 			if (sys->meas == 'M' && 2 * sys->length == L-2) {
 				meas = meas_step(sys, env, m, 0);
+				printf("\nMeasurement Time!! \n");
 				break;
 			}
 
@@ -507,7 +516,7 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 		}
 	}
 
-	for (i = 0; i < L-4; i++) {
+	for (i = 0; i < L-3; i++) {
 		if (saved_blocksL[i]) { freeDMRGBlock(saved_blocksL[i]); }
 		if (saved_blocksR[i]) { freeDMRGBlock(saved_blocksR[i]); }
 	}
@@ -531,7 +540,6 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
    ms        : list of truncation sizes for the finite sweeps (size num_sweeps)
 */
 meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model) {
-	assert(L%2 == 0);
 
 	DMRGBlock **saved_blocks = (DMRGBlock **)mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 
@@ -572,12 +580,13 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 
 				if (i == num_sweeps - 1) {
 					sys->meas = 'M';
-					printf("Measurement Time!! \n");
+					printf("\nKeeping track of measurements...\n");
 				}
 			}
 
 			// measure and finish run
 			if (sys->meas == 'M' && 2 * sys->length == L-2) {
+				printf("\nMeasurement Time!!\n");
 				meas = meas_step(sys, env, m, 0);
 				break;
 			}
@@ -599,7 +608,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 		}
 	}
 
-	for (i = 0; i < L-4; i++) {
+	for (i = 0; i < L-3; i++) {
 		if (saved_blocks[i]) { freeDMRGBlock(saved_blocks[i]); }
 	}
 	mkl_free(saved_blocks);

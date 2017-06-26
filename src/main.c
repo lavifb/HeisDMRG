@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
 	// Start cpu timer
 	clock_t t_start = clock();
 
-	// inf_dmrg(L, m, model);
+	// inf_dmrg(params.L, params.minf, model);
 	meas = fin_dmrgR(params.L, params.minf, params.num_ms, params.ms, model);
 	// fin_dmrg(10, 5, 1, ms, model);
 
@@ -52,11 +52,18 @@ int main(int argc, char *argv[]) {
 	printSimParams(stdout, &params);
 
 	// outputMeasData("test-", meas);
-
 	freeMeas(meas);
 
 	freeModel(model);
 	freeParams(&params);
+
+	MKL_Free_Buffers();
+	int nbuffers;
+	MKL_INT64 nbytes_alloc;
+	nbytes_alloc = MKL_Mem_Stat(&nbuffers);
+	if (nbytes_alloc > 0) {
+		errprintf("MKL still uses %lld bytes in %d buffer(s).\n", nbytes_alloc, nbuffers);
+	}
 
 	return 0;
 }
