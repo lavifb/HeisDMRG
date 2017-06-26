@@ -28,18 +28,6 @@ void freeMeas(meas_data_t *meas) {
 */
 int outputMeasData(const char* path, meas_data_t *meas) {
 	
-	// log file
-	char log_filename[1024];
-	sprintf(log_filename, "%soutput.log", path); 
-
-	FILE *log_f = fopen(log_filename, "w");
-	if (log_f == NULL) {
-		errprintf("Cannot open file '%s'.\n", log_filename);
-		return -1;
-	}
-
-	fclose(log_f);
-
 	// S_i file
 	char Si_filename[1024];
 	sprintf(Si_filename, "%sSz.dat", path); 

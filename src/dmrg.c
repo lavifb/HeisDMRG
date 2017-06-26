@@ -358,6 +358,7 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	printf("\n\n%d sites\n\n", meas->num_sites);
 
 	int i;
+	// <S_i> spins
 	printf("<S_i>\n");
 	for (i = 0; i<meas->num_sites; i++) {
 		double* supOp = (double *)mkl_calloc(dimSup*dimSup, sizeof(double), MEM_DATA_ALIGN);
@@ -372,7 +373,7 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		printf("%6.12f\n", meas->Szs[i]);
 	}
 
-	// <S_i S_j>
+	// <S_i S_j> correlations
 	printf("\n<S_i S_j>\n");
 	for (i = 0; i<meas->num_sites; i++) {
 		double* SSop = (double *)mkl_calloc(dimSys*dimSys, sizeof(double), MEM_DATA_ALIGN);

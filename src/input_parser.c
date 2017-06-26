@@ -231,7 +231,7 @@ void printSimParams(FILE *stream, const sim_params_t *params) {
 			"\n"
 			"Start Time : %s"
 			, params->model->J, params->model->Jz,
-			asctime(localtime(params->start_time)));
+			ctime(params->start_time) );
 
 	if (params->runtime > 0) {
 		fprintf(stream,

@@ -6,6 +6,7 @@
 #include <mkl.h>
 #include <time.h>
 #include <stdio.h>
+#include <sys/stat.h>
 
 int main(int argc, char *argv[]) {
 
@@ -34,6 +35,12 @@ int main(int argc, char *argv[]) {
 	time_t start_time = time(NULL);
 	params.start_time = &start_time;
 
+	// file path for output dir
+	char out_dir[1024];
+	sprintf(out_dir, "L%d_M%d_sim_%d/", params.L, params.ms[params.num_ms-1], *params.start_time);
+
+	mkdir(out_dir, 0755);
+
 	printSimParams(stdout, &params);
 
 	meas_data_t *meas;
@@ -49,9 +56,23 @@ int main(int argc, char *argv[]) {
 	clock_t t_end = clock();
 	params.runtime = (double)(t_end - t_start) / CLOCKS_PER_SEC;
 
-	printSimParams(stdout, &params);
+	printf("\n\nSimulation finished in %.3f seconds.\n", params.runtime);
 
-	// outputMeasData("test-", meas);
+	// Save sim params to a log file
+	char log_filename[1024];
+	sprintf(log_filename, "%sparams.log", out_dir); 
+
+	FILE *log_f = fopen(log_filename, "w");
+	if (log_f == NULL) {
+		errprintf("Cannot open file '%s'.\n", log_filename);
+		return -1;
+	}
+
+	printSimParams(log_f, &params);
+	fclose(log_f);
+
+	// Save Measurements
+	outputMeasData(out_dir, meas);
 	freeMeas(meas);
 
 	freeModel(model);
