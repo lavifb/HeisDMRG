@@ -28,38 +28,25 @@ void freeMeas(meas_data_t *meas) {
 */
 int outputMeasData(const char* path, meas_data_t *meas) {
 	
-	// S_i file
-	char Si_filename[1024];
-	sprintf(Si_filename, "%sSz.dat", path); 
+	char filename[1024];
+	sprintf(filename, "%smeasurements.dat", path); 
 
-	FILE *si_f = fopen(Si_filename, "w");
-	if (si_f == NULL) {
-		errprintf("Cannot open file '%s'.\n", Si_filename);
+	FILE *m_f = fopen(filename, "w");
+	if (m_f == NULL) {
+		errprintf("Cannot open file '%s'.\n", filename);
 		return -1;
 	}
+
+	fprintf(m_f, "%-6s%-20s%-20s\n"
+				 "---------------------------------------------\n"
+				 , "Site", "Sz", "SS");
 
 	int i;
 	for (i=meas->num_sites-1; i>=0; i--) {
-		fprintf(si_f, "%6.12f\n", meas->Szs[i]);
+		fprintf(m_f, "%-6d%- 20.12f%- 20.12f\n", i+1, meas->Szs[i], meas->SSs[i]);
 	}
 
-	fclose(si_f);
-
-	// S_i S_j file
-	char SS_filename[1024];
-	sprintf(SS_filename, "%sSS.dat", path); 
-
-	FILE *ss_f = fopen(SS_filename, "w");
-	if (ss_f == NULL) {
-		errprintf("Cannot open file '%s'.\n", SS_filename);
-		return -1;
-	}
-
-	for (i=meas->num_sites-1; i>=0; i--) {
-		fprintf(ss_f, "%6.12f\n", meas->SSs[i]);
-	}
-
-	fclose(ss_f);
+	fclose(m_f);
 
 	return 0;
 }
