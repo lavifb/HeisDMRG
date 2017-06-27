@@ -6,8 +6,8 @@ ms  :	10, 10, 20
 d_model: 2
 
 # One Site Matrices
-H1  : [ 1  0 
-		0  1 ]
+H1  : [ 0  0 
+		0  0 ]
 
 Sz  : [ .5  0 
 		0  -.5 ]

@@ -48,9 +48,8 @@ int main(int argc, char *argv[]) {
 	// Start cpu timer
 	clock_t t_start = clock();
 
-	inf_dmrg(params.L, params.minf, model);
-	// meas = fin_dmrgR(params.L, params.minf, params.num_ms, params.ms, model);
-	// fin_dmrg(10, 5, 1, ms, model);
+	// inf_dmrg(params.L, params.minf, model);
+	meas = fin_dmrgR(params.L, params.minf, params.num_ms, params.ms, model);
 
 	// Record end time
 	clock_t t_end = clock();
