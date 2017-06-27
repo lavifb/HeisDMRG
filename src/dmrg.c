@@ -133,7 +133,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	mkl_free(Hs_r);
 
 	double energy = energies[0]; // record ground state energy
-	printf("E/L = %6.12f\n", energy / (sys_enl->length + env_enl->length));
+	printf("E/L = % .12f\n", energy / (sys_enl->length + env_enl->length));
 	mkl_free(energies);
 
 	// Transformation Matrix
@@ -355,11 +355,8 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	meas->energy = energies[0] / (sys_enl->length + env_enl->length);
 	mkl_free(energies);
 
-	printf("\n\n%d sites\n\n", meas->num_sites);
-
 	int i;
 	// <S_i> spins
-	printf("<S_i>\n");
 	for (i = 0; i<meas->num_sites; i++) {
 		double* supOp = (double *)mkl_calloc(dimSup*dimSup, sizeof(double), MEM_DATA_ALIGN);
 		kron(1.0, dimSys, dimEnv, sys_enl->ops[i+3], Ienv, supOp);
@@ -370,11 +367,9 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 
 		meas->Szs[i] = *supOp_r;
 		mkl_free(supOp_r);
-		printf("%6.12f\n", meas->Szs[i]);
 	}
 
 	// <S_i S_j> correlations
-	printf("\n<S_i S_j>\n");
 	for (i = 0; i<meas->num_sites; i++) {
 		double* SSop = (double *)mkl_calloc(dimSys*dimSys, sizeof(double), MEM_DATA_ALIGN);
 		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, 1.0, sys_enl->ops[i+3], dimSys, sys_enl->ops[1], dimSys, 0.0, SSop, dimSys);
@@ -389,7 +384,6 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 
 		meas->SSs[i] = *supOp_r;
 		mkl_free(supOp_r);
-		printf("%6.12f\n", meas->SSs[i]);
 	}
 
 	freeDMRGBlock(sys_enl);
