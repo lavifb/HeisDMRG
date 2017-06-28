@@ -9,6 +9,10 @@ Thanks to http://troydhanson.github.io/uthash/ for easy to use hashtable.
 Todo
 ----
 
+- Runtime tester
+
+- Better outformat for truncation error and energy
+
 - Time dependent code
 	- Trotter evolution
 	- Runge-Kutta evolution
