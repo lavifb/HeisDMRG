@@ -60,17 +60,11 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	int dimEnv = env_enl->d_block;
 	int dimSup = dimSys * dimEnv;
 
-	double *Isys = identity(dimSys);
-	double *Ienv = identity(dimEnv);
-
 	// Superblock Hamiltonian
 	double *Hs = HeisenH_int(model->J, model->Jz, dimSys, dimEnv, 
 					sys_enl->ops[1], sys_enl->ops[2], env_enl->ops[1], env_enl->ops[2]);
-	kron(1.0, dimSys, dimEnv, sys_enl->ops[0], Ienv, Hs);
-	kron(1.0, dimSys, dimEnv, Isys, env_enl->ops[0], Hs);
-
-	mkl_free(Isys);
-	mkl_free(Ienv);
+	kronI('R', dimSys, dimEnv, sys_enl->ops[0], Hs);
+	kronI('L', dimSys, dimEnv, env_enl->ops[0], Hs);
 
 	// Create sectors to treat seperately
 	sector_t *sup_sectors = NULL;
@@ -283,16 +277,11 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	int dimEnv = env_enl->d_block;
 	int dimSup = dimSys * dimEnv;
 
-	double *Isys = identity(dimSys);
-	double *Ienv = identity(dimEnv);
-
 	// Superblock Hamiltonian
 	double *Hs = HeisenH_int(model->J, model->Jz, dimSys, dimEnv, 
 					sys_enl->ops[1], sys_enl->ops[2], env_enl->ops[1], env_enl->ops[2]);
-	kron(1.0, dimSys, dimEnv, sys_enl->ops[0], Ienv, Hs);
-	kron(1.0, dimSys, dimEnv, Isys, env_enl->ops[0], Hs);
-
-	mkl_free(Isys);
+	kronI('R', dimSys, dimEnv, sys_enl->ops[0], Hs);
+	kronI('L', dimSys, dimEnv, env_enl->ops[0], Hs);
 
 	// indexes used for restricting Hs
 	int num_restr_ind = 0;
@@ -359,7 +348,7 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	// <S_i> spins
 	for (i = 0; i<meas->num_sites; i++) {
 		double* supOp = (double *)mkl_calloc(dimSup*dimSup, sizeof(double), MEM_DATA_ALIGN);
-		kron(1.0, dimSys, dimEnv, sys_enl->ops[i+3], Ienv, supOp);
+		kronI('R', dimSys, dimEnv, sys_enl->ops[i+3], supOp);
 
 		double *supOp_r = restrictOp(dimSup, supOp, num_restr_ind, restr_basis_inds);
 		mkl_free(supOp);
@@ -375,7 +364,7 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, 1.0, sys_enl->ops[i+3], dimSys, sys_enl->ops[1], dimSys, 0.0, SSop, dimSys);
 		double* supOp = (double *)mkl_calloc(dimSup*dimSup, sizeof(double), MEM_DATA_ALIGN);
 
-		kron(1.0, dimSys, dimEnv, SSop, Ienv, supOp);
+		kronI('R', dimSys, dimEnv, SSop, supOp);
 		mkl_free(SSop);
 
 		double *supOp_r = restrictOp(dimSup, supOp, num_restr_ind, restr_basis_inds);
@@ -388,7 +377,6 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 
 	freeDMRGBlock(sys_enl);
 	mkl_free(restr_basis_inds);
-	mkl_free(Ienv);
 	mkl_free(psi0_r);
 
 	return meas;

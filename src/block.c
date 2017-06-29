@@ -146,22 +146,22 @@ double **enlargeOps(const DMRGBlock *block) {
 	// H_enl
 	enl_ops[0] = HeisenH_int(model->J, model->Jz, d_block, d_model, 
 					block->ops[1], block->ops[2], model->Sz, model->Sp);
-	kron(1.0, d_block, d_model, block->ops[0], model->Id, enl_ops[0]);
-	kron(1.0, d_block, d_model, I_m, model->H1, enl_ops[0]);
+	kronI('R', d_block, d_model, block->ops[0], enl_ops[0]);
+	kronI('L', d_block, d_model, model->H1, enl_ops[0]);
 
 	// conn_Sz
 	enl_ops[1] = (double *)mkl_calloc(d_enl*d_enl, sizeof(double), MEM_DATA_ALIGN);
-	kron(1.0, d_block, d_model, I_m, model->Sz, enl_ops[1]);
+	kronI('L', d_block, d_model, model->Sz, enl_ops[1]);
 
 	// conn_Sp
 	enl_ops[2] = (double *)mkl_calloc(d_enl*d_enl, sizeof(double), MEM_DATA_ALIGN);
-	kron(1.0, d_block, d_model, I_m, model->Sp, enl_ops[2]);
+	kronI('L', d_block, d_model, model->Sp, enl_ops[2]);
 
 	int i;
 	for (i = 3; i < block->num_ops; i++) { // loop over measurement ops
 		// S_i ops
 		enl_ops[i] = (double *)mkl_calloc(d_enl*d_enl, sizeof(double), MEM_DATA_ALIGN);
-		kron(1.0, d_block, d_model, block->ops[i], model->Id, enl_ops[i]);
+		kronI('R', d_block, d_model, block->ops[i], enl_ops[i]);
 
 		// TODO: S_i S_j corrs for arbitary i and j
 	}

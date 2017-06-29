@@ -2,8 +2,7 @@
 #include <mkl.h>
 #include <stdlib.h>
 
-/*
-	Compute Kronecker product of two square matrices. Sets C = alpha * kron(A,B) + C
+/*  Compute Kronecker product of two square matrices. Sets C = alpha * kron(A,B) + C
  
 	m: size of matrix A
 	n: size of matrix B
@@ -22,6 +21,51 @@ void kron(const double alpha, const int m, const int n, const double *restrict A
 				}
 			}
 		}
+	}
+}
+
+/*  Compute Kronecker product of a square matrix with identity.
+	Sets C = kron(A, I) + C or C = kron(I, A) + C
+
+	Note: The order of m and n is designed to easily replace standard kron function
+	without swapping parameters.
+
+	side: 'l' or 'L' if I is multplied on the left or
+	      'r' or 'R' if I is multplied on the right
+	m: size of matrix A if side is 'r' or
+	   size of identity matrix if side is 'l'
+	n: size of identity matrix if side is 'r' or
+	   size of matrix A if side is 'l'
+	A: m*m matrix or n*n matrix
+	C: mn*mn matrix
+*/
+void kronI(const char side, const int m, const int n, const double *restrict A, double *restrict C) {
+	int ldac = m*n;
+	int i, j, k;
+
+	switch (side) {
+
+		case 'r':
+		case 'R':
+			for (i=0; i<m; i++) {
+				for (j=0; j<m; j++) {
+					for (k=0; k<n; k++) {
+						C[(n*i + k) + ldac*(n*j + k)] += A[i+m*j];
+					}
+				}
+			}
+			break;
+
+		case 'l':
+		case 'L':
+			for (i=0; i<n; i++) {
+				for (j=0; j<n; j++) {
+					for (k=0; k<m; k++) {
+						C[(n*k + i) + ldac*(n*k + j)] += A[i+n*j];
+					}
+				}
+			}
+			break;
 	}
 }
 
