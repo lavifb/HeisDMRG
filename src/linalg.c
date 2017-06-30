@@ -12,6 +12,11 @@
 */
 void kron(const double alpha, const int m, const int n, const double *restrict A, const double *restrict B, double *restrict C) {
 	int ldac = m*n;
+
+	__assume_aligned(A, MEM_DATA_ALIGN);
+	__assume_aligned(B, MEM_DATA_ALIGN);
+	__assume_aligned(C, MEM_DATA_ALIGN);
+
 	int i, j, k, l;
 	for (i=0; i<m; i++) {
 		for (j=0; j<m; j++) {
@@ -41,8 +46,11 @@ void kron(const double alpha, const int m, const int n, const double *restrict A
 */
 void kronI(const char side, const int m, const int n, const double *restrict A, double *restrict C) {
 	int ldac = m*n;
-	int i, j, k;
 
+	__assume_aligned(A, MEM_DATA_ALIGN);
+	__assume_aligned(C, MEM_DATA_ALIGN);
+
+	int i, j, k;
 	switch (side) {
 
 		case 'r':

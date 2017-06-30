@@ -74,6 +74,8 @@ double *HeisenH_int(const double J, const double Jz, const int dim1, const int d
 	double *Sm1   = (double *)mkl_malloc(dim1*dim1 * sizeof(double), MEM_DATA_ALIGN);
 	double *Sm2   = (double *)mkl_malloc(dim2*dim2 * sizeof(double), MEM_DATA_ALIGN);
 	__assume_aligned(H_int,   MEM_DATA_ALIGN);
+	__assume_aligned(Sp1  ,   MEM_DATA_ALIGN);
+	__assume_aligned(Sp2  ,   MEM_DATA_ALIGN);
 	__assume_aligned(Sm1  ,   MEM_DATA_ALIGN);
 	__assume_aligned(Sm2  ,   MEM_DATA_ALIGN);
 
