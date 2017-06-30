@@ -211,7 +211,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	int newDimSys = lamb_i;
 	assert(newDimSys <= dimSys);
 
-	double *trans = (double *)mkl_calloc(dimSys*mm, sizeof(double), MEM_DATA_ALIGN);
+	double *trans = (double *)mkl_malloc(dimSys*mm * sizeof(double), MEM_DATA_ALIGN);
 	__assume_aligned(trans, MEM_DATA_ALIGN);
 
 	assert(mm <= newDimSys);
