@@ -141,8 +141,6 @@ double **enlargeOps(const DMRGBlock *block) {
 	int d_block	= block->d_block;
 	int d_enl  	= d_model * d_block;
 
-	double *I_m = identity(d_block);
-
 	// H_enl
 	enl_ops[0] = HeisenH_int(model->J, model->Jz, d_block, d_model, 
 					block->ops[1], block->ops[2], model->Sz, model->Sp);
@@ -172,7 +170,6 @@ double **enlargeOps(const DMRGBlock *block) {
 		memcpy(enl_ops[block->num_ops], enl_ops[1], d_enl*d_enl * sizeof(double));
 	}
 
-	mkl_free(I_m);
 	return enl_ops;
 }
 
