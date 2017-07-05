@@ -54,6 +54,7 @@ int main(int argc, char *argv[]) {
 				"---------------------------------------------\n"
 				 , "L", "Energy", "Truncation Error");
 
+
 	printSimParams(stdout, &params);
 
 	meas_data_t *meas;

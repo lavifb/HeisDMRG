@@ -15,6 +15,7 @@ SRC := src
 INC := include
 ODIR:= odir
 TEST:= test
+DBUG:= debug
 
 # SRC_FILES = $(patsubst $(PUG)/%.pug, $(TEST)/%.html, $(wildcard $(PUG)/[^_]*.pug))
 
@@ -23,22 +24,23 @@ build: proj_main
 clean: 
 	-rm -rf ${BIN}/*
 	-rm ${ODIR}/*
-	-rm -rf ${TEST}/*
 
-clean-test:
-	-rm -rf ${TEST}/*
+clean-debug:
+	-rm -rf ${DBUG}/*
+
+clean-all: clean clean-debug
 
 src : $(patsubst $(SRC)/%.c, $(ODIR)/%.o, $(wildcard $(SRC)/[^_]*.c))
-srcD: $(patsubst $(SRC)/%.c, $(TEST)/%.o, $(wildcard $(SRC)/[^_]*.c))
+srcD: $(patsubst $(SRC)/%.c, $(DBUG)/%.o, $(wildcard $(SRC)/[^_]*.c))
 
 ${ODIR}/%.o: ${SRC}/%.c
 	${CC} -c -I${INC}/ ${CCOPTSR} ${MKL} $< -o $@
 
-${TEST}/%.o: ${SRC}/%.c
+${DBUG}/%.o: ${SRC}/%.c
 	${CC} -c -I${INC}/ ${CCOPTSD} ${MKL} $< -o $@
 
 proj_main: src
 	 ${CC} -I${INC}/ ${CCOPTSR} ${MKL} -o ${BIN}/dmrg ${ODIR}/*
 
-debug: clean-test srcD
-	 ${CC} -I${INC}/ ${CCOPTSD} ${MKL} -o ${TEST}/dmrg_debug ${TEST}/*
+debug: clean-debug srcD
+	 ${CC} -I${INC}/ ${CCOPTSD} ${MKL} -o ${BIN}/dmrg_debug ${DBUG}/*
