@@ -142,7 +142,7 @@ double **enlargeOps(const DMRGBlock *block) {
 	int d_enl  	= d_model * d_block;
 
 	// H_enl
-	enl_ops[0] = HeisenH_int(model->J, model->Jz, d_block, d_model, 
+	enl_ops[0] = model->H_int(model->H_params, d_block, d_model, 
 					block->ops[1], block->ops[2], model->Sz, model->Sp);
 	kronI('R', d_block, d_model, block->ops[0], enl_ops[0]);
 	kronI('L', d_block, d_model, model->H1, enl_ops[0]);

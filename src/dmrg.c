@@ -61,7 +61,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	int dimSup = dimSys * dimEnv;
 
 	// Superblock Hamiltonian
-	double *Hs = HeisenH_int(model->J, model->Jz, dimSys, dimEnv, 
+	double *Hs = model->H_int(model->H_params, dimSys, dimEnv, 
 					sys_enl->ops[1], sys_enl->ops[2], env_enl->ops[1], env_enl->ops[2]);
 	kronI('R', dimSys, dimEnv, sys_enl->ops[0], Hs);
 	kronI('L', dimSys, dimEnv, env_enl->ops[0], Hs);
@@ -278,7 +278,7 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	int dimSup = dimSys * dimEnv;
 
 	// Superblock Hamiltonian
-	double *Hs = HeisenH_int(model->J, model->Jz, dimSys, dimEnv, 
+	double *Hs = model->H_int(model->H_params, dimSys, dimEnv, 
 					sys_enl->ops[1], sys_enl->ops[2], env_enl->ops[1], env_enl->ops[2]);
 	kronI('R', dimSys, dimEnv, sys_enl->ops[0], Hs);
 	kronI('L', dimSys, dimEnv, env_enl->ops[0], Hs);
