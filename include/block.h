@@ -14,6 +14,9 @@ typedef struct {
 	double **ops;
 	int *mzs;   	// 2*mz quantum number for each state
 	model_t *model;
+
+	double energy;
+	double trunc_err;
 } DMRGBlock;
 
 DMRGBlock *createDMRGBlock(model_t *model, int fullLength);

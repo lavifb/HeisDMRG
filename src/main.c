@@ -3,6 +3,7 @@
 #include "linalg.h"
 #include "dmrg.h"
 #include "input_parser.h"
+#include "logio.h"
 #include <mkl.h>
 #include <time.h>
 #include <stdio.h>
@@ -41,6 +42,18 @@ int main(int argc, char *argv[]) {
 
 	mkdir(out_dir, 0755);
 
+	// open file to log energies and truncation errors
+	char log_filename[1024];
+	sprintf(log_filename, "%senergies.log", out_dir);
+	f_log = fopen(log_filename, "w");
+	if (f_log == NULL) {
+		errprintf("Cannot open file '%s'.\n", log_filename);
+		return -1;
+	}
+	fprintf(f_log, "%-5s%-20s%-20s\n"
+				"---------------------------------------------\n"
+				 , "L", "Energy", "Truncation Error");
+
 	printSimParams(stdout, &params);
 
 	meas_data_t *meas;
@@ -49,6 +62,7 @@ int main(int argc, char *argv[]) {
 	clock_t t_start = clock();
 
 	// inf_dmrg(params.L, params.minf, model);
+	// meas = fin_dmrg(params.L, params.minf, params.num_ms, params.ms, model);
 	meas = fin_dmrgR(params.L, params.minf, params.num_ms, params.ms, model);
 
 	// Record end time
@@ -57,18 +71,20 @@ int main(int argc, char *argv[]) {
 
 	printf("\n\nSimulation finished in %.3f seconds.\n", params.runtime);
 
-	// Save sim params to a log file
-	char log_filename[1024];
-	sprintf(log_filename, "%sparams.log", out_dir); 
+	fclose(f_log);
 
-	FILE *log_f = fopen(log_filename, "w");
-	if (log_f == NULL) {
-		errprintf("Cannot open file '%s'.\n", log_filename);
+	// Save sim params to a log file
+	char plog_filename[1024];
+	sprintf(plog_filename, "%sparams.log", out_dir); 
+
+	FILE *plog_f = fopen(plog_filename, "w");
+	if (plog_f == NULL) {
+		errprintf("Cannot open file '%s'.\n", plog_filename);
 		return -1;
 	}
 
-	printSimParams(log_f, &params);
-	fclose(log_f);
+	printSimParams(plog_f, &params);
+	fclose(plog_f);
 
 	// Save Measurements
 	outputMeasData(out_dir, meas);

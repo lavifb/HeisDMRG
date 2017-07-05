@@ -2,7 +2,7 @@
 #include "model.h"
 #include "linalg.h"
 #include <mkl.h>
-#include <assert.h>
+#include <float.h>
 
 
 DMRGBlock *createDMRGBlock(model_t *model, int fullLength) {
@@ -30,6 +30,10 @@ DMRGBlock *createDMRGBlock(model_t *model, int fullLength) {
 		memcpy(block->ops[i], model->init_ops[i], dim*dim * sizeof(double));
 	}
 
+	// Set energy to ridiculous value
+	block->energy = DBL_MAX;
+	block->trunc_err = 0;
+
 	return block;
 }
 
@@ -56,6 +60,9 @@ DMRGBlock *copyDMRGBlock(DMRGBlock *orig) {
 		newBlock->ops[i] = (double *)mkl_malloc(dim*dim * sizeof(double), MEM_DATA_ALIGN);
 		memcpy(newBlock->ops[i], orig->ops[i], dim*dim * sizeof(double));
 	}
+
+	newBlock->energy = orig->energy;
+	newBlock->trunc_err = orig->trunc_err;
 
 	return newBlock;
 }

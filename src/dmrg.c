@@ -3,6 +3,7 @@
 #include "sector.h"
 #include "meas.h"
 #include "linalg.h"
+#include "logio.h"
 #include "uthash.h"
 #include <mkl.h>
 #include <mkl_scalapack.h>
@@ -126,8 +127,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	mkl_free(ifail);
 	mkl_free(Hs_r);
 
-	double energy = energies[0]; // record ground state energy
-	printf("E/L = % .12f\n", energy / (sys_enl->length + env_enl->length));
+	sys_enl->energy = energies[0]; // record ground state energy
 	mkl_free(energies);
 
 	// Transformation Matrix
@@ -227,11 +227,11 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	mkl_free(sys_mzs_full);
 	mkl_free(trans_full);
 	
-	double truncation_err = 1;
+	double truncation_err = 1.0;
 	for (i = 0; i < mm; i++) {
 		truncation_err -= lambs[i];
 	}
-	printf("Truncation Error: %.10e\n", truncation_err);
+	sys_enl->trunc_err = truncation_err;
 	mkl_free(lambs);
 	mkl_free(sorted_inds);
 
@@ -392,10 +392,12 @@ void inf_dmrg(const int L, const int m, model_t *model) {
 	DMRGBlock *sys = createDMRGBlock(model, L);
 
 	while (2*sys->length < L) {
-		printf("\nL = %d\n", sys->length * 2 + 2);
+		int currL = sys->length * 2 + 2;
+		printf("\nL = %d\n", currL);
 		DMRGBlock *newSys = single_step(sys, sys, m, 0);
 		freeDMRGBlock(sys);
 		sys = newSys;
+		printf("E/L = % .12f\n", sys->energy / currL);
 	}
 
 	freeDMRGBlock(sys);
@@ -422,7 +424,6 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 
 	// run infinite algorithm to build up system
 	while (2*sys->length < L) {
-		printGraphic(sys, sys);
 		DMRGBlock *newSys = single_step(sys, sys, m_inf, 0);
 		freeDMRGBlock(sys);
 		sys = newSys;
@@ -460,16 +461,17 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 				sys = env;
 				env = tempBlock;
 
-				if (sys->side == 'L' && i == num_sweeps - 1) {
+				if (sys->side == 'L' && i == num_sweeps-1) {
 					sys->meas = 'M';
-					printf("\nKeeping track of measurements...\n");
+					printf("Keeping track of measurements...\n");
 				}
 			}
 
 			// measure and finish run
-			if (sys->meas == 'M' && 2 * sys->length == L-2) {
+			if (i == num_sweeps-1 && 2 * sys->length == L-2) {
+				printf("Done with sweep %d/%d\n", num_sweeps, num_sweeps);
+				printf("\nTaking measurements...\n");
 				meas = meas_step(sys, env, m, 0);
-				printf("\nMeasurement Time!! \n");
 				break;
 			}
 
@@ -477,6 +479,8 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 			DMRGBlock *newSys = single_step(sys, env, m, 0);
 			freeDMRGBlock(sys);
 			sys = newSys;
+
+			logBlock(sys);
 
 			// Save new block
 			switch (sys->side) {
@@ -493,7 +497,8 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 
 			// Check if sweep is done
 			if (sys->side == 'L' && 2 * sys->length == L) {
-				printf("\nDone with sweep %d/%d\n\n", i+1, num_sweeps);
+				printf("Done with sweep %d/%d\n", i+1, num_sweeps);
+				logSweepEnd();
 				break;
 			}
 		}
@@ -561,15 +566,16 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 				sys = env;
 				env = tempBlock;
 
-				if (i == num_sweeps - 1) {
+				if (i == num_sweeps-1) {
 					sys->meas = 'M';
-					printf("\nKeeping track of measurements...\n");
+					printf("Keeping track of measurements...\n");
 				}
 			}
 
 			// measure and finish run
-			if (sys->meas == 'M' && 2 * sys->length == L-2) {
-				printf("\nMeasurement Time!!\n");
+			if (i == num_sweeps-1 && 2 * sys->length == L-2) {
+				printf("Done with sweep %d/%d\n", num_sweeps, num_sweeps);
+				printf("\nTaking measurements...\n");
 				meas = meas_step(sys, env, m, 0);
 				break;
 			}
@@ -579,13 +585,16 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 			freeDMRGBlock(sys);
 			sys = newSys;
 
+			logBlock(sys);
+
 			// Save new block
 			if (saved_blocks[sys->length-1]) { freeDMRGBlock(saved_blocks[sys->length-1]); }
 			saved_blocks[sys->length-1] = copyDMRGBlock(sys);
 
 			// Check if sweep is done
 			if (2 * sys->length == L) {
-				printf("\nDone with sweep %d/%d\n\n", i+1, num_sweeps);
+				printf("Done with sweep %d/%d\n", i+1, num_sweeps);
+				logSweepEnd();
 				break;
 			}
 		}
