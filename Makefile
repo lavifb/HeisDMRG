@@ -44,3 +44,7 @@ proj_main: src
 
 debug: clean-debug srcD
 	 ${CC} -I${INC}/ ${CCOPTSD} ${MKL} -o ${BIN}/dmrg_debug ${DBUG}/*
+	 
+tests: src
+	rm -f ${ODIR}/main.o
+	${CC} -I${INC}/ ${CCOPTSR} ${MKL} -o ${BIN}/quick_test ${ODIR}/* ${TEST}/quick_test.c
