@@ -241,7 +241,7 @@ void printSimParams(FILE *stream, const sim_params_t *params) {
 
 	fprintf(stream,
 			"\n"
-			"******************************\n\n");
+			"******************************\n\n\n");
 }
 
 void freeParams(sim_params_t *params) {

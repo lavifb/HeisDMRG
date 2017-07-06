@@ -432,7 +432,6 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 		saved_blocksR[sys->length-1] = copyDMRGBlock(sys);
 		saved_blocksR[sys->length-1]->side = 'R';
 	}
-	printf("\n\n");
 
 	meas_data_t *meas;
 
@@ -545,7 +544,6 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 
 		saved_blocks[sys->length-1] = copyDMRGBlock(sys);
 	}
-	printf("\n\n");
 
 	meas_data_t *meas;
 

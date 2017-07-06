@@ -51,21 +51,41 @@ int main() {
 	clock_t t_end = clock();
 	double runtime = (double)(t_end - t_start) / CLOCKS_PER_SEC;
 
-	printf("Quick Test finished in %.3f seconds.\n", runtime);
+	printf("Quick Test finished in %.3f seconds.\n\n", runtime);
 
-	// Expected test energy
-	#define ETE -0x1.c3dc97de7fe89p-2
+	int success = 0;
 
-	if (meas->energy != ETE) {
-		errprintf("\nTest Failed!\nExpected Energy: %.17f\nMeasured Energy: %.17f\n",
+	// Expected test results
+	#define ETE  -0x1.c3dc97de7fe89p-2
+	#define Sz12 -0x1.ebp-52
+	#define Sz19 0x1.bap-49
+	#define SS5  -0x1.c1f45da2c588p-9
+	#define SS42 0x1.8fb3d2733c562p-6
+
+	if (meas->energy == ETE) {
+		printf( TERM_GREEN "Energy Test Passed!\n" TERM_RESET );
+	} else {
+		errprintf("Energy Test Failed!\nExpected Energy: %.17f\nMeasured Energy: %.17f\n",
 			ETE, meas->energy);
-		return -1;
+		success = -1;
 	}
 
-	printf( TERM_GREEN "\nTest Passed!\n" TERM_RESET );
+	if (meas->Szs[12] == Sz12 && meas->Szs[19] == Sz19) {
+		printf( TERM_GREEN "Sz Test Passed!\n" TERM_RESET );
+	} else {
+		errprintf("Sz Test Failed!\n");
+		success = -1;
+	}
+
+	if (meas->SSs[5] == SS5 && meas->SSs[42] == SS42) {
+		printf( TERM_GREEN "SS correleation Test Passed!\n" TERM_RESET );
+	} else {
+		errprintf("SS correleation Test Failed!\n");
+		success = -1;
+	}
 
 	// fclose(f_log);
 
 
-	return 0;
+	return success;
 }
