@@ -31,6 +31,4 @@ DMRGBlock *enlargeBlock(const DMRGBlock *block);
 
 double **enlargeOps(const DMRGBlock *block);
 
-void transformOps(const int numOps, const int opDim, const int newDim, const double *restrict trans, double **ops);
-
 #endif

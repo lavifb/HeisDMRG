@@ -179,26 +179,3 @@ double **enlargeOps(const DMRGBlock *block) {
 
 	return enl_ops;
 }
-
-/*  Transform an entire set of operators at once.
-*/
-void transformOps(const int numOps, const int opDim, const int newDim, const double *restrict trans, double **ops) {
-
-	double *newOp = (double *)mkl_malloc(newDim*newDim * sizeof(double), MEM_DATA_ALIGN);
-	double *temp  = (double *)mkl_malloc(newDim*opDim  * sizeof(double), MEM_DATA_ALIGN);
-	__assume_aligned(trans, MEM_DATA_ALIGN);
-	__assume_aligned(newOp, MEM_DATA_ALIGN);
-	__assume_aligned(temp , MEM_DATA_ALIGN);
-
-	int i;
-	for (i = 0; i < numOps; i++) {
-		__assume_aligned(ops[i], MEM_DATA_ALIGN);
-		cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, newDim, opDim , opDim, 1.0, trans, opDim, ops[i], opDim, 0.0, temp, newDim);
-		cblas_dgemm(CblasColMajor, CblasNoTrans  , CblasNoTrans, newDim, newDim, opDim, 1.0, temp, newDim, trans, opDim, 0.0, newOp, newDim);
-		ops[i] = (double *)mkl_realloc(ops[i], newDim*newDim * sizeof(double));
-		memcpy(ops[i], newOp, newDim*newDim * sizeof(double)); // copy newOp back into ops[i]
-	}
-
-	mkl_free(temp);
-	mkl_free(newOp);
-}

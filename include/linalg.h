@@ -9,6 +9,8 @@ double *identity(const int N);
 
 double *transformOp(const int opDim, const int newDim, const double *restrict trans, const double *restrict op);
 
+void transformOps(const int numOps, const int opDim, const int newDim, const double *restrict trans, double **ops);
+
 double *restrictOp(const int m, const double *op, const int num_ind, const int *inds);
 
 double *restrictVec(const int m, const double *v, const int num_ind, const int *inds);
