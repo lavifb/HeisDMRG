@@ -11,7 +11,7 @@ Todo
 
 - Runtime tester
 
-- Better outformat for truncation error and energy
+- Better output format for truncation error and energy
 
 - Time dependent code
 	- Trotter evolution
