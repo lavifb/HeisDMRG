@@ -15,7 +15,7 @@ int main() {
 	#define L    100
 	#define minf 10
 	#define n_ms 3
-	int ms[3] = {10, 10, 20};
+	int ms[n_ms] = {10, 10, 20};
 
 	model_t *model = newNullModel();
 	model->d_model = 2;
