@@ -36,7 +36,7 @@ clean-main:
 src : $(patsubst $(SRC)/%.c, $(OBJ)/%.o, $(wildcard $(SRC)/[^_]*.c))
 srcD: $(patsubst $(SRC)/%.c, $(DBUG)/%.o, $(wildcard $(SRC)/[^_]*.c))
 
-tests: $(patsubst $(TEST)/%.c, $(BIN)/%, $(wildcard $(TEST)/[^_]*.c))
+test: $(patsubst $(TEST)/%.c, $(BIN)/%, $(wildcard $(TEST)/[^_]*.c))
 
 ${OBJ}/%.o: ${SRC}/%.c
 	${CC} -c -I${INC}/ ${CCOPTSR} ${MKL} $< -o $@
