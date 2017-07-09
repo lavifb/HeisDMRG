@@ -13,7 +13,7 @@ MKL = -mkl=sequential
 BIN := bin
 SRC := src
 INC := include
-ODIR:= odir
+OBJ := obj
 TEST:= test
 DBUG:= debug
 
@@ -23,28 +23,32 @@ build: proj_main
 
 clean: 
 	-rm -rf ${BIN}/*
-	-rm ${ODIR}/*
+	-rm ${OBJ}/*
 
 clean-debug:
 	-rm -rf ${DBUG}/*
 
 clean-all: clean clean-debug
 
-src : $(patsubst $(SRC)/%.c, $(ODIR)/%.o, $(wildcard $(SRC)/[^_]*.c))
+clean-main:
+	-rm -f ${OBJ}/main.o
+
+src : $(patsubst $(SRC)/%.c, $(OBJ)/%.o, $(wildcard $(SRC)/[^_]*.c))
 srcD: $(patsubst $(SRC)/%.c, $(DBUG)/%.o, $(wildcard $(SRC)/[^_]*.c))
 
-${ODIR}/%.o: ${SRC}/%.c
+tests: $(patsubst $(TEST)/%.c, $(BIN)/%, $(wildcard $(TEST)/[^_]*.c))
+
+${OBJ}/%.o: ${SRC}/%.c
 	${CC} -c -I${INC}/ ${CCOPTSR} ${MKL} $< -o $@
 
 ${DBUG}/%.o: ${SRC}/%.c
 	${CC} -c -I${INC}/ ${CCOPTSD} ${MKL} $< -o $@
 
 proj_main: src
-	 ${CC} -I${INC}/ ${CCOPTSR} ${MKL} -o ${BIN}/dmrg ${ODIR}/*
+	 ${CC} -I${INC}/ ${CCOPTSR} ${MKL} -o ${BIN}/dmrg ${OBJ}/*
 
 debug: clean-debug srcD
 	 ${CC} -I${INC}/ ${CCOPTSD} ${MKL} -o ${BIN}/dmrg_debug ${DBUG}/*
 	 
-tests: src
-	rm -f ${ODIR}/main.o
-	${CC} -I${INC}/ ${CCOPTSR} ${MKL} -o ${BIN}/quick_test ${ODIR}/* ${TEST}/quick_test.c
+${BIN}/%: ${TEST}/%.c src clean-main
+	${CC} -I${INC}/ ${CCOPTSR} ${MKL} -o $@ $< ${OBJ}/*
