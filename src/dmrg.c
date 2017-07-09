@@ -4,6 +4,7 @@
 #include "meas.h"
 #include "linalg.h"
 #include "logio.h"
+#include "progress.h"
 #include "uthash.h"
 #include <mkl.h>
 #include <mkl_scalapack.h>
@@ -11,28 +12,6 @@
 // #include <stdio.h>
 // #include <string.h>
 // #include <stdlib.h>
-
-/* Print nice graphic of the system and environment
-*/
-void printGraphic(DMRGBlock *sys, DMRGBlock *env) {
-
-	char *sys_g = (char *)malloc((sys->length +1) * sizeof(char));
-	char *env_g = (char *)malloc((env->length +1) * sizeof(char));
-
-	memset(sys_g, '=', sys->length);
-	memset(env_g, '-', env->length);
-	sys_g[sys->length] = '\0';
-	env_g[env->length] = '\0';
-
-	if (sys->side == 'L') {
-		printf("%s**%s\n", sys_g, env_g);
-	} else {
-		printf("%s**%s\n", env_g, sys_g);
-	}
-
-	free(sys_g);
-	free(env_g);
-}
 
 /* Single DMRG step
    
@@ -535,6 +514,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 	// Note: saved_blocks[i] has length i+1
 	saved_blocks[0] = copyDMRGBlock(sys);
 
+	printProgressBar(50);
 	// run infinite algorithm to build up system
 	while (2*sys->length < L) {
 		// printGraphic(sys, sys);
@@ -543,7 +523,9 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 		sys = newSys;
 
 		saved_blocks[sys->length-1] = copyDMRGBlock(sys);
+		updateProgressBar(sys->length*50*2 / L, 50);
 	}
+	printf("\n");
 
 	meas_data_t *meas;
 

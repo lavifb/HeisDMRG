@@ -179,3 +179,25 @@ double **enlargeOps(const DMRGBlock *block) {
 
 	return enl_ops;
 }
+
+/* Print nice graphic of the system and environment
+*/
+void printGraphic(DMRGBlock *sys, DMRGBlock *env) {
+
+	char *sys_g = (char *)malloc((sys->length +1) * sizeof(char));
+	char *env_g = (char *)malloc((env->length +1) * sizeof(char));
+
+	memset(sys_g, '=', sys->length);
+	memset(env_g, '-', env->length);
+	sys_g[sys->length] = '\0';
+	env_g[env->length] = '\0';
+
+	if (sys->side == 'L') {
+		printf("%s**%s\n", sys_g, env_g);
+	} else {
+		printf("%s**%s\n", env_g, sys_g);
+	}
+
+	free(sys_g);
+	free(env_g);
+}
