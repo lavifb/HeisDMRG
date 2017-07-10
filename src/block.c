@@ -30,6 +30,9 @@ DMRGBlock *createDMRGBlock(model_t *model, int fullLength) {
 		memcpy(block->ops[i], model->init_ops[i], dim*dim * sizeof(double));
 	}
 
+	block->psi = (double *)mkl_malloc(dim * sizeof(double), MEM_DATA_ALIGN);
+	block->A = (double *)mkl_malloc(dim*dim * sizeof(double), MEM_DATA_ALIGN);
+
 	// Set energy to ridiculous value
 	block->energy = DBL_MAX;
 	block->trunc_err = 0;
@@ -61,6 +64,11 @@ DMRGBlock *copyDMRGBlock(DMRGBlock *orig) {
 		memcpy(newBlock->ops[i], orig->ops[i], dim*dim * sizeof(double));
 	}
 
+	newBlock->psi = (double *)mkl_malloc(dim * sizeof(double), MEM_DATA_ALIGN);
+	memcpy(newBlock->psi, orig->psi, dim * sizeof(double));
+	newBlock->A = (double *)mkl_malloc(dim*dim * sizeof(double), MEM_DATA_ALIGN);
+	memcpy(newBlock->A, orig->A, dim*dim * sizeof(double));
+
 	newBlock->energy = orig->energy;
 	newBlock->trunc_err = orig->trunc_err;
 
@@ -75,6 +83,8 @@ void freeDMRGBlock(DMRGBlock *block) {
 	}
 	mkl_free(block->ops);
 	mkl_free(block->mzs);
+	mkl_free(block->psi);
+	mkl_free(block->A);
 
 	mkl_free(block);
 }
@@ -99,11 +109,16 @@ DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 	enl_block->length  = block->length + 1;
 	enl_block->fullLength = block->fullLength;
 	int d_model = block->model->d_model;
-	enl_block->d_block = block->d_block * d_model;
+	int dim = block->d_block * d_model;
+	enl_block->d_block = dim;
 	enl_block->num_ops = block->num_ops;
 	enl_block->model   = block->model;
 	enl_block->side    = block->side;
 	enl_block->meas    = block->meas;
+
+	enl_block->psi = (double *)mkl_malloc(dim * sizeof(double), MEM_DATA_ALIGN);
+	enl_block->A = (double *)mkl_malloc(dim*dim * sizeof(double), MEM_DATA_ALIGN);
+	// TODO: add enlarged block A
 
 	enl_block->ops = enlargeOps(block);
 	if (enl_block->meas == 'M') { // measurement block

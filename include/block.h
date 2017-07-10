@@ -15,6 +15,9 @@ typedef struct {
 	int *mzs;   	// 2*mz quantum number for each state
 	model_t *model;
 
+	double *psi;	// tracked state
+	double *A;  	// operator that takes ground to desired state: A|psi0> = |psi>
+
 	double energy;
 	double trunc_err;
 } DMRGBlock;
