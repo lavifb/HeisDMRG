@@ -85,7 +85,17 @@ int main() {
 	}
 
 	// fclose(f_log);
+	freeMeas(meas);
+	freeModel(model);
 
+	MKL_Free_Buffers();
+	int nbuffers;
+	MKL_INT64 nbytes_alloc;
+	nbytes_alloc = MKL_Mem_Stat(&nbuffers);
+	if (nbytes_alloc > 0) {
+		errprintf("MKL reports a memory leak of %lld bytes in %d buffer(s).\n", nbytes_alloc, nbuffers);
+		success = -1;
+	}
 
 	return success;
 }
