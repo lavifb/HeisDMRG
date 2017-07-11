@@ -147,7 +147,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		int env_mz = target_mz - mz;
 		int n_sec = sec->num_ind;
 
-		double *psi0_sec = restrictVec(num_restr_ind, psi0_r, n_sec, sec->inds);
+		double *psi0_sec = restrictVec(psi0_r, n_sec, sec->inds);
 
 		sector_t *sys_enl_mz, *env_enl_mz;
 		HASH_FIND_INT(sys_enl_sectors, &mz    , sys_enl_mz);
@@ -343,6 +343,10 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	meas_data_t *meas = createMeas(sys_enl->num_ops - 3);
 	meas->energy = energies[0] / (sys_enl->length + env_enl->length);
 	mkl_free(energies);
+
+	// unrestrict psi0
+	// psi = A*psi0
+	// get new restricted indices
 
 	int i;
 	// <S_i> spins

@@ -13,7 +13,7 @@ void transformOps(const int numOps, const int opDim, const int newDim, const dou
 
 double *restrictOp(const int m, const double *op, const int num_ind, const int *inds);
 
-double *restrictVec(const int m, const double *v, const int num_ind, const int *inds);
+double *restrictVec(const double *v, const int num_ind, const int *inds);
 
 double *unrestrictVec(const int m, const double *v_r, const int num_ind, const int *inds);
 

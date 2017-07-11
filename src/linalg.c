@@ -153,12 +153,11 @@ double *restrictOp(const int m, const double *op, const int num_ind, const int *
 
 /*  Restrict vector to only indexes 
 
-	m       : dimension of v
 	v       : input vector
 	num_ind : number of indexes provided. Also dimension of output
 	inds    : list of indexes
 */
-double *restrictVec(const int m, const double *v, const int num_ind, const int *inds) {
+double *restrictVec(const double *v, const int num_ind, const int *inds) {
 
 	double *v_r = (double *)mkl_malloc(num_ind * sizeof(double), MEM_DATA_ALIGN);
 
