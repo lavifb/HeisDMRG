@@ -1,6 +1,9 @@
 #include "linalg.h"
 #include <mkl.h>
+#include <math.h>
 #include <stdlib.h>
+
+#define ZERO_TOLERANCE 10e-7
 
 /*  Compute Kronecker product of two square matrices. Sets C = alpha * kron(A,B) + C
  
@@ -167,6 +170,41 @@ double *restrictVec(const double *v, const int num_ind, const int *inds) {
 	}
 
 	return v_r;
+}
+/*  Restrict vector to only indexes where v is nonzero.
+
+	m       : dimension of v
+	v       : input vector
+
+	RETURNS
+	v       : restricted input vector
+	num_indp: pointer to number of unrestricted indexes
+	inds    : list of indexes
+*/
+int *restrictVecToNonzero(const int m, double *v, int *num_indp) {
+
+	int num_ind = 0;
+	double *v_r = (double *)mkl_malloc(m * sizeof(double), MEM_DATA_ALIGN);
+	int *inds = (int *)mkl_malloc(m * sizeof(int), MEM_DATA_ALIGN);
+
+	int i;
+	for (i = 0; i < m; i++) {
+		if (fabs(v[i]) > ZERO_TOLERANCE) {
+			v_r[num_ind] = v[i];
+			inds[num_ind] = i;
+			num_ind++;
+		}
+	}
+
+	v = mkl_realloc(v, num_ind * sizeof(double), MEM_DATA_ALIGN);
+	inds = mkl_realloc(inds, num_ind * sizeof(int), MEM_DATA_ALIGN);
+
+	memcpy(v, v_r, num_ind * sizeof(double));
+	mkl_free(v_r);
+
+	*num_indp = num_ind;
+
+	return inds;
 }
 
 /*  Unrestrict vector 
