@@ -57,10 +57,10 @@ int main() {
 
 	// Expected test results
 	#define ETE  -0x1.c3dc97de7fe89p-2
-	#define Sz12 -0x1.ebp-52
-	#define Sz19 0x1.bap-49
-	#define SS5  -0x1.c1f45da2c588p-9
-	#define SS42 0x1.8fb3d2733c562p-6
+	#define Sz13 -0x1.ebp-52
+	#define Sz20 0x1.bap-49
+	#define SS6  -0x1.c1f45da2c588p-9
+	#define SS43 0x1.8fb3d2733c562p-6
 
 	if (meas->energy == ETE) {
 		printf( TERM_GREEN "Energy Test Passed!\n" TERM_RESET );
@@ -70,14 +70,14 @@ int main() {
 		success = -1;
 	}
 
-	if (meas->Szs[12] == Sz12 && meas->Szs[19] == Sz19) {
+	if (meas->Szs[13] == Sz13 && meas->Szs[20] == Sz20) {
 		printf( TERM_GREEN "Sz Test Passed!\n" TERM_RESET );
 	} else {
 		errprintf("Sz Test Failed!\n");
 		success = -1;
 	}
 
-	if (meas->SSs[5] == SS5 && meas->SSs[42] == SS42) {
+	if (meas->SSs[6] == SS6 && meas->SSs[43] == SS43) {
 		printf( TERM_GREEN "SS correleation Test Passed!\n" TERM_RESET );
 	} else {
 		errprintf("SS correleation Test Failed!\n");

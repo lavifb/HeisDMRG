@@ -19,7 +19,7 @@ DBUG:= debug
 
 # SRC_FILES = $(patsubst $(PUG)/%.pug, $(TEST)/%.html, $(wildcard $(PUG)/[^_]*.pug))
 
-build: proj_main
+build: proj_main test
 
 clean: 
 	-rm -rf ${BIN}/*

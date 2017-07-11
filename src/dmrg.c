@@ -461,7 +461,7 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 				env = tempBlock;
 
 				if (sys->side == 'L' && i == num_sweeps-1) {
-					sys->meas = 'M';
+					startMeasBlock(sys);
 					printf("Keeping track of measurements...\n");
 				}
 			}
@@ -565,7 +565,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 				env = tempBlock;
 
 				if (i == num_sweeps-1) {
-					sys->meas = 'M';
+					startMeasBlock(sys);
 					printf("Keeping track of measurements...\n");
 				}
 			}

@@ -194,3 +194,20 @@ double **enlargeOps(const DMRGBlock *block) {
 
 	return enl_ops;
 }
+
+/* Prepares block to keep track of measurement ops
+   Note: It is assumed that the block is length 1
+*/
+void startMeasBlock(DMRGBlock *block) {
+
+	// assert(block->length == 1);
+	block->meas = 'M';
+
+	int dim = block->d_block;
+
+	block->ops[block->num_ops] = (double *)mkl_malloc(dim*dim * sizeof(double), MEM_DATA_ALIGN);
+	// New S_i is same as conn_Sz
+	memcpy(block->ops[block->num_ops], block->ops[1], dim*dim * sizeof(double));
+
+	block->num_ops++;
+}
