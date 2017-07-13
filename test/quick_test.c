@@ -6,6 +6,7 @@
 #include "input_parser.h"
 #include "logio.h"
 #include <mkl.h>
+#include <math.h>
 #include <time.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -60,13 +61,15 @@ int main() {
 	int success = 0;
 
 	// Expected test results
-	#define ETE  -0x1.c3dc97de7fe89p-2
+	#define ETE  -.441271
 	#define Sz13 -0x1.ebp-52
 	#define Sz20 0x1.bap-49
 	#define SS6  -0x1.c1f45da2c588p-9
 	#define SS43 0x1.8fb3d2733c562p-6
 
-	if (meas->energy == ETE) {
+	#define TOLERANCE 10e-4
+
+	if (fabs(meas->energy - ETE) < TOLERANCE) {
 		printf( TERM_GREEN "Energy Test Passed!\n" TERM_RESET );
 	} else {
 		errprintf("Energy Test Failed!\nExpected Energy: %.17f\nMeasured Energy: %.17f\n",
@@ -74,14 +77,14 @@ int main() {
 		success = -1;
 	}
 
-	if (meas->Szs[13] == Sz13 && meas->Szs[20] == Sz20) {
+	if (fabs(meas->Szs[13] - Sz13) < TOLERANCE && fabs(meas->Szs[20] - Sz20) < TOLERANCE) {
 		printf( TERM_GREEN "Sz Test Passed!\n" TERM_RESET );
 	} else {
 		errprintf("Sz Test Failed!\n");
 		success = -1;
 	}
 
-	if (meas->SSs[6] == SS6 && meas->SSs[43] == SS43) {
+	if (fabs(meas->SSs[6] - SS6) < TOLERANCE && fabs(meas->SSs[43] - SS43) < TOLERANCE) {
 		printf( TERM_GREEN "SS correleation Test Passed!\n" TERM_RESET );
 	} else {
 		errprintf("SS correleation Test Failed!\n");
