@@ -18,7 +18,7 @@ DMRGBlock *createDMRGBlock(model_t *model, int fullLength) {
 	block->d_block = dim;
 	block->num_ops = model->num_ops;
 	block->model   = model;
-	
+
 	block->mzs = (int *)mkl_malloc(dim * sizeof(int), MEM_DATA_ALIGN);
 	memcpy(block->mzs, model->init_mzs, dim * sizeof(int));
 
@@ -76,7 +76,7 @@ DMRGBlock *copyDMRGBlock(DMRGBlock *orig) {
 }
 
 void freeDMRGBlock(DMRGBlock *block) {
-	
+
 	int i;
 	for (i=0; i<block->num_ops; i++) {
 		mkl_free(block->ops[i]);
@@ -140,19 +140,19 @@ DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 	0: H
 	1: conn_Sz
 	2: conn_Sp
-	
+
 	----------
 
 	H_enl = kron(H, I_d) + kron(I_m, H1) + H_int(conn_Sz, conn_Sp, Sz, Sp)
 	conn_Sz = kron(I_m, Sz)
-	conn_Sp = kron(I_m, Sp) 
+	conn_Sp = kron(I_m, Sp)
 */
 
 double **enlargeOps(const DMRGBlock *block) {
 
 	int numOps = block->num_ops;
 
-	if (block->meas == 'M') { 
+	if (block->meas == 'M') {
 		numOps++; // add new s_i block
 	}
 
@@ -164,7 +164,7 @@ double **enlargeOps(const DMRGBlock *block) {
 	int d_enl  	= d_model * d_block;
 
 	// H_enl
-	enl_ops[0] = model->H_int(model->H_params, d_block, d_model, 
+	enl_ops[0] = model->H_int(model->H_params, d_block, d_model,
 					block->ops[1], block->ops[2], model->Sz, model->Sp);
 	kronI('R', d_block, d_model, block->ops[0], enl_ops[0]);
 	kronI('L', d_block, d_model, model->H1, enl_ops[0]);

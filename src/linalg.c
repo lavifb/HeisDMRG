@@ -77,6 +77,8 @@ void kronI(const char side, const int m, const int n, const double *restrict A, 
 	}
 }
 
+// TODO: make function to kron and restrict in 1 step, saving time/memory measuring.
+
 /* Creates identity matrix of size N*N
 */
 double *identity(const int N) {
