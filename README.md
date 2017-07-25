@@ -11,15 +11,16 @@ Todo
 
 - Runtime tester
 
-- Better output format for truncation error and energy
-
 - Time dependent code
-	- Trotter evolution
-	- Runge-Kutta evolution
+	- Trotter evolution?
 
-- Performance improvements
-	- Use sparse matrix for H
-	- Eigenstate guessing
+- Complex data type
+
+- Write to HD for very large matrices
+
+####Maybe
+
+- Variable m for set truncation error
 
 - Use Input File for parameters
 	- Full Hamiltonian
