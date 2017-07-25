@@ -20,26 +20,30 @@ int main(int argc, char *argv[]) {
 		mm = atoi(argv[1]);
 	}
 
-	#define L    100
+	#define L    32
 	#define n_ms 8
+	#define N    2
 	int minf;
 	int ms[n_ms];
 
 	model_t *model = newNullModel();
-	model->d_model = 2;
+	model->d_model = N;
 	model->J  = 1;
 	model->Jz = 1;
 
-	double H1[4] = { 0, 0,
+	double H1[N*N] = { 0, 0,
 					 0, 0 };
-	double Sz[4] = {.5, 0,
+	double Sz[N*N] = {.5, 0,
 					 0,-.5};
-	double Sp[4] = { 0, 1,
+	double Sp[N*N] = { 0, 1,
 					 0, 0 };
 
-	model->H1 = H1;
-	model->Sz = Sz;
-	model->Sp = Sp;
+	model->H1 = mkl_malloc(N*N * sizeof(double), MEM_DATA_ALIGN);
+	memcpy(model->H1, H1, N*N * sizeof(double));
+	model->Sz = mkl_malloc(N*N * sizeof(double), MEM_DATA_ALIGN);
+	memcpy(model->Sz, Sz, N*N * sizeof(double));
+	model->Sp = mkl_malloc(N*N * sizeof(double), MEM_DATA_ALIGN);
+	memcpy(model->Sp, Sp, N*N * sizeof(double));
 
 	compileParams(model);
 
@@ -50,8 +54,8 @@ int main(int argc, char *argv[]) {
 
 	clock_t t_start = clock();
 
-	// meas_data_t *meas = fin_dmrgR(L, minf, n_ms, ms, model);
-	meas_data_t *meas = fin_dmrg(L, minf, n_ms, ms, model);
+	meas_data_t *meas = fin_dmrgR(L, minf, n_ms, ms, model);
+	// meas_data_t *meas = fin_dmrg(L, minf, n_ms, ms, model);
 
 	clock_t t_end = clock();
 	double runtime = (double)(t_end - t_start) / CLOCKS_PER_SEC;
