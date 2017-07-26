@@ -198,8 +198,8 @@ int *restrictVecToNonzero(const int m, double *v, int *num_indp) {
 		}
 	}
 
-	v = mkl_realloc(v, num_ind * sizeof(double), MEM_DATA_ALIGN);
-	inds = mkl_realloc(inds, num_ind * sizeof(int), MEM_DATA_ALIGN);
+	v = mkl_realloc(v, num_ind * sizeof(double));
+	inds = mkl_realloc(inds, num_ind * sizeof(int));
 
 	memcpy(v, v_r, num_ind * sizeof(double));
 	mkl_free(v_r);
