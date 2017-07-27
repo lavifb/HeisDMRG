@@ -61,6 +61,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	int dimEnv = env_enl->d_block;
 	int dimSup = dimSys * dimEnv;
 
+	// TODO: only get Hs for restricted basis
 	// Superblock Hamiltonian
 	double *Hs = model->H_int(model->H_params, dimSys, dimEnv, 
 					sys_enl->ops[1], sys_enl->ops[2], env_enl->ops[1], env_enl->ops[2]);

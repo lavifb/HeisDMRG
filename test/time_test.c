@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
 	int mm;
 
 	if (argc < 2) {
-		mm = 10;
+		mm = 20;
 	} else {
 		mm = atoi(argv[1]);
 	}

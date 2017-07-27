@@ -23,9 +23,11 @@ void kron(const double alpha, const int m, const int n, const double *restrict A
 	int i, j, k, l;
 	for (i=0; i<m; i++) {
 		for (j=0; j<m; j++) {
+			if (A[i+m*j] == 0.0) { continue; }
+
 			for (k=0; k<n; k++) {
 				for (l=0; l<n; l++) {
-					C[(n*i + k) + ldac*(n*j + l)] += alpha * A[i+m*j]*B[k+n*l];
+					C[(n*i + k) + ldac*(n*j + l)] += B[k+n*l]*A[i+m*j] * alpha;
 				}
 			}
 		}
@@ -60,6 +62,8 @@ void kronI(const char side, const int m, const int n, const double *restrict A, 
 		case 'R':
 			for (i=0; i<m; i++) {
 				for (j=0; j<m; j++) {
+					if (A[i+m*j] == 0.0) { continue; }
+
 					for (k=0; k<n; k++) {
 						C[(n*i + k) + ldac*(n*j + k)] += A[i+m*j];
 					}
@@ -71,6 +75,8 @@ void kronI(const char side, const int m, const int n, const double *restrict A, 
 		case 'L':
 			for (i=0; i<n; i++) {
 				for (j=0; j<n; j++) {
+					if (A[i+n*j] == 0.0) { continue; }
+
 					for (k=0; k<m; k++) {
 						C[(n*k + i) + ldac*(n*k + j)] += A[i+n*j];
 					}
