@@ -274,12 +274,6 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	int dimEnv = env_enl->d_block;
 	int dimSup = dimSys * dimEnv;
 
-	// Superblock Hamiltonian
-	double *Hs = model->H_int(model->H_params, dimSys, dimEnv, 
-					sys_enl->ops[1], sys_enl->ops[2], env_enl->ops[1], env_enl->ops[2]);
-	kronI('R', dimSys, dimEnv, sys_enl->ops[0], Hs);
-	kronI('L', dimSys, dimEnv, env_enl->ops[0], Hs);
-
 	// indexes used for restricting Hs
 	int num_restr_ind = 0;
 	int *restr_basis_inds = (int *)mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
@@ -313,9 +307,12 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		freeDMRGBlock(env_enl);
 		freeSectors(env_enl_sectors);
 	}
-
-	double *Hs_r = restrictOp(dimSup, Hs, num_restr_ind, restr_basis_inds);
-	mkl_free(Hs);
+	
+	// Restricted Superblock Hamiltonian
+	double *Hs_r = HeisenH_int_r(model->H_params, dimSys, dimEnv, sys_enl->ops[1], sys_enl->ops[2], 
+					env_enl->ops[1], env_enl->ops[2], num_restr_ind, restr_basis_inds);
+	kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
+	kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
 
 	__assume_aligned(Hs_r, MEM_DATA_ALIGN);
 
@@ -347,11 +344,9 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	int i;
 	// <S_i> spins
 	for (i = 0; i<meas->num_sites; i++) {
-		double* supOp = (double *)mkl_calloc(dimSup*dimSup, sizeof(double), MEM_DATA_ALIGN);
-		kronI('R', dimSys, dimEnv, sys_enl->ops[i+3], supOp);
+		double* supOp_r = (double *)mkl_calloc(num_restr_ind*num_restr_ind, sizeof(double), MEM_DATA_ALIGN);
+		kronI_r('R', dimSys, dimEnv, sys_enl->ops[i + model->num_ops], supOp_r, num_restr_ind, restr_basis_inds);
 
-		double *supOp_r = restrictOp(dimSup, supOp, num_restr_ind, restr_basis_inds);
-		mkl_free(supOp);
 		transformOps(1, num_restr_ind, 1, psi0_r, &supOp_r);
 
 		meas->Szs[i] = *supOp_r;
@@ -360,15 +355,14 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 
 	// <S_i S_j> correlations
 	for (i = 0; i<meas->num_sites; i++) {
-		double* SSop = (double *)mkl_calloc(dimSys*dimSys, sizeof(double), MEM_DATA_ALIGN);
-		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, 1.0, sys_enl->ops[i+3], dimSys, sys_enl->ops[1], dimSys, 0.0, SSop, dimSys);
-		double* supOp = (double *)mkl_calloc(dimSup*dimSup, sizeof(double), MEM_DATA_ALIGN);
+		double* SSop = (double *)mkl_malloc(dimSys*dimSys * sizeof(double), MEM_DATA_ALIGN);
+		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, 1.0, sys_enl->ops[i + model->num_ops], 
+			dimSys, sys_enl->ops[1], dimSys, 0.0, SSop, dimSys);
+		double* supOp_r = (double *)mkl_calloc(dimSup*dimSup, sizeof(double), MEM_DATA_ALIGN);
 
-		kronI('R', dimSys, dimEnv, SSop, supOp);
+		kronI_r('R', dimSys, dimEnv, SSop, supOp_r, num_restr_ind, restr_basis_inds);
 		mkl_free(SSop);
 
-		double *supOp_r = restrictOp(dimSup, supOp, num_restr_ind, restr_basis_inds);
-		mkl_free(supOp);
 		transformOps(1, num_restr_ind, 1, psi0_r, &supOp_r);
 
 		meas->SSs[i] = *supOp_r;
