@@ -61,13 +61,6 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	int dimEnv = env_enl->d_block;
 	int dimSup = dimSys * dimEnv;
 
-	// TODO: only get Hs for restricted basis
-	// Superblock Hamiltonian
-	double *Hs = model->H_int(model->H_params, dimSys, dimEnv, 
-					sys_enl->ops[1], sys_enl->ops[2], env_enl->ops[1], env_enl->ops[2]);
-	kronI('R', dimSys, dimEnv, sys_enl->ops[0], Hs);
-	kronI('L', dimSys, dimEnv, env_enl->ops[0], Hs);
-
 	// Create sectors to treat seperately
 	sector_t *sup_sectors = NULL;
 
@@ -104,8 +97,12 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		}
 	}
 
-	double *Hs_r = restrictOp(dimSup, Hs, num_restr_ind, restr_basis_inds);
-	mkl_free(Hs);
+	// Restricted Superblock Hamiltonian
+	double *Hs_r = HeisenH_int_r(model->H_params, dimSys, dimEnv, sys_enl->ops[1], sys_enl->ops[2], 
+					env_enl->ops[1], env_enl->ops[2], num_restr_ind, restr_basis_inds);
+	kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
+	kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
+
 	mkl_free(restr_basis_inds);
 
 	__assume_aligned(Hs_r, MEM_DATA_ALIGN);
@@ -118,7 +115,6 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	double *energies = (double *)mkl_malloc(num_restr_ind * sizeof(double), MEM_DATA_ALIGN);;
 	int *isuppz = (int *)mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);;
 
-	// TODO: try syevr
 	info = LAPACKE_dsyevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
 			0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
 	if (info > 0) {

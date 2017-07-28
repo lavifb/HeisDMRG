@@ -3,7 +3,13 @@
 
 void kron(const double alpha, const int m, const int n, const double *restrict A, const double *restrict B, double *restrict C);
 
+void kron_r(const double alpha, const int m, const int n, const double *restrict A, const double *restrict B,
+	        double *restrict C, const int num_ind, const int *restrict inds);
+
 void kronI(const char side, const int m, const int n, const double *restrict A, double *restrict C);
+
+void kronI_r(const char side, const int m, const int n, const double *restrict A, 
+	         double *restrict C, const int num_ind, const int *restrict inds);
 
 double *identity(const int N);
 

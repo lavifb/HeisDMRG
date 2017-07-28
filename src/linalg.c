@@ -47,7 +47,7 @@ void kron(const double alpha, const int m, const int n, const double *restrict A
 	C: num_ind*num_ind matrix
 */
 void kron_r(const double alpha, const int m, const int n, const double *restrict A, const double *restrict B,
-	        const int num_ind, const int *restrict inds, double *restrict C) {
+	        double *restrict C, const int num_ind, const int *restrict inds) {
 
 	__assume_aligned(A, MEM_DATA_ALIGN);
 	__assume_aligned(B, MEM_DATA_ALIGN);
@@ -111,6 +111,61 @@ void kronI(const char side, const int m, const int n, const double *restrict A, 
 
 					for (k=0; k<m; k++) {
 						C[(n*k + i) + ldac*(n*k + j)] += A[i+n*j];
+					}
+				}
+			}
+			break;
+	}
+}
+
+/*  Compute Kronecker product of a square matrix with identity and restrict basis.
+	Sets C = kron(A, I) + C or C = kron(I, A) + C
+
+	Note: The order of m and n is designed to easily replace standard kron function
+	without swapping parameters.
+
+	side: 'l' or 'L' if I is multplied on the left or
+	      'r' or 'R' if I is multplied on the right
+	m: size of matrix A if side is 'r' or
+	   size of identity matrix if side is 'l'
+	n: size of identity matrix if side is 'r' or
+	   size of matrix A if side is 'l'
+	A: m*m matrix or n*n matrix
+	C: mn*mn matrix
+*/
+void kronI_r(const char side, const int m, const int n, const double *restrict A, 
+	         double *restrict C, const int num_ind, const int *restrict inds) {
+
+	__assume_aligned(A, MEM_DATA_ALIGN);
+	__assume_aligned(C, MEM_DATA_ALIGN);
+
+	int p, q;
+	switch (side) {
+
+		default:
+		case 'r':
+		case 'R':
+			for (p=0; p<num_ind; p++) {
+				for (q=0; q<num_ind; q++) {
+					int i = inds[q]/n;
+					int j = inds[p]/n;
+
+					if (inds[p]%n == inds[q]%n) {
+						C[num_ind*p + q] += A[i+m*j];
+					}
+				}
+			}
+			break;
+
+		case 'l':
+		case 'L':
+			for (p=0; p<num_ind; p++) {
+				for (q=0; q<num_ind; q++) {
+					int i = inds[q]%n;
+					int j = inds[p]%n;
+
+					if (inds[p]/n == inds[q]/n) {
+						C[num_ind*p + q] += A[i+n*j];
 					}
 				}
 			}
