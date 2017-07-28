@@ -34,6 +34,38 @@ void kron(const double alpha, const int m, const int n, const double *restrict A
 	}
 }
 
+/*  Compute Kronecker product of two square matrices and restrict basis.
+	Sets C = alpha * kron(A,B) + C within restricted basis.
+ 
+	m: size of matrix A
+	n: size of matrix B
+	A: m*m matrix
+	B: n*n matrix
+
+	num_ind: number of restricted basis inds and size of matrix C 
+	inds:    restricted basis inds
+	C: num_ind*num_ind matrix
+*/
+void kron_r(const double alpha, const int m, const int n, const double *restrict A, const double *restrict B,
+	        const int num_ind, const int *restrict inds, double *restrict C) {
+
+	__assume_aligned(A, MEM_DATA_ALIGN);
+	__assume_aligned(B, MEM_DATA_ALIGN);
+	__assume_aligned(C, MEM_DATA_ALIGN);
+
+	int p, q;
+	for (p=0; p<num_ind; p++) {
+		for (q=0; q<num_ind; q++) {
+			int i = inds[q]/n;
+			int j = inds[p]/n;
+			int k = inds[q]%n;
+			int l = inds[p]%n;
+
+			C[num_ind*p + q] += B[k+n*l]*A[i+m*j] * alpha;
+		}
+	}
+}
+
 /*  Compute Kronecker product of a square matrix with identity.
 	Sets C = kron(A, I) + C or C = kron(I, A) + C
 
@@ -85,8 +117,6 @@ void kronI(const char side, const int m, const int n, const double *restrict A, 
 			break;
 	}
 }
-
-// TODO: make function to kron and restrict in 1 step, saving time/memory measuring.
 
 /* Creates identity matrix of size N*N
 */
