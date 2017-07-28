@@ -301,18 +301,18 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		}
 	}
 
+	// Superblock Hamiltonian
+	double *Hs_r = HeisenH_int_r(model->H_params, dimSys, dimEnv, sys_enl->ops[1], sys_enl->ops[2],
+					env_enl->ops[1], env_enl->ops[2], num_restr_ind, restr_basis_inds);
+	kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
+	kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
+
 	freeSectors(sys_enl_sectors);
 	// Free enlarged environment block
 	if (sys != env) {
 		freeDMRGBlock(env_enl);
 		freeSectors(env_enl_sectors);
 	}
-	
-	// Restricted Superblock Hamiltonian
-	double *Hs_r = HeisenH_int_r(model->H_params, dimSys, dimEnv, sys_enl->ops[1], sys_enl->ops[2], 
-					env_enl->ops[1], env_enl->ops[2], num_restr_ind, restr_basis_inds);
-	kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
-	kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
 
 	__assume_aligned(Hs_r, MEM_DATA_ALIGN);
 
@@ -333,7 +333,7 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	mkl_free(isuppz);
 	mkl_free(Hs_r);
 
-	meas_data_t *meas = createMeas(sys_enl->num_ops - 3);
+	meas_data_t *meas = createMeas(sys_enl->num_ops - model->num_ops);
 	meas->energy = energies[0] / (sys_enl->length + env_enl->length);
 	mkl_free(energies);
 
