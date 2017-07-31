@@ -527,30 +527,27 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 	DMRGBlock *sys = createDMRGBlock(model, L);
 
 	// Note: saved_blocks[i] has length i+1
-	saved_blocks[0] = copyDMRGBlock(sys);
+	saved_blocks[0] = sys;
 
 	// run infinite algorithm to build up system
 	while (2*sys->length < L) {
 		// printGraphic(sys, sys);
-		DMRGBlock *newSys = single_step(sys, sys, m_inf, 0);
-		freeDMRGBlock(sys);
-		sys = newSys;
-
-		saved_blocks[sys->length-1] = copyDMRGBlock(sys);
+		sys = single_step(sys, sys, m_inf, 0);
+		// freeDMRGBlock(sys);
+		saved_blocks[sys->length-1] = sys;
 	}
 
 	meas_data_t *meas;
 
 	// Finite Sweeps
-	DMRGBlock *env = copyDMRGBlock(sys);
+	DMRGBlock *env = sys;
 	int i;
 	for (i = 0; i < num_sweeps; i++) {
 		int m = ms[i];
 
 		while (1) {
-			freeDMRGBlock(env);
 
-			env = copyDMRGBlock(saved_blocks[L - sys->length - 3]);
+			env = saved_blocks[L - sys->length - 3];
 
 			// Switch sys and env if at the end of the chain
 			if (env->length == 1) {
@@ -573,15 +570,12 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 			}
 
 			// printGraphic(sys, env);
-			DMRGBlock *newSys = single_step(sys, env, m, 0);
-			freeDMRGBlock(sys);
-			sys = newSys;
-
+			sys = single_step(sys, env, m, 0);
 			logBlock(sys);
 
 			// Save new block
 			if (saved_blocks[sys->length-1]) { freeDMRGBlock(saved_blocks[sys->length-1]); }
-			saved_blocks[sys->length-1] = copyDMRGBlock(sys);
+			saved_blocks[sys->length-1] = sys;
 
 			// Check if sweep is done
 			if (2 * sys->length == L) {
@@ -596,9 +590,6 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 		if (saved_blocks[i]) { freeDMRGBlock(saved_blocks[i]); }
 	}
 	mkl_free(saved_blocks);
-
-	freeDMRGBlock(env);
-	freeDMRGBlock(sys);
 
 	return meas;
 }

@@ -55,6 +55,8 @@ proj_main: src
 
 debug: clean-debug srcD
 	 ${CC} -I${INC}/ ${CCOPTSD} ${MKL} -o ${BIN}/dmrg_debug ${DBUG}/*
+	 -rm -f ${DBUG}/main.o
+	 ${CC} -I${INC}/ ${CCOPTSD} ${MKL} -o ${BIN}/quick_test_debug ${DBUG}/* ${TEST}/quick_test.c
 	 
 ${BIN}/%: ${TEST}/%.c src clean-main
 	${CC} -I${INC}/ ${CCOPTSR} ${MKL} -o $@ $< ${OBJ}/*
