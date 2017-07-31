@@ -412,17 +412,15 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 	DMRGBlock *sys = createDMRGBlock(model, L);
 
 	// Note: saved_blocksL[i] has length i+1
-	saved_blocksL[0] = copyDMRGBlock(sys);
+	saved_blocksL[0] = sys;
 	saved_blocksR[0] = copyDMRGBlock(sys);
 	saved_blocksR[0]->side = 'R';
 
 	// run infinite algorithm to build up system
 	while (2*sys->length < L) {
-		DMRGBlock *newSys = single_step(sys, sys, m_inf, 0);
-		freeDMRGBlock(sys);
-		sys = newSys;
+		sys = single_step(sys, sys, m_inf, 0);
 
-		saved_blocksL[sys->length-1] = copyDMRGBlock(sys);
+		saved_blocksL[sys->length-1] = sys;
 		saved_blocksR[sys->length-1] = copyDMRGBlock(sys);
 		saved_blocksR[sys->length-1]->side = 'R';
 	}
@@ -430,21 +428,20 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 	meas_data_t *meas;
 
 	// Finite Sweeps
-	DMRGBlock *env = copyDMRGBlock(sys);
+	DMRGBlock *env;
 	int i;
 	for (i = 0; i < num_sweeps; i++) {
 		int m = ms[i];
 
 		while (1) {
-			freeDMRGBlock(env);
 
 			switch (sys->side) {
 				case 'L':
-					env = copyDMRGBlock(saved_blocksR[L - sys->length - 3]);
+					env = saved_blocksR[L - sys->length - 3];
 					break;
 
 				case 'R':
-					env = copyDMRGBlock(saved_blocksL[L - sys->length - 3]);
+					env = saved_blocksL[L - sys->length - 3];
 					break;
 			}
 
@@ -461,7 +458,7 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 			}
 
 			// measure and finish run
-			if (i == num_sweeps-1 && 2 * sys->length == L-2) {
+			if (i == num_sweeps-1 && 2 * sys->length == L-2 && sys->side == 'L') {
 				printf("Done with sweep %d/%d\n", num_sweeps, num_sweeps);
 				printf("\nTaking measurements...\n");
 				meas = meas_step(sys, env, m, 0);
@@ -469,22 +466,19 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 			}
 
 			// printGraphic(sys, env);
-			DMRGBlock *newSys = single_step(sys, env, m, 0);
-			freeDMRGBlock(sys);
-			sys = newSys;
-
+			sys = single_step(sys, env, m, 0);
 			logBlock(sys);
 
 			// Save new block
 			switch (sys->side) {
 				case 'L':
 					if (saved_blocksL[sys->length-1]) { freeDMRGBlock(saved_blocksL[sys->length-1]); }
-					saved_blocksL[sys->length-1] = copyDMRGBlock(sys);
+					saved_blocksL[sys->length-1] = sys;
 					break;
 
 				case 'R':
 					if (saved_blocksR[sys->length-1]) { freeDMRGBlock(saved_blocksR[sys->length-1]); }
-					saved_blocksR[sys->length-1] = copyDMRGBlock(sys);
+					saved_blocksR[sys->length-1] = sys;
 					break;
 			}
 
@@ -503,9 +497,6 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 	}
 	mkl_free(saved_blocksL);
 	mkl_free(saved_blocksR);
-
-	freeDMRGBlock(env);
-	freeDMRGBlock(sys);
 
 	return meas;
 }
@@ -533,14 +524,13 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 	while (2*sys->length < L) {
 		// printGraphic(sys, sys);
 		sys = single_step(sys, sys, m_inf, 0);
-		// freeDMRGBlock(sys);
 		saved_blocks[sys->length-1] = sys;
 	}
 
 	meas_data_t *meas;
 
 	// Finite Sweeps
-	DMRGBlock *env = sys;
+	DMRGBlock *env;
 	int i;
 	for (i = 0; i < num_sweeps; i++) {
 		int m = ms[i];

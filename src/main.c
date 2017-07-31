@@ -64,8 +64,8 @@ int main(int argc, char *argv[]) {
 	clock_t t_start = clock();
 
 	// inf_dmrg(params.L, params.minf, model);
-	// meas = fin_dmrg(params.L, params.minf, params.num_ms, params.ms, model);
-	meas = fin_dmrgR(params.L, params.minf, params.num_ms, params.ms, model);
+	meas = fin_dmrg(params.L, params.minf, params.num_ms, params.ms, model);
+	// meas = fin_dmrgR(params.L, params.minf, params.num_ms, params.ms, model);
 
 	// Record end time
 	clock_t t_end = clock();
