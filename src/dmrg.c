@@ -44,8 +44,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	int *restr_basis_inds = (int *)mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
 
 	// loop over sys_enl_sectors and find only desired indexes
-	sector_t *sys_enl_sec;
-	for(sys_enl_sec=sys_enl_sectors; sys_enl_sec != NULL; sys_enl_sec=sys_enl_sec->hh.next) {
+	for (sector_t *sys_enl_sec=sys_enl_sectors; sys_enl_sec != NULL; sys_enl_sec=sys_enl_sec->hh.next) {
 
 		int sys_mz = sys_enl_sec->id;
 
@@ -113,8 +112,8 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	// state mzs to eventually truncate and put into sys_enl->mzs
 	int *sys_mzs_full = (int *)mkl_malloc(dimSys * sizeof(int), MEM_DATA_ALIGN);
 
-	sector_t *sec;
-	for(sec=sup_sectors; sec != NULL; sec=sec->hh.next) {
+	// Loop over sectors to find what basis inds to keep
+	for (sector_t *sec=sup_sectors; sec != NULL; sec=sec->hh.next) {
 		int mz = sec->id;
 		int env_mz = target_mz - mz;
 		int n_sec = sec->num_ind;
@@ -161,9 +160,8 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 		mkl_free(isuppz_sec);
 
 		// copy trans_sec into trans using the proper basis
-		int i, j;
-		for (i = 0; i < mm_sec; i++) {
-			for (j = 0; j < dimSys_sec; j++) {
+		for (int i = 0; i < mm_sec; i++) {
+			for (int j = 0; j < dimSys_sec; j++) {
 				// copy value using proper index basis
 				trans_full[lamb_i*dimSys + sys_enl_mz->inds[j]] = trans_sec[i*dimSys_sec + j];
 			}
@@ -172,7 +170,6 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 			lamb_i++;
 		}
 		
-		// mkl_free(lambs_sec);
 		mkl_free(trans_sec);
 	}
 
@@ -190,8 +187,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	int *sorted_inds = dsort2(newDimSys, lambs);
 
 	// copy to trans in right order
-	int i;
-	for (i = 0; i < mm; i++) {
+	for (int i = 0; i < mm; i++) {
 		memcpy(&trans[i*dimSys], &trans_full[sorted_inds[i]*dimSys], dimSys * sizeof(double));
 		sys_enl->mzs[i] = sys_mzs_full[sorted_inds[i]];
 	}
@@ -200,7 +196,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	mkl_free(trans_full);
 	
 	double truncation_err = 1.0;
-	for (i = 0; i < mm; i++) {
+	for (int i = 0; i < mm; i++) {
 		truncation_err -= lambs[i];
 	}
 	sys_enl->trunc_err = truncation_err;
@@ -254,8 +250,7 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	int *restr_basis_inds = (int *)mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
 
 	// loop over sys_enl_sectors and find only desired indexes
-	sector_t *sys_enl_sec;
-	for(sys_enl_sec=sys_enl_sectors; sys_enl_sec != NULL; sys_enl_sec=sys_enl_sec->hh.next) {
+	for (sector_t *sys_enl_sec=sys_enl_sectors; sys_enl_sec != NULL; sys_enl_sec=sys_enl_sec->hh.next) {
 
 		int sys_mz = sys_enl_sec->id;
 		int env_mz = target_mz - sys_mz;
@@ -312,13 +307,8 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	meas->energy = energies[0] / (sys_enl->length + env_enl->length);
 	mkl_free(energies);
 
-	// unrestrict psi0
-	// psi = A*psi0
-	// get new restricted indices
-
-	int i;
 	// <S_i> spins
-	for (i = 0; i<meas->num_sites; i++) {
+	for (int i = 0; i<meas->num_sites; i++) {
 		double* supOp_r = (double *)mkl_calloc(num_restr_ind*num_restr_ind, sizeof(double), MEM_DATA_ALIGN);
 		kronI_r('R', dimSys, dimEnv, sys_enl->ops[i + model->num_ops], supOp_r, num_restr_ind, restr_basis_inds);
 
@@ -329,7 +319,7 @@ meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 	}
 
 	// <S_i S_j> correlations
-	for (i = 0; i<meas->num_sites; i++) {
+	for (int i = 0; i<meas->num_sites; i++) {
 		double* SSop = (double *)mkl_malloc(dimSys*dimSys * sizeof(double), MEM_DATA_ALIGN);
 		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, 1.0, sys_enl->ops[i + model->num_ops], 
 			dimSys, sys_enl->ops[1], dimSys, 0.0, SSop, dimSys);
@@ -363,9 +353,8 @@ void inf_dmrg(const int L, const int m, model_t *model) {
 	while (2*sys->length < L) {
 		int currL = sys->length * 2 + 2;
 		printf("\nL = %d\n", currL);
-		DMRGBlock *newSys = single_step(sys, sys, m, 0);
-		freeDMRGBlock(sys);
-		sys = newSys;
+		sys = single_step(sys, sys, m, 0);
+
 		printf("E/L = % .12f\n", sys->energy / currL);
 	}
 
@@ -404,8 +393,7 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 
 	// Finite Sweeps
 	DMRGBlock *env;
-	int i;
-	for (i = 0; i < num_sweeps; i++) {
+	for (int i = 0; i < num_sweeps; i++) {
 		int m = ms[i];
 
 		while (1) {
@@ -466,7 +454,7 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 		}
 	}
 
-	for (i = 0; i < L-3; i++) {
+	for (int i = 0; i < L-3; i++) {
 		if (saved_blocksL[i]) { freeDMRGBlock(saved_blocksL[i]); }
 		if (saved_blocksR[i]) { freeDMRGBlock(saved_blocksR[i]); }
 	}
@@ -495,7 +483,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 	// Note: saved_blocks[i] has length i+1
 	saved_blocks[0] = sys;
 
-	// run infinite algorithm to build up system
+	// Run infinite algorithm to build up system
 	while (2*sys->length < L) {
 		// printGraphic(sys, sys);
 		sys = single_step(sys, sys, m_inf, 0);
@@ -506,8 +494,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 
 	// Finite Sweeps
 	DMRGBlock *env;
-	int i;
-	for (i = 0; i < num_sweeps; i++) {
+	for (int i = 0; i < num_sweeps; i++) {
 		int m = ms[i];
 
 		while (1) {
@@ -551,7 +538,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 		}
 	}
 
-	for (i = 0; i < L-3; i++) {
+	for (int i = 0; i < L-3; i++) {
 		if (saved_blocks[i]) { freeDMRGBlock(saved_blocks[i]); }
 	}
 	mkl_free(saved_blocks);
