@@ -1,6 +1,7 @@
 #include "input_parser.h"
 #include "model.h"
 #include <mkl.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

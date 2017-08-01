@@ -4,8 +4,6 @@
 #include "block.h"
 #include "meas.h"
 
-void printGraphic(DMRGBlock *sys, DMRGBlock *env);
-
 DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz);
 
 meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz);

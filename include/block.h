@@ -30,6 +30,8 @@ void freeDMRGBlock(DMRGBlock *block);
 
 void printDMRGBlock(const char *desc, DMRGBlock *block);
 
+void printGraphic(DMRGBlock *sys, DMRGBlock *env);
+
 DMRGBlock *enlargeBlock(const DMRGBlock *block);
 
 double **enlargeOps(const DMRGBlock *block);
