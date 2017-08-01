@@ -6,7 +6,6 @@
 #include "logio.h"
 #include "uthash.h"
 #include <mkl.h>
-#include <mkl_scalapack.h>
 #include <assert.h>
 
 /* Single DMRG step
@@ -15,7 +14,7 @@
 
    returns enlarged system block
 */
-DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz) {
+DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz) {
 
 	DMRGBlock *sys_enl, *env_enl;
 	sector_t *sys_enl_sectors, *env_enl_sectors;
@@ -224,7 +223,7 @@ DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const 
 
    returns enlarged system block
 */
-meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz) {
+meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz) {
 
 	DMRGBlock *sys_enl, *env_enl;
 	sector_t *sys_enl_sectors, *env_enl_sectors;

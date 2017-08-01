@@ -4,9 +4,9 @@
 #include "block.h"
 #include "meas.h"
 
-DMRGBlock *single_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz);
+DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz);
 
-meas_data_t *meas_step(DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz);
+meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz);
 
 void inf_dmrg(const int L, const int m, model_t *model);
 
