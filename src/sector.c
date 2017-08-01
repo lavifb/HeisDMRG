@@ -42,19 +42,18 @@ sector_t *sectorize(const DMRGBlock *block) {
 
 	sector_t *secs = NULL; // Initialize uthash
 
-	int j;
-	for (j = 0; j < block->d_block; j++) {
-		int id = block->mzs[j];
+	for (int i = 0; i < block->d_block; i++) {
+		int id = block->mzs[i];
 		sector_t *qn_sec;
 
 		HASH_FIND_INT(secs, &id, qn_sec);
 
 		if (qn_sec == NULL) { // create new entry in hashtable
 			qn_sec = createSector(id);
-			sectorPush(qn_sec, j);
+			sectorPush(qn_sec, i);
 			HASH_ADD_INT(secs, id, qn_sec);
 		} else { // add to entry
-			sectorPush(qn_sec, j);
+			sectorPush(qn_sec, i);
 		}
 	}
 

@@ -91,8 +91,7 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 		} else if (strcmp(paramName, "ms") == 0) {
 			int *ms = mkl_malloc(num_vals * sizeof(int), MEM_DATA_ALIGN);
 
-			int i;
-			for (i = 0; i < num_vals; i++) {
+			for (int i = 0; i < num_vals; i++) {
 				ms[i] = atoi(vals[i]);
 				if (ms[i] < 1) {
 					errprintf("Parameter 'ms' must all be positive.\n");
@@ -131,8 +130,7 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 
 			double *H1 = mkl_malloc(num_vals * sizeof(double), MEM_DATA_ALIGN);
 
-			int i;
-			for (i = 0; i < num_vals; i++) {
+			for (int i = 0; i < num_vals; i++) {
 				H1[i] = atof(vals[i]);
 				if (isnan(H1[i])) {
 					errprintf("Parameter 'H1' must be all floats.\n");
@@ -155,8 +153,7 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 
 			double *Sz = mkl_malloc(num_vals * sizeof(double), MEM_DATA_ALIGN);
 
-			int i;
-			for (i = 0; i < num_vals; i++) {
+			for (int i = 0; i < num_vals; i++) {
 				Sz[i] = atof(vals[i]);
 				if (isnan(Sz[i])) {
 					errprintf("Parameter 'Sz' must be all floats.\n");
@@ -179,8 +176,7 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 
 			double *Sp = mkl_malloc(num_vals * sizeof(double), MEM_DATA_ALIGN);
 
-			int i;
-			for (i = 0; i < num_vals; i++) {
+			for (int i = 0; i < num_vals; i++) {
 				Sp[i] = atof(vals[i]);
 				if (isnan(Sp[i])) {
 					errprintf("Parameter 'Sp' must be all floats.\n");
@@ -220,8 +216,7 @@ void printSimParams(FILE *stream, const sim_params_t *params) {
 			"num_sweeps = %d\n"
 			"ms = ", params->L, params->minf, params->num_ms);
 
-	int i;
-	for (i = 0; i < params->num_ms-1; i++) {
+	for (int i = 0; i < params->num_ms-1; i++) {
 		fprintf(stream, "%d, ", params->ms[i]);
 	} fprintf(stream, "%d\n", params->ms[params->num_ms-1]);
 

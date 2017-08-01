@@ -23,8 +23,7 @@ void compileParams(model_t *model) {
 	model->init_ops[2] = model->Sp;
 
 	model->init_mzs = (int *)mkl_malloc(dim * sizeof(int), MEM_DATA_ALIGN);
-	int i;
-	for (i=0; i<dim; i++) {
+	for (int i=0; i<dim; i++) {
 		// init_mzs stores 2*mz to make it an integer
 		model->init_mzs[i] = model->Sz[i*dim+i] * 2;
 	}
@@ -103,7 +102,6 @@ double *HeisenH_int(const double* H_params, const int dim1, const int dim2,
 	kron(J2, dim1, dim2, Sp1, Sm2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
 	kron(J2, dim1, dim2, Sm1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
 
-
 	mkl_free(Sm1);
 	mkl_free(Sm2);
 
@@ -139,7 +137,6 @@ double *HeisenH_int_r(const double* H_params, const int dim1, const int dim2,
 
 	kron_r(J2, dim1, dim2, Sp1, Sm2, H_int, num_ind, inds); // H_int += J/2 * kron(Sp1, Sm2)
 	kron_r(J2, dim1, dim2, Sm1, Sp2, H_int, num_ind, inds); // H_int += J/2 * kron(Sm1, Sp2)
-
 
 	mkl_free(Sm1);
 	mkl_free(Sm2);
