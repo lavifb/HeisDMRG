@@ -34,7 +34,7 @@ void compileParams(model_t *model) {
 	model->H_params[1] = model->Jz;
 
 	// Set Hamiltonian interaction function
-	model->H_int = &HeisenH_int;
+	// model->H_int = &HeisenH_int;
 }
 
 /* Nulls out model parameters

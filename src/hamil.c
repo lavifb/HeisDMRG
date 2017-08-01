@@ -1,5 +1,6 @@
 #include "hamil.h"
 #include "block.h"
+#include "linalg.h"
 #include <mkl.h>
 
 /*  Interaction part of Heisenberg Hamiltonian

@@ -1,7 +1,7 @@
-#ifndef MODEL_H
-#define MODEL_H
+#ifndef HAMIL_H
+#define HAMIL_H
 
-#include "block.h"
+// #include "block.h"
 
 double *HeisenH_int(const double* H_params, const int dim1, const int dim2, 
 					const double *restrict Sz1, const double *restrict Sp1, 
