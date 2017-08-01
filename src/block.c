@@ -2,6 +2,8 @@
 #include "model.h"
 #include "linalg.h"
 #include <mkl.h>
+#include <stdio.h>
+#include <string.h>
 #include <float.h>
 
 
@@ -22,10 +24,9 @@ DMRGBlock *createDMRGBlock(model_t *model, int fullLength) {
 	block->mzs = (int *)mkl_malloc(dim * sizeof(int), MEM_DATA_ALIGN);
 	memcpy(block->mzs, model->init_mzs, dim * sizeof(int));
 
-	int i;
 	// copy operators
 	block->ops = (double **)mkl_malloc(block->num_ops * sizeof(double *), MEM_DATA_ALIGN);
-	for (i = 0; i < block->num_ops; i++) {
+	for (int i = 0; i < block->num_ops; i++) {
 		block->ops[i] = (double *)mkl_malloc(dim*dim * sizeof(double), MEM_DATA_ALIGN);
 		memcpy(block->ops[i], model->init_ops[i], dim*dim * sizeof(double));
 	}
@@ -56,10 +57,9 @@ DMRGBlock *copyDMRGBlock(DMRGBlock *orig) {
 	newBlock->mzs = (int *)mkl_malloc(dim * sizeof(int), MEM_DATA_ALIGN);
 	memcpy(newBlock->mzs, orig->mzs, dim * sizeof(int));
 
-	int i;
 	// Copy all matrices (not just pointers)
 	newBlock->ops = (double **)mkl_malloc(newBlock->num_ops * sizeof(double *), MEM_DATA_ALIGN);
-	for (i = 0; i < newBlock->num_ops; i++) {
+	for (int i = 0; i < newBlock->num_ops; i++) {
 		newBlock->ops[i] = (double *)mkl_malloc(dim*dim * sizeof(double), MEM_DATA_ALIGN);
 		memcpy(newBlock->ops[i], orig->ops[i], dim*dim * sizeof(double));
 	}
@@ -103,6 +103,28 @@ void printDMRGBlock(const char *desc, DMRGBlock *block) {
 	printf("\n");
 }
 
+/* Print nice graphic of the system and environment
+*/
+void printGraphic(DMRGBlock *sys, DMRGBlock *env) {
+
+	char *sys_g = (char *)malloc((sys->length +1) * sizeof(char));
+	char *env_g = (char *)malloc((env->length +1) * sizeof(char));
+
+	memset(sys_g, '=', sys->length);
+	memset(env_g, '-', env->length);
+	sys_g[sys->length] = '\0';
+	env_g[env->length] = '\0';
+
+	if (sys->side == 'L') {
+		printf("%s**%s\n", sys_g, env_g);
+	} else {
+		printf("%s**%s\n", env_g, sys_g);
+	}
+
+	free(sys_g);
+	free(env_g);
+}
+
 DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 
 	DMRGBlock *enl_block = (DMRGBlock *)mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
@@ -126,9 +148,8 @@ DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 	}
 
 	enl_block->mzs = (int *)mkl_malloc(enl_block->d_block * sizeof(int), MEM_DATA_ALIGN);
-	int i, j;
-	for (i = 0; i < block->d_block; i++) {
-		for (j = 0; j < d_model; j++) {
+	for (int i = 0; i < block->d_block; i++) {
+		for (int j = 0; j < d_model; j++) {
 			enl_block->mzs[i*d_model + j] = block->mzs[i] + block->model->init_mzs[j];
 		}
 	}
@@ -177,8 +198,7 @@ double **enlargeOps(const DMRGBlock *block) {
 	enl_ops[2] = (double *)mkl_calloc(d_enl*d_enl, sizeof(double), MEM_DATA_ALIGN);
 	kronI('L', d_block, d_model, model->Sp, enl_ops[2]);
 
-	int i;
-	for (i = 3; i < block->num_ops; i++) { // loop over measurement ops
+	for (int i = 3; i < block->num_ops; i++) { // loop over measurement ops
 		// S_i ops
 		enl_ops[i] = (double *)mkl_calloc(d_enl*d_enl, sizeof(double), MEM_DATA_ALIGN);
 		kronI('R', d_block, d_model, block->ops[i], enl_ops[i]);

@@ -41,8 +41,7 @@ int outputMeasData(const char* path, meas_data_t *meas) {
 				 "---------------------------------------------\n"
 				 , "Site", "Sz", "SS");
 
-	int i;
-	for (i=meas->num_sites-1; i>=0; i--) {
+	for (int i = meas->num_sites-1; i>=0; i--) {
 		fprintf(m_f, "%-6d%- 20.12f%- 20.12f\n", i+1, meas->Szs[i], meas->SSs[i]);
 	}
 

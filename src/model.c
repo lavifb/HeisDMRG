@@ -23,8 +23,7 @@ void compileParams(model_t *model) {
 	model->init_ops[2] = model->Sp;
 
 	model->init_mzs = (int *)mkl_malloc(dim * sizeof(int), MEM_DATA_ALIGN);
-	int i;
-	for (i=0; i<dim; i++) {
+	for (int i=0; i<dim; i++) {
 		// init_mzs stores 2*mz to make it an integer
 		model->init_mzs[i] = model->Sz[i*dim+i] * 2;
 	}

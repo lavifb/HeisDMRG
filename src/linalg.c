@@ -2,6 +2,7 @@
 #include <mkl.h>
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 
 #define ZERO_TOLERANCE 10e-7
@@ -21,13 +22,12 @@ void kron(const double alpha, const int m, const int n, const double *restrict A
 	__assume_aligned(B, MEM_DATA_ALIGN);
 	__assume_aligned(C, MEM_DATA_ALIGN);
 
-	int i, j, k, l;
-	for (i=0; i<m; i++) {
-		for (j=0; j<m; j++) {
+	for (int i=0; i<m; i++) {
+		for (int j=0; j<m; j++) {
 			if (A[i+m*j] == 0.0) { continue; }
 
-			for (k=0; k<n; k++) {
-				for (l=0; l<n; l++) {
+			for (int k=0; k<n; k++) {
+				for (int l=0; l<n; l++) {
 					C[(n*i + k) + ldac*(n*j + l)] += B[k+n*l]*A[i+m*j] * alpha;
 				}
 			}
@@ -54,9 +54,8 @@ void kron_r(const double alpha, const int m, const int n, const double *restrict
 	__assume_aligned(B, MEM_DATA_ALIGN);
 	__assume_aligned(C, MEM_DATA_ALIGN);
 
-	int p, q;
-	for (p=0; p<num_ind; p++) {
-		for (q=0; q<num_ind; q++) {
+	for (int p=0; p<num_ind; p++) {
+		for (int q=0; q<num_ind; q++) {
 			int i = inds[q]/n;
 			int j = inds[p]/n;
 			int k = inds[q]%n;
@@ -88,16 +87,15 @@ void kronI(const char side, const int m, const int n, const double *restrict A, 
 	__assume_aligned(A, MEM_DATA_ALIGN);
 	__assume_aligned(C, MEM_DATA_ALIGN);
 
-	int i, j, k;
 	switch (side) {
 
 		case 'r':
 		case 'R':
-			for (i=0; i<m; i++) {
-				for (j=0; j<m; j++) {
+			for (int i=0; i<m; i++) {
+				for (int j=0; j<m; j++) {
 					if (A[i+m*j] == 0.0) { continue; }
 
-					for (k=0; k<n; k++) {
+					for (int k=0; k<n; k++) {
 						C[(n*i + k) + ldac*(n*j + k)] += A[i+m*j];
 					}
 				}
@@ -106,11 +104,11 @@ void kronI(const char side, const int m, const int n, const double *restrict A, 
 
 		case 'l':
 		case 'L':
-			for (i=0; i<n; i++) {
-				for (j=0; j<n; j++) {
+			for (int i=0; i<n; i++) {
+				for (int j=0; j<n; j++) {
 					if (A[i+n*j] == 0.0) { continue; }
 
-					for (k=0; k<m; k++) {
+					for (int k=0; k<m; k++) {
 						C[(n*k + i) + ldac*(n*k + j)] += A[i+n*j];
 					}
 				}
@@ -140,14 +138,13 @@ void kronI_r(const char side, const int m, const int n, const double *restrict A
 	__assume_aligned(A, MEM_DATA_ALIGN);
 	__assume_aligned(C, MEM_DATA_ALIGN);
 
-	int p, q;
 	switch (side) {
 
 		default:
 		case 'r':
 		case 'R':
-			for (p=0; p<num_ind; p++) {
-				for (q=0; q<num_ind; q++) {
+			for (int p=0; p<num_ind; p++) {
+				for (int q=0; q<num_ind; q++) {
 					int i = inds[q]/n;
 					int j = inds[p]/n;
 
@@ -160,8 +157,8 @@ void kronI_r(const char side, const int m, const int n, const double *restrict A
 
 		case 'l':
 		case 'L':
-			for (p=0; p<num_ind; p++) {
-				for (q=0; q<num_ind; q++) {
+			for (int p=0; p<num_ind; p++) {
+				for (int q=0; q<num_ind; q++) {
 					int i = inds[q]%n;
 					int j = inds[p]%n;
 
@@ -178,8 +175,8 @@ void kronI_r(const char side, const int m, const int n, const double *restrict A
 */
 double *identity(const int N) {
 	double *Id = (double *)mkl_calloc(N*N, sizeof(double), MEM_DATA_ALIGN);
-	int i;
-	for (i = 0; i < N; i++) Id[i*N+i] = 1.0;
+
+	for (int i = 0; i < N; i++) { Id[i*N+i] = 1.0; }
 
 	return Id;
 }
@@ -207,23 +204,18 @@ double *transformOp(const int opDim, const int newDim, const double *restrict tr
 */
 void transformOps(const int numOps, const int opDim, const int newDim, const double *restrict trans, double **ops) {
 
-	double *newOp = (double *)mkl_malloc(newDim*newDim * sizeof(double), MEM_DATA_ALIGN);
 	double *temp  = (double *)mkl_malloc(newDim*opDim  * sizeof(double), MEM_DATA_ALIGN);
 	__assume_aligned(trans, MEM_DATA_ALIGN);
-	__assume_aligned(newOp, MEM_DATA_ALIGN);
 	__assume_aligned(temp , MEM_DATA_ALIGN);
 
-	int i;
-	for (i = 0; i < numOps; i++) {
+	for (int i = 0; i < numOps; i++) {
 		__assume_aligned(ops[i], MEM_DATA_ALIGN);
 		cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, newDim, opDim , opDim, 1.0, trans, opDim, ops[i], opDim, 0.0, temp, newDim);
-		cblas_dgemm(CblasColMajor, CblasNoTrans  , CblasNoTrans, newDim, newDim, opDim, 1.0, temp, newDim, trans, opDim, 0.0, newOp, newDim);
 		ops[i] = (double *)mkl_realloc(ops[i], newDim*newDim * sizeof(double));
-		memcpy(ops[i], newOp, newDim*newDim * sizeof(double)); // copy newOp back into ops[i]
+		cblas_dgemm(CblasColMajor, CblasNoTrans  , CblasNoTrans, newDim, newDim, opDim, 1.0, temp, newDim, trans, opDim, 0.0, ops[i], newDim);
 	}
 
 	mkl_free(temp);
-	mkl_free(newOp);
 }
 
 /*  Restrict square matrix to only indexes 
@@ -237,9 +229,8 @@ double *restrictOp(const int m, const double *op, const int num_ind, const int *
 
 	double *op_r = (double *)mkl_malloc(num_ind*num_ind * sizeof(double), MEM_DATA_ALIGN);
 
-	int i, j;
-	for (i = 0; i < num_ind; i++) {
-		for (j = 0; j < num_ind; j++) {
+	for (int i = 0; i < num_ind; i++) {
+		for (int j = 0; j < num_ind; j++) {
 			int op_i = inds[i]*m + inds[j];
 			op_r[i*num_ind + j] = op[op_i];
 		}
@@ -258,8 +249,7 @@ double *restrictVec(const double *v, const int num_ind, const int *inds) {
 
 	double *v_r = (double *)mkl_malloc(num_ind * sizeof(double), MEM_DATA_ALIGN);
 
-	int i;
-	for (i = 0; i < num_ind; i++) {
+	for (int i = 0; i < num_ind; i++) {
 		v_r[i] = v[inds[i]];
 	}
 
@@ -281,8 +271,7 @@ int *restrictVecToNonzero(const int m, double *v, int *num_indp) {
 	double *v_r = (double *)mkl_malloc(m * sizeof(double), MEM_DATA_ALIGN);
 	int *inds = (int *)mkl_malloc(m * sizeof(int), MEM_DATA_ALIGN);
 
-	int i;
-	for (i = 0; i < m; i++) {
+	for (int i = 0; i < m; i++) {
 		if (fabs(v[i]) > ZERO_TOLERANCE) {
 			v_r[num_ind] = v[i];
 			inds[num_ind] = i;
@@ -312,8 +301,7 @@ double *unrestrictVec(const int m, const double *v_r, const int num_ind, const i
 
 	double *v = (double *)mkl_calloc(m, sizeof(double), MEM_DATA_ALIGN);
 
-	int i;
-	for (i = 0; i < num_ind; i++) {
+	for (int i = 0; i < num_ind; i++) {
 		v[inds[i]] = v_r[i];
 	}
 
@@ -336,8 +324,7 @@ int *dsort2(const int n, double *a) {
 	double *temp = (double *)mkl_malloc(n * sizeof(double), MEM_DATA_ALIGN);
 	memcpy(temp, a, n * sizeof(double));
 
-	int i;
-	for(i = 0; i < n; i++) {
+	for (int i = 0; i < n; i++) {
 		ais[i] = &temp[i];
 	}
 
@@ -345,7 +332,7 @@ int *dsort2(const int n, double *a) {
 	qsort(ais, n, sizeof(ais[0]), dcmp);
 	
 	int *inds = (int *)mkl_malloc(n * sizeof(int), MEM_DATA_ALIGN);
-	for(i = 0; i < n; i++) {
+	for (int i = 0; i < n; i++) {
 		inds[i] = (int) (ais[i] - ai0);
 		a[i] = *ais[i];
 	}
@@ -358,10 +345,9 @@ int *dsort2(const int n, double *a) {
 /* Print matrix from Intel MKL examples
 */
 void print_matrix( char* desc, int m, int n, double* a, int lda ) {
-	int i, j;
 	printf( "\n %s\n", desc );
-	for(i = 0; i < m; i++ ) {
-		for( j = 0; j < n; j++ ) printf( " % 6.2f", a[i+j*lda] );
+	for (int i = 0; i < m; i++ ) {
+		for (int j = 0; j < n; j++ ) { printf( " % 6.2f", a[i+j*lda] ); }
 		printf( "\n" );
 	}
 }
