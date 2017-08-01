@@ -1,5 +1,6 @@
 #include "model.h"
 #include "block.h"
+#include "hamil.h"
 #include "meas.h"
 #include "linalg.h"
 #include "dmrg.h"

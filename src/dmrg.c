@@ -1,5 +1,6 @@
 #include "dmrg.h"
 #include "block.h"
+#include "hamil.h"
 #include "sector.h"
 #include "meas.h"
 #include "linalg.h"
