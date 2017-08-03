@@ -35,7 +35,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	int dimEnv = env_enl->d_block;
 	int dimSup = dimSys * dimEnv;
 
-	// Create sectors to treat seperately
+	// Create sectors to treat separately
 	sector_t *sup_sectors = NULL;
 
 	// indexes used for restricting Hs
@@ -71,7 +71,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	}
 
 	// Restricted Superblock Hamiltonian
-	double *Hs_r = HeisenH_int_r(model->H_params, dimSys, dimEnv, sys_enl->ops[1], sys_enl->ops[2], 
+	double *Hs_r = model->H_int_r(model->H_params, dimSys, dimEnv, sys_enl->ops[1], sys_enl->ops[2], 
 					env_enl->ops[1], env_enl->ops[2], num_restr_ind, restr_basis_inds);
 	kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
 	kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
@@ -271,7 +271,7 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	}
 
 	// Superblock Hamiltonian
-	double *Hs_r = HeisenH_int_r(model->H_params, dimSys, dimEnv, sys_enl->ops[1], sys_enl->ops[2],
+	double *Hs_r = model->H_int_r(model->H_params, dimSys, dimEnv, sys_enl->ops[1], sys_enl->ops[2],
 					env_enl->ops[1], env_enl->ops[2], num_restr_ind, restr_basis_inds);
 	kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
 	kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);

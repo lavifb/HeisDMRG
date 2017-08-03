@@ -10,6 +10,7 @@ CCOPTSD = ${CCOPTS} -g -O0 -DMKL_DISABLE_FAST_MM=1
 
 # MKL Library
 MKL = -mkl=sequential
+# MKL = -mkl=parallel
 
 BIN := bin
 SRC := src
