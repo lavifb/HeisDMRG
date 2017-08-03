@@ -34,6 +34,7 @@ void compileParams(model_t *model) {
 	model->H_params[0] = model->J/2;
 	model->H_params[1] = model->Jz;
 
+	// TODO: don't copy init_ops into block (doesn't really matter though...)
 	model->single_block = createDMRGBlock(model, 100);
 
 	// Set Hamiltonian interaction function
