@@ -34,6 +34,8 @@ void compileParams(model_t *model) {
 	model->H_params[0] = model->J/2;
 	model->H_params[1] = model->Jz;
 
+	model->single_block = createDMRGBlock(model, 100);
+
 	// Set Hamiltonian interaction function
 	model->H_int   = &HeisenH_int;
 	model->H_int_r = &HeisenH_int_r;
@@ -70,6 +72,7 @@ void freeModel(model_t *model) {
 	if(model->init_mzs) { mkl_free(model->init_mzs); }
 	if(model->init_ops) { mkl_free(model->init_ops); }
 	if(model->H_params) { mkl_free(model->H_params); }
+	if(model->single_block) { freeDMRGBlock(model->single_block); }
 
 	mkl_free(model);
 }

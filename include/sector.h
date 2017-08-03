@@ -2,6 +2,7 @@
 #define SECTOR_H
 
 #include "block.h"
+#include "uthash.h"
 
 #define HASH_IND_MIN_SIZE 32
 

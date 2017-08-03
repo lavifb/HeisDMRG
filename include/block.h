@@ -1,10 +1,10 @@
 #ifndef BLOCK_H
 #define BLOCK_H
 
-#include "uthash.h"
-#include "model.h"
+// farward declaration for model
+typedef struct model_t model_t;
 
-typedef struct {
+typedef struct DMRGBlock {
 	int length;
 	int fullLength;
 	char side;  	// 'L' if left block and 'R' if right block

@@ -6,9 +6,16 @@
 /*  Interaction part of Heisenberg Hamiltonian
 	H_int = J/2 (kron(Sp1, Sm2) + kron(Sm1, Sp2)) + Jz kron(Sz1, Sz2)
 */
-double *HeisenH_int(const double* H_params, const int dim1, const int dim2, 
-					const double *restrict Sz1, const double *restrict Sp1, 
-					const double *restrict Sz2, const double *restrict Sp2) {
+double *HeisenH_int(const double* H_params, const DMRGBlock *block1, const DMRGBlock *block2) {
+
+	int dim1 = block1->d_block;
+	int dim2 = block2->d_block;
+
+	double *Sz1 = block1->ops[1];
+	double *Sz2 = block2->ops[1];
+	double *Sp1 = block1->ops[2];
+	double *Sp2 = block2->ops[2];
+
 	int N = dim1*dim2; // size of new basis
 
 	double *H_int = (double *)mkl_calloc(N*N,        sizeof(double), MEM_DATA_ALIGN);
@@ -43,10 +50,16 @@ double *HeisenH_int(const double* H_params, const int dim1, const int dim2,
 /*  Interaction part of Heisenberg Hamiltonian with basis restriction
 	H_int = J/2 (kron(Sp1, Sm2) + kron(Sm1, Sp2)) + Jz kron(Sz1, Sz2)
 */
-double *HeisenH_int_r(const double* H_params, const int dim1, const int dim2, 
-					const double *restrict Sz1, const double *restrict Sp1, 
-					const double *restrict Sz2, const double *restrict Sp2, 
+double *HeisenH_int_r(const double* H_params, const DMRGBlock *block1, const DMRGBlock *block2,
 					const int num_ind, const int *restrict inds) {
+
+	int dim1 = block1->d_block;
+	int dim2 = block2->d_block;
+
+	double *Sz1 = block1->ops[1];
+	double *Sz2 = block2->ops[1];
+	double *Sp1 = block1->ops[2];
+	double *Sp2 = block2->ops[2];
 
 	double *H_int = (double *)mkl_calloc(num_ind*num_ind, sizeof(double), MEM_DATA_ALIGN);
 	double *Sm1   = (double *)mkl_malloc(dim1*dim1 * sizeof(double), MEM_DATA_ALIGN);
