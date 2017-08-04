@@ -66,6 +66,109 @@ void kron_r(const double alpha, const int m, const int n, const double *restrict
 	}
 }
 
+/*  Compute Kronecker product of two square matrices with one conjugate transposed. 
+	Sets C = alpha * kron(At,B) + C or C = alpha * kron(A,Bt) + C
+ 
+ 	side: 'l' or 'L' if left matrix transposed
+ 	      'r' or 'R' if right matrix transposed
+	m: size of matrix A
+	n: size of matrix B
+	A: m*m matrix
+	B: n*n matrix
+	C: mn*mn matrix
+*/
+void kronT(const char side, const double alpha, const int m, const int n, const double *restrict A, const double *restrict B, double *restrict C) {
+	int ldac = m*n;
+
+	__assume_aligned(A, MEM_DATA_ALIGN);
+	__assume_aligned(B, MEM_DATA_ALIGN);
+	__assume_aligned(C, MEM_DATA_ALIGN);
+
+	switch (side) {
+
+		case 'r':
+		case 'R':
+			for (int i=0; i<m; i++) {
+				for (int j=0; j<m; j++) {
+					if (A[i+m*j] == 0.0) { continue; }
+
+					for (int k=0; k<n; k++) {
+						for (int l=0; l<n; l++) {
+							C[(n*i + k) + ldac*(n*j + l)] += B[l+n*k]*A[i+m*j] * alpha;
+						}
+					}
+				}
+			}
+			break;
+		case 'l':
+		case 'L':
+			for (int i=0; i<m; i++) {
+				for (int j=0; j<m; j++) {
+					if (A[j+m*i] == 0.0) { continue; }
+
+					for (int k=0; k<n; k++) {
+						for (int l=0; l<n; l++) {
+							C[(n*i + k) + ldac*(n*j + l)] += B[k+n*l]*A[j+m*i] * alpha;
+						}
+					}
+				}
+			}
+			break;
+	}
+
+}
+
+/*  Compute Kronecker product of two square matrices with one conjugate transposed and restrict basis. 
+	Sets C = alpha * kron(At,B) + C or C = alpha * kron(A,Bt) + C
+ 
+ 	side: 'l' or 'L' if left matrix transposed
+ 	      'r' or 'R' if right matrix transposed
+	m: size of matrix A
+	n: size of matrix B
+	A: m*m matrix
+	B: n*n matrix
+	C: mn*mn matrix
+*/
+void kronT_r(const char side, const double alpha, const int m, const int n, const double *restrict A, const double *restrict B,
+			double *restrict C, const int num_ind, const int *restrict inds) {
+	int ldac = m*n;
+
+	__assume_aligned(A, MEM_DATA_ALIGN);
+	__assume_aligned(B, MEM_DATA_ALIGN);
+	__assume_aligned(C, MEM_DATA_ALIGN);
+
+	switch (side) {
+
+		case 'r':
+		case 'R':
+			for (int p=0; p<num_ind; p++) {
+				for (int q=0; q<num_ind; q++) {
+					int i = inds[q]/n;
+					int j = inds[p]/n;
+					int k = inds[q]%n;
+					int l = inds[p]%n;
+
+					C[num_ind*p + q] += B[l+n*k]*A[i+m*j] * alpha;
+				}
+			}
+			break;
+		case 'l':
+		case 'L':
+			for (int p=0; p<num_ind; p++) {
+				for (int q=0; q<num_ind; q++) {
+					int i = inds[q]/n;
+					int j = inds[p]/n;
+					int k = inds[q]%n;
+					int l = inds[p]%n;
+
+					C[num_ind*p + q] += B[k+n*l]*A[j+m*i] * alpha;
+				}
+			}
+			break;
+	}
+
+}
+
 /*  Compute Kronecker product of a square matrix with identity.
 	Sets C = kron(A, I) + C or C = kron(I, A) + C
 
