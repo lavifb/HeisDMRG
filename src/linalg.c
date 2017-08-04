@@ -7,17 +7,6 @@
 
 #define ZERO_TOLERANCE 10e-7
 
-/*  Sets y = alpha * x1 * x2
-*/
-inline void mult(const double alpha, const MAT_TYPE x1, const MAT_TYPE x2, MAT_TYPE *y) {
-	#if COMPLEX
-	*y.real += alpha * (x1.real*x2.real - x1.imag*x2.imag);
-	*y.imag += alpha * (x1.real*x2.imag + x1.imag*x2.real);
-	#else
-	*y += alpha * x1 * x2;
-	#endif
-}
-
 #if COMPLEX
 	#define MULT(alpha, x1, x2, y) y.real += alpha * (x1.real*x2.real - x1.imag*x2.imag); y.imag += alpha * (x1.real*x2.imag + x1.imag*x2.real);
 #else
@@ -29,17 +18,6 @@ inline void mult(const double alpha, const MAT_TYPE x1, const MAT_TYPE x2, MAT_T
 #else
 	#define PLUSEQ(x, y) y += x;
 #endif
-
-/*  Sets y += x
-*/
-inline void pluseq(const MAT_TYPE x, MAT_TYPE *y) {
-	#if COMPLEX
-	*y.real += x.real;
-	*y.imag += x.imag;
-	#else
-	*y += x;
-	#endif
-}
 
 
 /*  Compute Kronecker product of two square matrices. Sets C = alpha * kron(A,B) + C
