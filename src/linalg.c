@@ -9,23 +9,35 @@
 
 /*  Sets y = alpha * x1 * x2
 */
-inline void mult(const double alpha, const MAT_TYPE x1, const MAT_TYPE x2, MAT_TYPE y) {
+inline void mult(const double alpha, const MAT_TYPE x1, const MAT_TYPE x2, MAT_TYPE *y) {
 	#if COMPLEX
-	y.real += alpha * (x1.real*x2.real - x1.imag*x2.imag);
-	y.imag += alpha * (x1.real*x2.imag + x1.imag*x2.real);
+	*y.real += alpha * (x1.real*x2.real - x1.imag*x2.imag);
+	*y.imag += alpha * (x1.real*x2.imag + x1.imag*x2.real);
 	#else
-	y += alpha * x1 * x2;
+	*y += alpha * x1 * x2;
 	#endif
 }
 
+#if COMPLEX
+	#define MULT(alpha, x1, x2, y) y.real += alpha * (x1.real*x2.real - x1.imag*x2.imag); y.imag += alpha * (x1.real*x2.imag + x1.imag*x2.real);
+#else
+	#define MULT(alpha, x1, x2, y) y += alpha * x1 * x2;
+#endif
+
+#if COMPLEX
+	#define PLUSEQ(x, y) y.real += x.real; y.imag += x.imag;
+#else
+	#define PLUSEQ(x, y) y += x;
+#endif
+
 /*  Sets y += x
 */
-inline void pluseq(const MAT_TYPE x, MAT_TYPE y) {
+inline void pluseq(const MAT_TYPE x, MAT_TYPE *y) {
 	#if COMPLEX
-	y.real += x.real;
-	y.imag += x.imag;
+	*y.real += x.real;
+	*y.imag += x.imag;
 	#else
-	y += x;
+	*y += x;
 	#endif
 }
 
@@ -55,7 +67,7 @@ void kron(const double alpha, const int m, const int n, const MAT_TYPE *restrict
 
 			for (int k=0; k<n; k++) {
 				for (int l=0; l<n; l++) {
-					mult(alpha, B[k+n*l], A[i+m*j], C[(n*i + k) + ldac*(n*j + l)]);
+					MULT(alpha, B[k+n*l], A[i+m*j], C[(n*i + k) + ldac*(n*j + l)]);
 				}
 			}
 		}
@@ -88,7 +100,7 @@ void kron_r(const double alpha, const int m, const int n, const MAT_TYPE *restri
 			int k = inds[q]%n;
 			int l = inds[p]%n;
 
-			mult(alpha, B[k+n*l], A[i+m*j], C[num_ind*p + q]);
+			MULT(alpha, B[k+n*l], A[i+m*j], C[num_ind*p + q]);
 		}
 	}
 }
@@ -127,7 +139,7 @@ void kronI(const char side, const int m, const int n, const MAT_TYPE *restrict A
 					#endif
 
 					for (int k=0; k<n; k++) {
-						pluseq(A[i+m*j], C[(n*i + k) + ldac*(n*j + k)]);
+						PLUSEQ(A[i+m*j], C[(n*i + k) + ldac*(n*j + k)]);
 					}
 				}
 			}
@@ -144,7 +156,7 @@ void kronI(const char side, const int m, const int n, const MAT_TYPE *restrict A
 					#endif
 
 					for (int k=0; k<m; k++) {
-						pluseq(A[i+n*j], C[(n*k + i) + ldac*(n*k + j)]);
+						PLUSEQ(A[i+n*j], C[(n*k + i) + ldac*(n*k + j)]);
 					}
 				}
 			}
@@ -184,7 +196,7 @@ void kronI_r(const char side, const int m, const int n, const MAT_TYPE *restrict
 					int j = inds[p]/n;
 
 					if (inds[p]%n == inds[q]%n) {
-						pluseq(A[i+m*j], C[num_ind*p + q]);
+						PLUSEQ(A[i+m*j], C[num_ind*p + q]);
 					}
 				}
 			}
@@ -198,7 +210,7 @@ void kronI_r(const char side, const int m, const int n, const MAT_TYPE *restrict
 					int j = inds[p]%n;
 
 					if (inds[p]/n == inds[q]/n) {
-						pluseq(A[i+n*j], C[num_ind*p + q]);
+						PLUSEQ(A[i+n*j], C[num_ind*p + q]);
 					}
 				}
 			}
