@@ -7,6 +7,29 @@
 
 #define ZERO_TOLERANCE 10e-7
 
+/*  Sets y = alpha * x1 * x2
+*/
+inline void mult(const double alpha, const MAT_TYPE x1, const MAT_TYPE x2, MAT_TYPE y) {
+	#if COMPLEX
+	y.real += alpha * (x1.real*x2.real - x1.imag*x2.imag);
+	y.imag += alpha * (x1.real*x2.imag + x1.imag*x2.real);
+	#else
+	y += alpha * x1 * x2;
+	#endif
+}
+
+/*  Sets y += x
+*/
+inline void pluseq(const MAT_TYPE x, MAT_TYPE y) {
+	#if COMPLEX
+	y.real += x.real;
+	y.imag += x.imag;
+	#else
+	y += x;
+	#endif
+}
+
+
 /*  Compute Kronecker product of two square matrices. Sets C = alpha * kron(A,B) + C
  
 	m: size of matrix A
@@ -24,11 +47,15 @@ void kron(const double alpha, const int m, const int n, const MAT_TYPE *restrict
 
 	for (int i=0; i<m; i++) {
 		for (int j=0; j<m; j++) {
+			#if COMPLEX
+			if (A[i+m*j].real == 0.0 && A[i+m*j].imag == 0.0) { continue; }
+			#else
 			if (A[i+m*j] == 0.0) { continue; }
+			#endif
 
 			for (int k=0; k<n; k++) {
 				for (int l=0; l<n; l++) {
-					C[(n*i + k) + ldac*(n*j + l)] += B[k+n*l]*A[i+m*j] * alpha;
+					mult(alpha, B[k+n*l], A[i+m*j], C[(n*i + k) + ldac*(n*j + l)]);
 				}
 			}
 		}
@@ -61,7 +88,7 @@ void kron_r(const double alpha, const int m, const int n, const MAT_TYPE *restri
 			int k = inds[q]%n;
 			int l = inds[p]%n;
 
-			C[num_ind*p + q] += B[k+n*l]*A[i+m*j] * alpha;
+			mult(alpha, B[k+n*l], A[i+m*j], C[num_ind*p + q]);
 		}
 	}
 }
@@ -93,10 +120,14 @@ void kronI(const char side, const int m, const int n, const MAT_TYPE *restrict A
 		case 'R':
 			for (int i=0; i<m; i++) {
 				for (int j=0; j<m; j++) {
+					#if COMPLEX
+					if (A[i+m*j].real == 0.0 && A[i+m*j].imag == 0.0) { continue; }
+					#else
 					if (A[i+m*j] == 0.0) { continue; }
+					#endif
 
 					for (int k=0; k<n; k++) {
-						C[(n*i + k) + ldac*(n*j + k)] += A[i+m*j];
+						pluseq(A[i+m*j], C[(n*i + k) + ldac*(n*j + k)]);
 					}
 				}
 			}
@@ -106,10 +137,14 @@ void kronI(const char side, const int m, const int n, const MAT_TYPE *restrict A
 		case 'L':
 			for (int i=0; i<n; i++) {
 				for (int j=0; j<n; j++) {
+					#if COMPLEX
+					if (A[i+n*j].real == 0.0 && A[i+n*j].imag == 0.0) { continue; }
+					#else
 					if (A[i+n*j] == 0.0) { continue; }
+					#endif
 
 					for (int k=0; k<m; k++) {
-						C[(n*k + i) + ldac*(n*k + j)] += A[i+n*j];
+						pluseq(A[i+n*j], C[(n*k + i) + ldac*(n*k + j)]);
 					}
 				}
 			}
@@ -149,7 +184,7 @@ void kronI_r(const char side, const int m, const int n, const MAT_TYPE *restrict
 					int j = inds[p]/n;
 
 					if (inds[p]%n == inds[q]%n) {
-						C[num_ind*p + q] += A[i+m*j];
+						pluseq(A[i+m*j], C[num_ind*p + q]);
 					}
 				}
 			}
@@ -163,7 +198,7 @@ void kronI_r(const char side, const int m, const int n, const MAT_TYPE *restrict
 					int j = inds[p]%n;
 
 					if (inds[p]/n == inds[q]/n) {
-						C[num_ind*p + q] += A[i+n*j];
+						pluseq(A[i+n*j], C[num_ind*p + q]);
 					}
 				}
 			}
@@ -176,7 +211,13 @@ void kronI_r(const char side, const int m, const int n, const MAT_TYPE *restrict
 MAT_TYPE *identity(const int N) {
 	MAT_TYPE *Id = (MAT_TYPE *)mkl_calloc(N*N, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
-	for (int i = 0; i < N; i++) { Id[i*N+i] = 1.0; }
+	for (int i = 0; i < N; i++) {
+		#if COMPLEX
+		Id[i*N+i].real = 1.0;
+		#else
+		Id[i*N+i] = 1.0;
+		#endif
+	}
 
 	return Id;
 }
@@ -193,8 +234,10 @@ MAT_TYPE *transformOp(const int opDim, const int newDim, const MAT_TYPE *restric
 	__assume_aligned(temp , MEM_DATA_ALIGN);
 
 	#if COMPLEX
-	cblas_zgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, newDim, opDim , opDim, 1.0, trans, opDim, op, opDim, 0.0, temp, newDim);
-	cblas_zgemm(CblasColMajor, CblasNoTrans  , CblasNoTrans, newDim, newDim, opDim, 1.0, temp, newDim, trans, opDim, 0.0, newOp, newDim);
+	MKL_Complex16 one  = {.real=1.0, .imag=0.0};
+	MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+	cblas_zgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, newDim, opDim , opDim, &one, trans, opDim, op, opDim, &zero, temp, newDim);
+	cblas_zgemm(CblasColMajor, CblasNoTrans  , CblasNoTrans, newDim, newDim, opDim, &one, temp, newDim, trans, opDim, &zero, newOp, newDim);
 	#else
 	cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, newDim, opDim , opDim, 1.0, trans, opDim, op, opDim, 0.0, temp, newDim);
 	cblas_dgemm(CblasColMajor, CblasNoTrans  , CblasNoTrans, newDim, newDim, opDim, 1.0, temp, newDim, trans, opDim, 0.0, newOp, newDim);
@@ -216,9 +259,11 @@ void transformOps(const int numOps, const int opDim, const int newDim, const MAT
 	for (int i = 0; i < numOps; i++) {
 		__assume_aligned(ops[i], MEM_DATA_ALIGN);
 		#if COMPLEX
-		cblas_zgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, newDim, opDim , opDim, 1.0, trans, opDim, ops[i], opDim, 0.0, temp, newDim);
+		MKL_Complex16 one  = {.real=1.0, .imag=0.0};
+		MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+		cblas_zgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, newDim, opDim , opDim, &one, trans, opDim, ops[i], opDim, &zero, temp, newDim);
 		ops[i] = (MAT_TYPE *)mkl_realloc(ops[i], newDim*newDim * sizeof(MAT_TYPE));
-		cblas_zgemm(CblasColMajor, CblasNoTrans  , CblasNoTrans, newDim, newDim, opDim, 1.0, temp, newDim, trans, opDim, 0.0, ops[i], newDim);
+		cblas_zgemm(CblasColMajor, CblasNoTrans  , CblasNoTrans, newDim, newDim, opDim, &one, temp, newDim, trans, opDim, &zero, ops[i], newDim);
 		#else
 		cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, newDim, opDim , opDim, 1.0, trans, opDim, ops[i], opDim, 0.0, temp, newDim);
 		ops[i] = (MAT_TYPE *)mkl_realloc(ops[i], newDim*newDim * sizeof(MAT_TYPE));
@@ -283,7 +328,11 @@ int *restrictVecToNonzero(const int m, MAT_TYPE *v, int *num_indp) {
 	int *inds = (int *)mkl_malloc(m * sizeof(int), MEM_DATA_ALIGN);
 
 	for (int i = 0; i < m; i++) {
+		#if COMPLEX
+		if (fabs(v[i].real) > ZERO_TOLERANCE || fabs(v[i].imag) > ZERO_TOLERANCE) {
+		#else
 		if (fabs(v[i]) > ZERO_TOLERANCE) {
+		#endif
 			v_r[num_ind] = v[i];
 			inds[num_ind] = i;
 			num_ind++;
