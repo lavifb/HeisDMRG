@@ -18,7 +18,7 @@ void compileParams(model_t *model) {
 	model->Id = identity(dim);
 
 	model->num_ops  = 3;
-	model->init_ops = (double **)mkl_malloc(3 * sizeof(double *), MEM_DATA_ALIGN);
+	model->init_ops = (MAT_TYPE **)mkl_malloc(3 * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
 	model->init_ops[0] = model->H1;
 	model->init_ops[1] = model->Sz;
 	model->init_ops[2] = model->Sp;
@@ -30,7 +30,7 @@ void compileParams(model_t *model) {
 	}
 
 	// Set Hamiltonian parameters
-	model->H_params = (double *)mkl_malloc(2 * sizeof(double), MEM_DATA_ALIGN);
+	model->H_params = (MAT_TYPE *)mkl_malloc(2 * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	model->H_params[0] = model->J/2;
 	model->H_params[1] = model->Jz;
 

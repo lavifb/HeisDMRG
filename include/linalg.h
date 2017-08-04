@@ -1,30 +1,38 @@
 #ifndef LINALG_H
 #define LINALG_H
 
-void kron(const double alpha, const int m, const int n, const double *restrict A, const double *restrict B, double *restrict C);
+#include <mkl_types.h>
 
-void kron_r(const double alpha, const int m, const int n, const double *restrict A, const double *restrict B,
-	        double *restrict C, const int num_ind, const int *restrict inds);
+#if COMPLEX
+#define MAT_TYPE MKL_Complex16
+#else
+#define MAT_TYPE double
+#endif
 
-void kronI(const char side, const int m, const int n, const double *restrict A, double *restrict C);
+void kron(const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B, MAT_TYPE *restrict C);
 
-void kronI_r(const char side, const int m, const int n, const double *restrict A, 
-	         double *restrict C, const int num_ind, const int *restrict inds);
+void kron_r(const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B,
+	        MAT_TYPE *restrict C, const int num_ind, const int *restrict inds);
 
-double *identity(const int N);
+void kronI(const char side, const int m, const int n, const MAT_TYPE *restrict A, MAT_TYPE *restrict C);
 
-double *transformOp(const int opDim, const int newDim, const double *restrict trans, const double *restrict op);
+void kronI_r(const char side, const int m, const int n, const MAT_TYPE *restrict A, 
+	         MAT_TYPE *restrict C, const int num_ind, const int *restrict inds);
 
-void transformOps(const int numOps, const int opDim, const int newDim, const double *restrict trans, double **ops);
+MAT_TYPE *identity(const int N);
 
-double *restrictOp(const int m, const double *op, const int num_ind, const int *inds);
+MAT_TYPE *transformOp(const int opDim, const int newDim, const MAT_TYPE *restrict trans, const MAT_TYPE *restrict op);
 
-double *restrictVec(const double *v, const int num_ind, const int *inds);
+void transformOps(const int numOps, const int opDim, const int newDim, const MAT_TYPE *restrict trans, MAT_TYPE **ops);
 
-double *unrestrictVec(const int m, const double *v_r, const int num_ind, const int *inds);
+MAT_TYPE *restrictOp(const int m, const MAT_TYPE *op, const int num_ind, const int *inds);
+
+MAT_TYPE *restrictVec(const MAT_TYPE *v, const int num_ind, const int *inds);
+
+MAT_TYPE *unrestrictVec(const int m, const MAT_TYPE *v_r, const int num_ind, const int *inds);
 
 int *dsort2(const int n, double *a);
 
-void print_matrix( char* desc, int m, int n, double* a, int lda );
+void print_matrix(char* desc, int m, int n, MAT_TYPE *a, int lda);
 
 #endif

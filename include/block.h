@@ -1,6 +1,8 @@
 #ifndef BLOCK_H
 #define BLOCK_H
 
+#include "linalg.h"
+
 // farward declaration for model
 typedef struct model_t model_t;
 
@@ -11,12 +13,12 @@ typedef struct DMRGBlock {
 	char meas;  	// 'N' is normal block and 'M' if measurements are tracked
 	int d_block;	// dimension of basis
 	int num_ops;
-	double **ops;
+	MAT_TYPE **ops;
 	int *mzs;   	// 2*mz quantum number for each state
 	model_t *model;
 
-	double *psi;	// tracked state
-	double *A;  	// operator that takes ground to desired state: A|psi0> = |psi>
+	MAT_TYPE *psi;	// tracked state
+	MAT_TYPE *A;  	// operator that takes ground to desired state: A|psi0> = |psi>
 
 	double energy;
 	double trunc_err;
@@ -34,7 +36,7 @@ void printGraphic(DMRGBlock *sys, DMRGBlock *env);
 
 DMRGBlock *enlargeBlock(const DMRGBlock *block);
 
-double **enlargeOps(const DMRGBlock *block);
+MAT_TYPE **enlargeOps(const DMRGBlock *block);
 
 void startMeasBlock(DMRGBlock *block);
 

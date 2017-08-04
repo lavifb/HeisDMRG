@@ -1,6 +1,7 @@
 #ifndef MEAS_H
 #define MEAS_H
 
+#include "linalg.h"
 #include <stdio.h>
 #include <time.h>
 
@@ -9,8 +10,8 @@ typedef struct {
 	double energy;
 
 	int num_sites;			// number of site spins measured
-	double* Szs;  			// single site spins <S_i>
-	double* SSs;  			// spin-spin corr <S_i S_j> where j is a middle spin
+	MAT_TYPE* Szs;  			// single site spins <S_i>
+	MAT_TYPE* SSs;  			// spin-spin corr <S_i S_j> where j is a middle spin
 	// double* truncation_error;
 
 } meas_data_t;

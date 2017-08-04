@@ -1,5 +1,6 @@
 #include "input_parser.h"
 #include "model.h"
+#include "linalg.h"
 #include <mkl.h>
 #include <math.h>
 #include <stdio.h>
@@ -128,7 +129,7 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 				return -2;
 			}
 
-			double *H1 = mkl_malloc(num_vals * sizeof(double), MEM_DATA_ALIGN);
+			MAT_TYPE *H1 = mkl_malloc(num_vals * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 			for (int i = 0; i < num_vals; i++) {
 				H1[i] = atof(vals[i]);
@@ -151,7 +152,7 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 				return -2;
 			}
 
-			double *Sz = mkl_malloc(num_vals * sizeof(double), MEM_DATA_ALIGN);
+			MAT_TYPE *Sz = mkl_malloc(num_vals * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 			for (int i = 0; i < num_vals; i++) {
 				Sz[i] = atof(vals[i]);
@@ -174,7 +175,7 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 				return -2;
 			}
 
-			double *Sp = mkl_malloc(num_vals * sizeof(double), MEM_DATA_ALIGN);
+			MAT_TYPE *Sp = mkl_malloc(num_vals * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 			for (int i = 0; i < num_vals; i++) {
 				Sp[i] = atof(vals[i]);
