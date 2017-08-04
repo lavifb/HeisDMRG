@@ -32,9 +32,14 @@ MAT_TYPE *HeisenH_int(const double* H_params, const DMRGBlock *block1, const DMR
 
 	kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
 
+	#if COMPLEX
+	MKL_Complex16 one = {.real=1.0, .imag=0.0};
+	mkl_zomatcopy('C', 'C', dim1, dim1, one, Sp1, dim1, Sm1, dim1); // Transpose Sp1 to Sm1
+	mkl_zomatcopy('C', 'C', dim2, dim2, one, Sp2, dim2, Sm2, dim2); // Transpose Sp2 to Sm2
+	#else
 	mkl_domatcopy('C', 'C', dim1, dim1, 1.0, Sp1, dim1, Sm1, dim1); // Transpose Sp1 to Sm1
 	mkl_domatcopy('C', 'C', dim2, dim2, 1.0, Sp2, dim2, Sm2, dim2); // Transpose Sp2 to Sm2
-
+	#endif
 	// TODO: kron transpose in 1 step
 
 	kron(J2, dim1, dim2, Sp1, Sm2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
@@ -75,9 +80,14 @@ MAT_TYPE *HeisenH_int_r(const double* H_params, const DMRGBlock *block1, const D
 
 	kron_r(Jz, dim1, dim2, Sz1, Sz2, H_int, num_ind, inds); // H_int += Jz * kron(Sz1, Sz2)
 
+	#if COMPLEX
+	MKL_Complex16 one = {.real=1.0, .imag=0.0};
+	mkl_zomatcopy('C', 'C', dim1, dim1, one, Sp1, dim1, Sm1, dim1); // Transpose Sp1 to Sm1
+	mkl_zomatcopy('C', 'C', dim2, dim2, one, Sp2, dim2, Sm2, dim2); // Transpose Sp2 to Sm2
+	#else
 	mkl_domatcopy('C', 'C', dim1, dim1, 1.0, Sp1, dim1, Sm1, dim1); // Transpose Sp1 to Sm1
 	mkl_domatcopy('C', 'C', dim2, dim2, 1.0, Sp2, dim2, Sm2, dim2); // Transpose Sp2 to Sm2
-
+	#endif
 	// TODO: kron transpose in 1 step
 
 	kron_r(J2, dim1, dim2, Sp1, Sm2, H_int, num_ind, inds); // H_int += J/2 * kron(Sp1, Sm2)
