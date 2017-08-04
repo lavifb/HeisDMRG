@@ -8,17 +8,12 @@
 #define ZERO_TOLERANCE 10e-7
 
 #if COMPLEX
+	#define PLUSEQ(x, y) y.real += x.real; y.imag += x.imag;
 	#define MULT(alpha, x1, x2, y) y.real += alpha * (x1.real*x2.real - x1.imag*x2.imag); y.imag += alpha * (x1.real*x2.imag + x1.imag*x2.real);
 #else
+	#define PLUSEQ(x, y) y += x;
 	#define MULT(alpha, x1, x2, y) y += alpha * x1 * x2;
 #endif
-
-#if COMPLEX
-	#define PLUSEQ(x, y) y.real += x.real; y.imag += x.imag;
-#else
-	#define PLUSEQ(x, y) y += x;
-#endif
-
 
 /*  Compute Kronecker product of two square matrices. Sets C = alpha * kron(A,B) + C
  
