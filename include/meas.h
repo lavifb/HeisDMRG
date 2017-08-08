@@ -1,6 +1,7 @@
 #ifndef MEAS_H
 #define MEAS_H
 
+#include "linalg.h"
 #include <stdio.h>
 #include <time.h>
 

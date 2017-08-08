@@ -73,7 +73,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	}
 
 	// Restricted Superblock Hamiltonian
-	double *Hs_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
+	MAT_TYPE *Hs_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
 	kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
 	kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
 
@@ -82,15 +82,21 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	__assume_aligned(Hs_r, MEM_DATA_ALIGN);
 
 	// Find ground state
-	double *psi0_r = (double *)mkl_malloc(num_restr_ind * sizeof(double), MEM_DATA_ALIGN);
+	MAT_TYPE *psi0_r = (MAT_TYPE *)mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	__assume_aligned(psi0_r, MEM_DATA_ALIGN);
 	int info;
 	int num_es_found;
 	double *energies = (double *)mkl_malloc(num_restr_ind * sizeof(double), MEM_DATA_ALIGN);;
 	int *isuppz = (int *)mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);;
 
+	#if COMPLEX
+	info = LAPACKE_zheevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
+			0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
+	#else
 	info = LAPACKE_dsyevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
 			0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
+	#endif
+
 	if (info > 0) {
 		printf("Failed to find eigenvalues of Superblock Hamiltonian\n");
 		exit(1);
@@ -103,7 +109,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	// Transformation Matrix
 	int mm = (dimSys < m) ? dimSys : m; // use min(dimSys, m) 
-	double *trans_full = (double *)mkl_calloc(dimSys*dimSys, sizeof(double), MEM_DATA_ALIGN);
+	MAT_TYPE *trans_full = (MAT_TYPE *)mkl_calloc(dimSys*dimSys, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 	// Eigenvalues
 	int lamb_i = 0;
@@ -115,16 +121,20 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	// Loop over sectors to find what basis inds to keep
 	for (sector_t *sec=sup_sectors; sec != NULL; sec=sec->hh.next) {
 		int mz = sec->id;
+		// printf("mz = %d\n", mz);
 		int env_mz = target_mz - mz;
 		int n_sec = sec->num_ind;
 
-		double *psi0_sec = restrictVec(psi0_r, n_sec, sec->inds);
+		MAT_TYPE *psi0_sec = restrictVec(psi0_r, n_sec, sec->inds);
 
 		sector_t *sys_enl_mz, *env_enl_mz;
 		HASH_FIND_INT(sys_enl_sectors, &mz    , sys_enl_mz);
 		HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_mz);
 		assert(sys_enl_mz != NULL);
+		// SOMETHING WRONG HERE!!!
 		if (env_enl_mz == NULL) {
+			// if (sys == env) { printf("sys == env\n"); }
+			// printf("skip\n");
 			continue;
 		}
 		int dimSys_sec = sys_enl_mz->num_ind;
@@ -134,24 +144,43 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		// psi0_sec needs to be arranged as a dimSys * dimEnv to trace out env
 		// Put sys_basis on rows and env_basis on the cols by taking transpose
 		// To not take transpose twice, take conj and take conjTrans on left side of dgemm bellow
+		#if COMPLEX
+		MKL_Complex16 one = {.real=1.0, .imag=0.0};
+		mkl_zimatcopy('C', 'R', dimEnv_sec, dimSys_sec, one, psi0_sec, dimEnv_sec, dimEnv_sec);
+		#else
 		mkl_dimatcopy('C', 'R', dimEnv_sec, dimSys_sec, 1.0, psi0_sec, dimEnv_sec, dimEnv_sec);
+		#endif
 
 		// Density matrix rho_sec
-		double *rho_sec = (double *)mkl_malloc(dimSys_sec*dimSys_sec * sizeof(double), MEM_DATA_ALIGN);
+		MAT_TYPE *rho_sec = (MAT_TYPE *)mkl_malloc(dimSys_sec*dimSys_sec * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		__assume_aligned(rho_sec, MEM_DATA_ALIGN);
 		// Trace out Environment to make rho (Note transpose structure as described above)
+		#if COMPLEX
+		MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+		cblas_zgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys_sec, dimSys_sec, dimEnv_sec, 
+					&one, psi0_sec, dimEnv_sec, psi0_sec, dimEnv_sec, &zero, rho_sec, dimSys_sec);
+		#else
 		cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys_sec, dimSys_sec, dimEnv_sec, 
 					1.0, psi0_sec, dimEnv_sec, psi0_sec, dimEnv_sec, 0.0, rho_sec, dimSys_sec);
+		#endif
+
 		mkl_free(psi0_sec);
 
 		// diagonalize rho_sec and add to list of eigenvalues
 		int mm_sec = (dimSys_sec < mm) ? dimSys_sec : mm;
-		double *trans_sec = (double *)mkl_malloc(dimSys_sec*mm_sec * sizeof(double), MEM_DATA_ALIGN);
+		MAT_TYPE *trans_sec = (MAT_TYPE *)mkl_malloc(dimSys_sec*mm_sec * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		__assume_aligned(trans_sec, MEM_DATA_ALIGN);
 		int *isuppz_sec = (int *)mkl_malloc(2*dimSys_sec * sizeof(int), MEM_DATA_ALIGN);
 		assert(lamb_i + mm_sec - 1 < dimSys);
+
+		#if COMPLEX
+		info = LAPACKE_zheevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', dimSys_sec, rho_sec, dimSys_sec, 0.0, 0.0,
+				dimSys_sec-mm_sec+1, dimSys_sec, 0.0, &num_es_found, &lambs[lamb_i], trans_sec, dimSys_sec, isuppz_sec);
+		#else
 		info = LAPACKE_dsyevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', dimSys_sec, rho_sec, dimSys_sec, 0.0, 0.0,
 				dimSys_sec-mm_sec+1, dimSys_sec, 0.0, &num_es_found, &lambs[lamb_i], trans_sec, dimSys_sec, isuppz_sec);
+		#endif
+
 		if (info > 0) {
 			printf("Failed to find eigenvalues of density matrix\n");
 			exit(1);
@@ -180,7 +209,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	int newDimSys = lamb_i;
 	assert(newDimSys <= dimSys);
 
-	double *trans = (double *)mkl_malloc(dimSys*mm * sizeof(double), MEM_DATA_ALIGN);
+	MAT_TYPE *trans = (MAT_TYPE *)mkl_malloc(dimSys*mm * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	__assume_aligned(trans, MEM_DATA_ALIGN);
 
 	assert(mm <= newDimSys);
@@ -188,7 +217,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	// copy to trans in right order
 	for (int i = 0; i < mm; i++) {
-		memcpy(&trans[i*dimSys], &trans_full[sorted_inds[i]*dimSys], dimSys * sizeof(double));
+		memcpy(&trans[i*dimSys], &trans_full[sorted_inds[i]*dimSys], dimSys * sizeof(MAT_TYPE));
 		sys_enl->mzs[i] = sys_mzs_full[sorted_inds[i]];
 	}
 
@@ -272,7 +301,7 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	}
 
 	// Superblock Hamiltonian
-	double *Hs_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
+	MAT_TYPE *Hs_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
 	kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
 	kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
 
@@ -286,15 +315,21 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	__assume_aligned(Hs_r, MEM_DATA_ALIGN);
 
 	// Find ground state
-	double *psi0_r = (double *)mkl_malloc(num_restr_ind * sizeof(double), MEM_DATA_ALIGN);
+	MAT_TYPE *psi0_r = (MAT_TYPE *)mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	__assume_aligned(psi0_r, MEM_DATA_ALIGN);
 	int info;
 	int num_es_found;
 	double *energies = (double *)mkl_malloc(num_restr_ind * sizeof(double), MEM_DATA_ALIGN);;
 	int *isuppz = (int *)mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);;
 
+	#if COMPLEX
+	info = LAPACKE_zheevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
+			0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
+	#else
 	info = LAPACKE_dsyevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
 			0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
+	#endif
+
 	if (info > 0) {
 		printf("Failed to find eigenvalues of Superblock Hamiltonian\n");
 		exit(1);
@@ -308,28 +343,45 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	// <S_i> spins
 	for (int i = 0; i<meas->num_sites; i++) {
-		double* supOp_r = (double *)mkl_calloc(num_restr_ind*num_restr_ind, sizeof(double), MEM_DATA_ALIGN);
+		MAT_TYPE* supOp_r = (MAT_TYPE *)mkl_calloc(num_restr_ind*num_restr_ind, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		kronI_r('R', dimSys, dimEnv, sys_enl->ops[i + model->num_ops], supOp_r, num_restr_ind, restr_basis_inds);
 
 		transformOps(1, num_restr_ind, 1, psi0_r, &supOp_r);
 
+		#if COMPLEX
+		meas->Szs[i] = (*supOp_r).real;
+		#else
 		meas->Szs[i] = *supOp_r;
+		#endif
+
 		mkl_free(supOp_r);
 	}
 
 	// <S_i S_j> correlations
 	for (int i = 0; i<meas->num_sites; i++) {
-		double* SSop = (double *)mkl_malloc(dimSys*dimSys * sizeof(double), MEM_DATA_ALIGN);
+		MAT_TYPE* SSop = (MAT_TYPE *)mkl_malloc(dimSys*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		#if COMPLEX
+		MKL_Complex16 one  = {.real=1.0, .imag=0.0};
+		MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, &one, sys_enl->ops[i + model->num_ops], 
+			dimSys, sys_enl->ops[1], dimSys, &zero, SSop, dimSys);
+		#else
 		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, 1.0, sys_enl->ops[i + model->num_ops], 
 			dimSys, sys_enl->ops[1], dimSys, 0.0, SSop, dimSys);
-		double* supOp_r = (double *)mkl_calloc(dimSup*dimSup, sizeof(double), MEM_DATA_ALIGN);
+		#endif
+		MAT_TYPE* supOp_r = (MAT_TYPE *)mkl_calloc(dimSup*dimSup, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 		kronI_r('R', dimSys, dimEnv, SSop, supOp_r, num_restr_ind, restr_basis_inds);
 		mkl_free(SSop);
 
 		transformOps(1, num_restr_ind, 1, psi0_r, &supOp_r);
 
+		#if COMPLEX
+		meas->SSs[i] = (*supOp_r).real;
+		#else
 		meas->SSs[i] = *supOp_r;
+		#endif
+
 		mkl_free(supOp_r);
 	}
 

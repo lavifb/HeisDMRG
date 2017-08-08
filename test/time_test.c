@@ -33,19 +33,32 @@ int main(int argc, char *argv[]) {
 	model->J  = 1;
 	model->Jz = 1;
 
-	double H1[N*N] = { 0, 0,
-					 0, 0 };
-	double Sz[N*N] = {.5, 0,
-					 0,-.5};
-	double Sp[N*N] = { 0, 1,
-					 0, 0 };
+	#if COMPLEX
+	MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+	MKL_Complex16 one  = {.real=1.0, .imag=0.0};
+	MKL_Complex16 p5   = {.real=0.5, .imag=0.0};
+	MKL_Complex16 mp5  = {.real=-.5, .imag=0.0};
+	MAT_TYPE H1[N*N] = { zero, zero,
+					     zero, zero };
+	MAT_TYPE Sz[N*N] = { p5  , zero,
+					     zero, mp5};
+	MAT_TYPE Sp[N*N] = { zero, one,
+					     zero, zero };
+	#else
+	MAT_TYPE H1[N*N] = { 0 , 0,
+					     0 , 0 };
+	MAT_TYPE Sz[N*N] = { .5, 0,
+					     0 ,-.5};
+	MAT_TYPE Sp[N*N] = { 0 , 1,
+					     0 , 0 };
+	#endif
 
-	model->H1 = mkl_malloc(N*N * sizeof(double), MEM_DATA_ALIGN);
-	memcpy(model->H1, H1, N*N * sizeof(double));
-	model->Sz = mkl_malloc(N*N * sizeof(double), MEM_DATA_ALIGN);
-	memcpy(model->Sz, Sz, N*N * sizeof(double));
-	model->Sp = mkl_malloc(N*N * sizeof(double), MEM_DATA_ALIGN);
-	memcpy(model->Sp, Sp, N*N * sizeof(double));
+	model->H1 = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	memcpy(model->H1, H1, N*N * sizeof(MAT_TYPE));
+	model->Sz = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	memcpy(model->Sz, Sz, N*N * sizeof(MAT_TYPE));
+	model->Sp = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	memcpy(model->Sp, Sp, N*N * sizeof(MAT_TYPE));
 
 	compileParams(model);
 

@@ -1,5 +1,6 @@
 #include "input_parser.h"
 #include "model.h"
+#include "linalg.h"
 #include <mkl.h>
 #include <math.h>
 #include <stdio.h>
@@ -128,14 +129,20 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 				return -2;
 			}
 
-			double *H1 = mkl_malloc(num_vals * sizeof(double), MEM_DATA_ALIGN);
+			MAT_TYPE *H1 = mkl_malloc(num_vals * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 			for (int i = 0; i < num_vals; i++) {
-				H1[i] = atof(vals[i]);
-				if (isnan(H1[i])) {
+				if (isnan(atof(vals[i]))) {
 					errprintf("Parameter 'H1' must be all floats.\n");
 					return -2;
 				}
+
+				#if COMPLEX
+				H1[i].real = atof(vals[i]);
+				H1[i].imag = 0.0;
+				#else
+				H1[i] = atof(vals[i]);
+				#endif
 			}
 			params->model->H1 = H1;
 		} else if (strcmp(paramName, "Sz") == 0) {
@@ -147,18 +154,24 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 			}
 
 			if (d_model * d_model != num_vals) {
-				errprintf("Parameter 'Sz' must be a d_model x d_model matrix.\n");
+				errprintf("Parameter 'Sz' must be a %d x %d matrix. %d values found.\n", d_model, d_model, num_vals);
 				return -2;
 			}
 
-			double *Sz = mkl_malloc(num_vals * sizeof(double), MEM_DATA_ALIGN);
+			MAT_TYPE *Sz = mkl_malloc(num_vals * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 			for (int i = 0; i < num_vals; i++) {
-				Sz[i] = atof(vals[i]);
-				if (isnan(Sz[i])) {
+				if (isnan(atof(vals[i]))) {
 					errprintf("Parameter 'Sz' must be all floats.\n");
 					return -2;
 				}
+
+				#if COMPLEX
+				Sz[i].real = atof(vals[i]);
+				Sz[i].imag = 0.0;
+				#else
+				Sz[i] = atof(vals[i]);
+				#endif
 			}
 			params->model->Sz = Sz;
 		} else if (strcmp(paramName, "Sp") == 0) {
@@ -170,18 +183,24 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 			}
 
 			if (d_model * d_model != num_vals) {
-				errprintf("Parameter 'Sp' must be a d_model x d_model matrix.\n");
+				errprintf("Parameter 'Sp' must be a %d x %d matrix. %d values found.\n", d_model, d_model, num_vals);
 				return -2;
 			}
 
-			double *Sp = mkl_malloc(num_vals * sizeof(double), MEM_DATA_ALIGN);
+			MAT_TYPE *Sp = mkl_malloc(num_vals * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 			for (int i = 0; i < num_vals; i++) {
-				Sp[i] = atof(vals[i]);
-				if (isnan(Sp[i])) {
+				if (isnan(atof(vals[i]))) {
 					errprintf("Parameter 'Sp' must be all floats.\n");
 					return -2;
 				}
+				
+				#if COMPLEX
+				Sp[i].real = atof(vals[i]);
+				Sp[i].imag = 0.0;
+				#else
+				Sp[i] = atof(vals[i]);
+				#endif
 			}
 			params->model->Sp = Sp;
 		} else if (strcmp(paramName, "J") == 0) {

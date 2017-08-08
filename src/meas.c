@@ -1,5 +1,6 @@
 #include "meas.h"
 #include "input_parser.h"
+#include "linalg.h"
 #include <mkl.h>
 #include <stdio.h>
 
@@ -42,7 +43,11 @@ int outputMeasData(const char* path, meas_data_t *meas) {
 				 , "Site", "Sz", "SS");
 
 	for (int i = meas->num_sites-1; i>=0; i--) {
+		// #if COMPLEX
+		// fprintf(m_f, "%-6d%- 20.12f%- 20.12f\n", i+1, meas->Szs[i].real, meas->SSs[i].real);
+		// #else
 		fprintf(m_f, "%-6d%- 20.12f%- 20.12f\n", i+1, meas->Szs[i], meas->SSs[i]);
+		// #endif
 	}
 
 	fclose(m_f);
