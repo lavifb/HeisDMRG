@@ -91,7 +91,7 @@ void kron_r(const double alpha, const int m, const int n, const MAT_TYPE *restri
 	B: n*n matrix
 	C: mn*mn matrix
 */
-void kronT(const char side, const double alpha, const int m, const int n, const double *restrict A, const double *restrict B, double *restrict C) {
+void kronT(const char side, const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B, MAT_TYPE *restrict C) {
 	int ldac = m*n;
 
 	__assume_aligned(A, MEM_DATA_ALIGN);
@@ -151,8 +151,8 @@ void kronT(const char side, const double alpha, const int m, const int n, const 
 	B: n*n matrix
 	C: mn*mn matrix
 */
-void kronT_r(const char side, const double alpha, const int m, const int n, const double *restrict A, const double *restrict B,
-			double *restrict C, const int num_ind, const int *restrict inds) {
+void kronT_r(const char side, const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B,
+			MAT_TYPE *restrict C, const int num_ind, const int *restrict inds) {
 	int ldac = m*n;
 
 	__assume_aligned(A, MEM_DATA_ALIGN);
