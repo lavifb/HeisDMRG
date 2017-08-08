@@ -3,8 +3,8 @@
 CC = icc
 
 # compiler options
-# CCOPTS  = -Wall -xHost -restrict -std=c99 -DMEM_DATA_ALIGN=64 -DCOMPLEX
-CCOPTS  = -Wall -xHost -restrict -std=c99 -DMEM_DATA_ALIGN=64
+CCOPTS  = -Wall -xHost -restrict -std=c99 -DMEM_DATA_ALIGN=64 -DCOMPLEX
+# CCOPTS  = -Wall -xHost -restrict -std=c99 -DMEM_DATA_ALIGN=64
 CCOPTSR = ${CCOPTS} -DNDEBUG -O2
 # CCOPTSR = ${CCOPTS} -DNDEBUG -pg -O2
 CCOPTSD = ${CCOPTS} -g -O0 -DMKL_DISABLE_FAST_MM=1

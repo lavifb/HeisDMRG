@@ -121,6 +121,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	// Loop over sectors to find what basis inds to keep
 	for (sector_t *sec=sup_sectors; sec != NULL; sec=sec->hh.next) {
 		int mz = sec->id;
+		// printf("mz = %d\n", mz);
 		int env_mz = target_mz - mz;
 		int n_sec = sec->num_ind;
 
@@ -130,7 +131,10 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		HASH_FIND_INT(sys_enl_sectors, &mz    , sys_enl_mz);
 		HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_mz);
 		assert(sys_enl_mz != NULL);
+		// SOMETHING WRONG HERE!!!
 		if (env_enl_mz == NULL) {
+			// if (sys == env) { printf("sys == env\n"); }
+			// printf("skip\n");
 			continue;
 		}
 		int dimSys_sec = sys_enl_mz->num_ind;
@@ -344,7 +348,12 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 		transformOps(1, num_restr_ind, 1, psi0_r, &supOp_r);
 
+		#if COMPLEX
+		meas->Szs[i] = (*supOp_r).real;
+		#else
 		meas->Szs[i] = *supOp_r;
+		#endif
+
 		mkl_free(supOp_r);
 	}
 
@@ -367,7 +376,12 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 		transformOps(1, num_restr_ind, 1, psi0_r, &supOp_r);
 
+		#if COMPLEX
+		meas->SSs[i] = (*supOp_r).real;
+		#else
 		meas->SSs[i] = *supOp_r;
+		#endif
+
 		mkl_free(supOp_r);
 	}
 

@@ -9,8 +9,8 @@ meas_data_t *createMeas(int num_sites) {
 	meas_data_t *meas = (meas_data_t *)mkl_malloc(sizeof(meas_data_t), MEM_DATA_ALIGN);
 
 	meas->num_sites = num_sites;
-	meas->Szs = (MAT_TYPE *)mkl_malloc(num_sites * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	meas->SSs = (MAT_TYPE *)mkl_malloc(num_sites * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	meas->Szs = (double *)mkl_malloc(num_sites * sizeof(double), MEM_DATA_ALIGN);
+	meas->SSs = (double *)mkl_malloc(num_sites * sizeof(double), MEM_DATA_ALIGN);
 
 	return meas;
 }
@@ -43,11 +43,11 @@ int outputMeasData(const char* path, meas_data_t *meas) {
 				 , "Site", "Sz", "SS");
 
 	for (int i = meas->num_sites-1; i>=0; i--) {
-		#if COMPLEX
-		fprintf(m_f, "%-6d%- 20.12f%- 20.12f\n", i+1, meas->Szs[i].real, meas->SSs[i].real);
-		#else
+		// #if COMPLEX
+		// fprintf(m_f, "%-6d%- 20.12f%- 20.12f\n", i+1, meas->Szs[i].real, meas->SSs[i].real);
+		// #else
 		fprintf(m_f, "%-6d%- 20.12f%- 20.12f\n", i+1, meas->Szs[i], meas->SSs[i]);
-		#endif
+		// #endif
 	}
 
 	fclose(m_f);

@@ -12,9 +12,18 @@ void compileParams(model_t *model) {
 
 	int dim = model->d_model;
 
+
+	#if COMPLEX
+	MKL_Complex16 one = {.real=1.0, .imag=0.0};
+	mkl_zimatcopy('C', 'T', dim, dim, one, model->H1, dim, dim);
+	mkl_zimatcopy('C', 'T', dim, dim, one, model->Sz, dim, dim);
+	mkl_zimatcopy('C', 'T', dim, dim, one, model->Sp, dim, dim);
+	#else
 	mkl_dimatcopy('C', 'T', dim, dim, 1.0, model->H1, dim, dim);
 	mkl_dimatcopy('C', 'T', dim, dim, 1.0, model->Sz, dim, dim);
 	mkl_dimatcopy('C', 'T', dim, dim, 1.0, model->Sp, dim, dim);
+	#endif
+
 	model->Id = identity(dim);
 
 	model->num_ops  = 3;
@@ -26,11 +35,15 @@ void compileParams(model_t *model) {
 	model->init_mzs = (int *)mkl_malloc(dim * sizeof(int), MEM_DATA_ALIGN);
 	for (int i=0; i<dim; i++) {
 		// init_mzs stores 2*mz to make it an integer
+		#if COMPLEX
+		model->init_mzs[i] = model->Sz[i*dim+i].real * 2;
+		#else
 		model->init_mzs[i] = model->Sz[i*dim+i] * 2;
+		#endif
 	}
 
 	// Set Hamiltonian parameters
-	model->H_params = (MAT_TYPE *)mkl_malloc(2 * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	model->H_params = (double *)mkl_malloc(2 * sizeof(double), MEM_DATA_ALIGN);
 	model->H_params[0] = model->J/2;
 	model->H_params[1] = model->Jz;
 
