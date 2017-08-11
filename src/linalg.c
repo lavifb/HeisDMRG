@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include "primme.h"
 
 #define ZERO_TOLERANCE 10e-7
 
@@ -466,12 +467,60 @@ MAT_TYPE *unrestrictVec(const int m, const MAT_TYPE *v_r, const int num_ind, con
 	return v;
 }
 
+void primme_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *blockSize, primme_params *primme, int *err) {
+
+	int N = primme->n;
+
+	cblas_dsymm(CblasColMajor, CblasLeft, CblasUpper, N, *blockSize, 1.0, (double *) primme->matrix, N,
+				(double *)x, N, 0.0, (double *)y, N);
+	*err = 0;
+}
+
+void dprimmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, const int numEvals) {
+
+	primme_params primme;
+
+	int ret;
+	int i;
+
+	/* Set default values in PRIMME configuration struct */
+	primme_initialize(&primme);
+
+	/* Set problem matrix */
+	primme.matrixMatvec = primme_matvec;
+	primme.matrix = A;
+
+	primme.n = N;
+	primme.numEvals = numEvals;     /* Number of wanted eigenpairs */
+	primme.eps = 1e-7;             /* ||r|| <= eps * ||matrix|| */
+	primme.target = primme_smallest;
+
+	primme_set_method(PRIMME_DYNAMIC, &primme);
+
+	double *rnorms = (double*)malloc(primme.numEvals*sizeof(double));
+
+	// printf("Ready for dprimme\n");
+
+	ret = dprimme(evals, evecs, rnorms, &primme);
+
+	if (ret != 0) {
+		fprintf(primme.outputFile, 
+			"Error: primme returned with nonzero exit status: %d \n", ret);
+		exit(1);
+	}
+	// printf("Energy = %f\n", evals[0]);
+
+	free(rnorms);
+	primme_free(&primme);
+}
+
+
 // Pointer comparison for sort below
 int dcmp(const void *pa, const void *pb){
-    double a = **(double **)pa;
-    double b = **(double **)pb;
+	double a = **(double **)pa;
+	double b = **(double **)pb;
 
-    return b - a > 0 ? 1 : -1;
+	return b - a > 0 ? 1 : -1;
 }
 
 /* Sort in descending order. Returns indexes in sorted order

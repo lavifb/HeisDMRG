@@ -2,23 +2,29 @@
 # use Intel compiler
 CC = icc
 
-# compiler options
-# CCOPTS  = -Wall -xHost -restrict -std=c99 -DMEM_DATA_ALIGN=64 -DCOMPLEX
-CCOPTS  = -Wall -xHost -restrict -std=c99 -DMEM_DATA_ALIGN=64
-CCOPTSR = ${CCOPTS} -DNDEBUG -O2
-# CCOPTSR = ${CCOPTS} -DNDEBUG -pg -O2
-CCOPTSD = ${CCOPTS} -g -O0 -DMKL_DISABLE_FAST_MM=1
-
-# MKL Library
-MKL = -mkl=sequential
-# MKL = -mkl=parallel
-
 BIN := bin
 SRC := src
 INC := include
 OBJ := obj
 TEST:= test
 DBUG:= debug
+
+# compiler options
+# CCOPTS  = -Wall -xHost -restrict -std=c99 -DMEM_DATA_ALIGN=64 -DCOMPLEX
+CCOPTS  = -Wall -xHost -restrict -std=c99 -DMEM_DATA_ALIGN=64 
+# CCOPTSR = ${CCOPTS} -DNDEBUG -O2
+CCOPTSR = ${CCOPTS} -DNDEBUG -pg -O2
+CCOPTSD = ${CCOPTS} -g -O0 -DMKL_DISABLE_FAST_MM=1
+
+# MKL Library
+MKL = -mkl=sequential
+# MKL = -mkl=parallel
+
+PRIMMEDIR = ../../Repos/primme
+
+LIB = ${MKL} -lprimme -L${PRIMMEDIR}/lib/
+INCDIRS = -I${INC}/ -I${PRIMMEDIR}/include/
+
 
 # SRC_FILES = $(patsubst $(PUG)/%.pug, $(TEST)/%.html, $(wildcard $(PUG)/[^_]*.pug))
 
@@ -47,18 +53,18 @@ srcD: $(patsubst $(SRC)/%.c, $(DBUG)/%.o, $(wildcard $(SRC)/[^_]*.c))
 test: $(patsubst $(TEST)/%.c, $(BIN)/%, $(wildcard $(TEST)/[^_]*.c))
 
 ${OBJ}/%.o: ${SRC}/%.c
-	${CC} -c -I${INC}/ ${CCOPTSR} ${MKL} $< -o $@
+	${CC} -c ${INCDIRS} ${CCOPTSR} ${LIB} $< -o $@
 
 ${DBUG}/%.o: ${SRC}/%.c
-	${CC} -c -I${INC}/ ${CCOPTSD} ${MKL} $< -o $@
+	${CC} -c ${INCDIRS} ${CCOPTSD} ${LIB} $< -o $@
 
 proj_main: src
-	 ${CC} -I${INC}/ ${CCOPTSR} ${MKL} -o ${BIN}/dmrg ${OBJ}/*
+	 ${CC} ${INCDIRS} ${CCOPTSR} ${LIB} -o ${BIN}/dmrg ${OBJ}/*
 
 debug: clean-debug srcD
-	 ${CC} -I${INC}/ ${CCOPTSD} ${MKL} -o ${BIN}/dmrg_debug ${DBUG}/*
+	 ${CC} ${INCDIRS} ${CCOPTSD} ${LIB} -o ${BIN}/dmrg_debug ${DBUG}/*
 	 -rm -f ${DBUG}/main.o
-	 ${CC} -I${INC}/ ${CCOPTSD} ${MKL} -o ${BIN}/quick_test_debug ${DBUG}/* ${TEST}/quick_test.c
+	 ${CC} ${INCDIRS} ${CCOPTSD} ${LIB} -o ${BIN}/quick_test_debug ${DBUG}/* ${TEST}/quick_test.c
 	 
 ${BIN}/%: ${TEST}/%.c src clean-main
-	${CC} -I${INC}/ ${CCOPTSR} ${MKL} -o $@ $< ${OBJ}/*
+	${CC} ${INCDIRS} ${CCOPTSR} ${LIB} -o $@ $< ${OBJ}/*

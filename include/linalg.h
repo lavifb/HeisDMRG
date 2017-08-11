@@ -25,6 +25,8 @@ void kronI(const char side, const int m, const int n, const MAT_TYPE *restrict A
 void kronI_r(const char side, const int m, const int n, const MAT_TYPE *restrict A, 
 	         MAT_TYPE *restrict C, const int num_ind, const int *restrict inds);
 
+void dprimmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, const int numEvals);
+
 MAT_TYPE *identity(const int N);
 
 MAT_TYPE *transformOp(const int opDim, const int newDim, const MAT_TYPE *restrict trans, const MAT_TYPE *restrict op);
