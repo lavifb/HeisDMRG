@@ -499,8 +499,6 @@ void dprimmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, co
 
 	double *rnorms = (double*)malloc(primme.numEvals*sizeof(double));
 
-	// printf("Ready for dprimme\n");
-
 	ret = dprimme(evals, evecs, rnorms, &primme);
 
 	if (ret != 0) {
@@ -508,7 +506,6 @@ void dprimmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, co
 			"Error: primme returned with nonzero exit status: %d \n", ret);
 		exit(1);
 	}
-	// printf("Energy = %f\n", evals[0]);
 
 	free(rnorms);
 	primme_free(&primme);

@@ -1,9 +1,11 @@
 DMRG Code
 ====
 
-Uses Intel MKL Library
+Uses Intel MKL and PRIMME libraries.
 
 Thanks to http://troydhanson.github.io/uthash/ for easy to use hashtable.
+
+PRIMME can be compiled from https://github.com/primme/primme
 
 
 Todo

@@ -168,6 +168,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		mkl_free(psi0_sec);
 
 		// diagonalize rho_sec and add to list of eigenvalues
+		// LAPACK faster since we need many eigenvalues
 		int mm_sec = (dimSys_sec < mm) ? dimSys_sec : mm;
 		MAT_TYPE *trans_sec = (MAT_TYPE *)mkl_malloc(dimSys_sec*mm_sec * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		__assume_aligned(trans_sec, MEM_DATA_ALIGN);
@@ -318,17 +319,18 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	// Find ground state
 	MAT_TYPE *psi0_r = (MAT_TYPE *)mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	__assume_aligned(psi0_r, MEM_DATA_ALIGN);
-	int info;
+	int info = 0;
 	int num_es_found;
-	double *energies = (double *)mkl_malloc(num_restr_ind * sizeof(double), MEM_DATA_ALIGN);;
+	double *energies = (double *)mkl_malloc(sizeof(double), MEM_DATA_ALIGN);;
 	int *isuppz = (int *)mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);;
 
 	#if COMPLEX
 	info = LAPACKE_zheevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
 			0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
 	#else
-	info = LAPACKE_dsyevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
-			0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
+	// info = LAPACKE_dsyevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
+	// 		0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
+	dprimmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1);
 	#endif
 
 	if (info > 0) {
