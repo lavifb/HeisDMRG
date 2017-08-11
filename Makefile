@@ -15,7 +15,7 @@ PRIMMEDIR = ../../Repos/primme
 
 # Comment out this line if you want a purely real calculation
 # This gives a reasonable performance boost for real calcualtions
-# COMPLEX = true
+COMPLEX = true
 
 # compiler options
 CCOPTS  = -Wall -xHost -restrict -std=c99 -DMEM_DATA_ALIGN=64

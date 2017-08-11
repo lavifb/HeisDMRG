@@ -27,16 +27,14 @@ int main() {
 	model->Jz = 1;
 
 	#if COMPLEX
-	const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
-	const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
-	const MKL_Complex16 p5   = {.real=0.5, .imag=0.0};
-	const MKL_Complex16 mp5  = {.real=-.5, .imag=0.0};
-	MAT_TYPE H1[N*N] = { zero, zero,
-					     zero, zero };
-	MAT_TYPE Sz[N*N] = { p5  , zero,
-					     zero, mp5};
-	MAT_TYPE Sp[N*N] = { zero, one,
-					     zero, zero };
+	#include <complex.h>
+
+	complex double H1[N*N] = { 0 , 0,
+					    	   0 , 0 };
+	complex double Sz[N*N] = { .5, 0,
+					     	   0 ,-.5};
+	complex double Sp[N*N] = { 0 , 1,
+							   0 , 0 };
 	#else
 	MAT_TYPE H1[N*N] = { 0 , 0,
 					     0 , 0 };
