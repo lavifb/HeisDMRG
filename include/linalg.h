@@ -25,7 +25,9 @@ void kronI(const char side, const int m, const int n, const MAT_TYPE *restrict A
 void kronI_r(const char side, const int m, const int n, const MAT_TYPE *restrict A, 
 	         MAT_TYPE *restrict C, const int num_ind, const int *restrict inds);
 
-void dprimmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, const int numEvals);
+#if USE_PRIMME
+void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, const int numEvals);
+#endif
 
 MAT_TYPE *identity(const int N);
 

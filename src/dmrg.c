@@ -79,30 +79,35 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	mkl_free(restr_basis_inds);
 
-	__assume_aligned(Hs_r, MEM_DATA_ALIGN);
-
 	// Find ground state
 	MAT_TYPE *psi0_r = (MAT_TYPE *)mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	__assume_aligned(psi0_r, MEM_DATA_ALIGN);
-	int info = 0;
-	int num_es_found;
-	double *energies = (double *)mkl_malloc(sizeof(double), MEM_DATA_ALIGN);;
-	int *isuppz = (int *)mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);;
+	double *energies = (double *)mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
 
-	#if COMPLEX
-	info = LAPACKE_zheevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
-			0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
+	// Use the faster PRIMME library if available. Otherwise, default to LAPACK.
+	#if USE_PRIMME
+		primmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1);
 	#else
-	// info = LAPACKE_dsyevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
-	// 		0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
-	dprimmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1);
+		__assume_aligned(Hs_r, MEM_DATA_ALIGN);
+		__assume_aligned(psi0_r, MEM_DATA_ALIGN);
+		int info = 0;
+		int num_es_found;
+		int *isuppz = (int *)mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
+
+		#if COMPLEX
+		info = LAPACKE_zheevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
+				0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
+		#else
+		info = LAPACKE_dsyevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
+				0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
+		#endif
+
+		if (info > 0) {
+			printf("Failed to find eigenvalues of Superblock Hamiltonian\n");
+			exit(1);
+		}
+		mkl_free(isuppz);
 	#endif
 
-	if (info > 0) {
-		printf("Failed to find eigenvalues of Superblock Hamiltonian\n");
-		exit(1);
-	}
-	mkl_free(isuppz);
 	mkl_free(Hs_r);
 
 	sys_enl->energy = energies[0]; // record ground state energy
@@ -173,13 +178,14 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		MAT_TYPE *trans_sec = (MAT_TYPE *)mkl_malloc(dimSys_sec*mm_sec * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		__assume_aligned(trans_sec, MEM_DATA_ALIGN);
 		int *isuppz_sec = (int *)mkl_malloc(2*dimSys_sec * sizeof(int), MEM_DATA_ALIGN);
+		int num_es_found;
 		assert(lamb_i + mm_sec - 1 < dimSys);
 
 		#if COMPLEX
-		info = LAPACKE_zheevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', dimSys_sec, rho_sec, dimSys_sec, 0.0, 0.0,
+		int info = LAPACKE_zheevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', dimSys_sec, rho_sec, dimSys_sec, 0.0, 0.0,
 				dimSys_sec-mm_sec+1, dimSys_sec, 0.0, &num_es_found, &lambs[lamb_i], trans_sec, dimSys_sec, isuppz_sec);
 		#else
-		info = LAPACKE_dsyevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', dimSys_sec, rho_sec, dimSys_sec, 0.0, 0.0,
+		int info = LAPACKE_dsyevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', dimSys_sec, rho_sec, dimSys_sec, 0.0, 0.0,
 				dimSys_sec-mm_sec+1, dimSys_sec, 0.0, &num_es_found, &lambs[lamb_i], trans_sec, dimSys_sec, isuppz_sec);
 		#endif
 
@@ -302,7 +308,7 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		}
 	}
 
-	// Superblock Hamiltonian
+	// RestrictedSuperblock Hamiltonian
 	MAT_TYPE *Hs_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
 	kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
 	kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
@@ -318,26 +324,33 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	// Find ground state
 	MAT_TYPE *psi0_r = (MAT_TYPE *)mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	__assume_aligned(psi0_r, MEM_DATA_ALIGN);
-	int info = 0;
-	int num_es_found;
-	double *energies = (double *)mkl_malloc(sizeof(double), MEM_DATA_ALIGN);;
-	int *isuppz = (int *)mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);;
+	double *energies = (double *)mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
 
-	#if COMPLEX
-	info = LAPACKE_zheevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
-			0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
+	// Use the faster PRIMME library if available. Otherwise, default to LAPACK.
+	#if USE_PRIMME
+		primmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1);
 	#else
-	// info = LAPACKE_dsyevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
-	// 		0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
-	dprimmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1);
+		__assume_aligned(Hs_r, MEM_DATA_ALIGN);
+		__assume_aligned(psi0_r, MEM_DATA_ALIGN);
+		int info = 0;
+		int num_es_found;
+		int *isuppz = (int *)mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
+
+		#if COMPLEX
+		info = LAPACKE_zheevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
+				0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
+		#else
+		info = LAPACKE_dsyevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
+				0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
+		#endif
+
+		if (info > 0) {
+			printf("Failed to find eigenvalues of Superblock Hamiltonian\n");
+			exit(1);
+		}
+		mkl_free(isuppz);
 	#endif
 
-	if (info > 0) {
-		printf("Failed to find eigenvalues of Superblock Hamiltonian\n");
-		exit(1);
-	}
-	mkl_free(isuppz);
 	mkl_free(Hs_r);
 
 	meas_data_t *meas = createMeas(sys_enl->num_ops - model->num_ops);

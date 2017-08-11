@@ -5,6 +5,7 @@ Uses Intel MKL and PRIMME libraries.
 
 Thanks to http://troydhanson.github.io/uthash/ for easy to use hashtable.
 
+Code is sped up considerably using the PRIMME eigensolver. It can be compiled without PRIMME but this is not recommended as the performance gains are substantial.
 PRIMME can be compiled from https://github.com/primme/primme and is needed for faster eigenvalue solving.
 
 Todo

@@ -4,7 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <complex.h>
+
+#if USE_PRIMME
 #include "primme.h"
+#endif
 
 #define ZERO_TOLERANCE 10e-7
 
@@ -467,16 +471,35 @@ MAT_TYPE *unrestrictVec(const int m, const MAT_TYPE *v_r, const int num_ind, con
 	return v;
 }
 
+// If PRIMME lib is available define wrapper for finding eigenvalues
+#if USE_PRIMME
 void primme_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *blockSize, primme_params *primme, int *err) {
 
 	int N = primme->n;
 
+	__assume_aligned(primme->matrix, MEM_DATA_ALIGN);
+
+	#if COMPLEX
+	const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
+	const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+	cblas_zhemm(CblasColMajor, CblasLeft, CblasUpper, N, *blockSize, &one, (MKL_Complex16 *) primme->matrix, N,
+				(MKL_Complex16 *)x, N, &zero, (MKL_Complex16 *)y, N);
+	#else
 	cblas_dsymm(CblasColMajor, CblasLeft, CblasUpper, N, *blockSize, 1.0, (double *) primme->matrix, N,
 				(double *)x, N, 0.0, (double *)y, N);
+	#endif
 	*err = 0;
 }
 
-void dprimmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, const int numEvals) {
+/*  Finds eigenvalues and eigenvectors of A.
+
+	A        : N*N Matrix
+	N        : Size of matrix A
+	evals    : pointer that will contain eigenvalues. Size should be numEvals
+	evecs    : pointer that will contain eigenvectors. Size should be numEvals*N
+	numEvals : number of desired eigenvectors
+*/
+void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, const int numEvals) {
 
 	primme_params primme;
 
@@ -492,14 +515,18 @@ void dprimmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, co
 
 	primme.n = N;
 	primme.numEvals = numEvals;     /* Number of wanted eigenpairs */
-	primme.eps = 1e-7;             /* ||r|| <= eps * ||matrix|| */
+	primme.eps = 1e-5;             /* ||r|| <= eps * ||matrix|| */
 	primme.target = primme_smallest;
 
 	primme_set_method(PRIMME_DYNAMIC, &primme);
 
 	double *rnorms = (double*)malloc(primme.numEvals*sizeof(double));
 
+	#if COMPLEX
+	ret = zprimme(evals, (complex double *) evecs, rnorms, &primme);
+	#else
 	ret = dprimme(evals, evecs, rnorms, &primme);
+	#endif
 
 	if (ret != 0) {
 		fprintf(primme.outputFile, 
@@ -510,6 +537,7 @@ void dprimmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, co
 	free(rnorms);
 	primme_free(&primme);
 }
+#endif
 
 
 // Pointer comparison for sort below
