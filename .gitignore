@@ -1,6 +1,11 @@
 *.DS_Store
 
-bin/
+bin/*
 debug/*
 obj/*
-output/
+output/*
+
+*.o
+*.dSYM/
+
+!*.gitkeep
