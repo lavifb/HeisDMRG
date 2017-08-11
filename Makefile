@@ -11,9 +11,10 @@ DBUG:= debug
 
 # Set directory containing PRIMME library
 # Comment out this line if do not have the PRIMME library
-# PRIMMEDIR = ../../Repos/primme
+PRIMMEDIR = ../../Repos/primme
 
 # Comment out this line if you want a purely real calculation
+# This gives a reasonable performance boost for real calcualtions
 # COMPLEX = true
 
 # compiler options
