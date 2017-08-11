@@ -27,10 +27,10 @@ int main() {
 	model->Jz = 1;
 
 	#if COMPLEX
-	MKL_Complex16 zero = {.real=0.0, .imag=0.0};
-	MKL_Complex16 one  = {.real=1.0, .imag=0.0};
-	MKL_Complex16 p5   = {.real=0.5, .imag=0.0};
-	MKL_Complex16 mp5  = {.real=-.5, .imag=0.0};
+	const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+	const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
+	const MKL_Complex16 p5   = {.real=0.5, .imag=0.0};
+	const MKL_Complex16 mp5  = {.real=-.5, .imag=0.0};
 	MAT_TYPE H1[N*N] = { zero, zero,
 					     zero, zero };
 	MAT_TYPE Sz[N*N] = { p5  , zero,

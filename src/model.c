@@ -14,7 +14,7 @@ void compileParams(model_t *model) {
 
 
 	#if COMPLEX
-	MKL_Complex16 one = {.real=1.0, .imag=0.0};
+	const MKL_Complex16 one = {.real=1.0, .imag=0.0};
 	mkl_zimatcopy('C', 'T', dim, dim, one, model->H1, dim, dim);
 	mkl_zimatcopy('C', 'T', dim, dim, one, model->Sz, dim, dim);
 	mkl_zimatcopy('C', 'T', dim, dim, one, model->Sp, dim, dim);

@@ -151,7 +151,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		// Put sys_basis on rows and env_basis on the cols by taking transpose
 		// To not take transpose twice, take conj and take conjTrans on left side of dgemm bellow
 		#if COMPLEX
-		MKL_Complex16 one = {.real=1.0, .imag=0.0};
+		const MKL_Complex16 one = {.real=1.0, .imag=0.0};
 		mkl_zimatcopy('C', 'R', dimEnv_sec, dimSys_sec, one, psi0_sec, dimEnv_sec, dimEnv_sec);
 		#else
 		mkl_dimatcopy('C', 'R', dimEnv_sec, dimSys_sec, 1.0, psi0_sec, dimEnv_sec, dimEnv_sec);
@@ -162,7 +162,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		__assume_aligned(rho_sec, MEM_DATA_ALIGN);
 		// Trace out Environment to make rho (Note transpose structure as described above)
 		#if COMPLEX
-		MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
 		cblas_zgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys_sec, dimSys_sec, dimEnv_sec, 
 					&one, psi0_sec, dimEnv_sec, psi0_sec, dimEnv_sec, &zero, rho_sec, dimSys_sec);
 		#else
@@ -377,8 +377,8 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	for (int i = 0; i<meas->num_sites; i++) {
 		MAT_TYPE* SSop = (MAT_TYPE *)mkl_malloc(dimSys*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		#if COMPLEX
-		MKL_Complex16 one  = {.real=1.0, .imag=0.0};
-		MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+		const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
+		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
 		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, &one, sys_enl->ops[i + model->num_ops], 
 			dimSys, sys_enl->ops[1], dimSys, &zero, SSop, dimSys);
 		#else

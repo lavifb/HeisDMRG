@@ -337,8 +337,8 @@ MAT_TYPE *transformOp(const int opDim, const int newDim, const MAT_TYPE *restric
 	__assume_aligned(temp , MEM_DATA_ALIGN);
 
 	#if COMPLEX
-	MKL_Complex16 one  = {.real=1.0, .imag=0.0};
-	MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+	const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
+	const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
 	cblas_zgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, newDim, opDim , opDim, &one, trans, opDim, op, opDim, &zero, temp, newDim);
 	cblas_zgemm(CblasColMajor, CblasNoTrans  , CblasNoTrans, newDim, newDim, opDim, &one, temp, newDim, trans, opDim, &zero, newOp, newDim);
 	#else
@@ -362,8 +362,8 @@ void transformOps(const int numOps, const int opDim, const int newDim, const MAT
 	for (int i = 0; i < numOps; i++) {
 		__assume_aligned(ops[i], MEM_DATA_ALIGN);
 		#if COMPLEX
-		MKL_Complex16 one  = {.real=1.0, .imag=0.0};
-		MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+		const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
+		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
 		cblas_zgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, newDim, opDim , opDim, &one, trans, opDim, ops[i], opDim, &zero, temp, newDim);
 		ops[i] = (MAT_TYPE *)mkl_realloc(ops[i], newDim*newDim * sizeof(MAT_TYPE));
 		cblas_zgemm(CblasColMajor, CblasNoTrans  , CblasNoTrans, newDim, newDim, opDim, &one, temp, newDim, trans, opDim, &zero, ops[i], newDim);
