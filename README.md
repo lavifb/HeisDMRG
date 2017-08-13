@@ -16,9 +16,9 @@ Todo
 - Time dependent code
 	- Trotter evolution?
 
-- Complex data type
-
 - Write to HD for very large matrices
+
+- Sparse storage of matrices
 
 ####Maybe
 
