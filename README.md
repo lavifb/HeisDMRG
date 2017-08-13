@@ -11,14 +11,14 @@ PRIMME can be compiled from https://github.com/primme/primme and is needed for f
 Todo
 ----
 
-- Runtime tester
+- Fleshed out runtime tester and progress bar
 
 - Time dependent code
 	- Trotter evolution?
 
-- Complex data type
-
 - Write to HD for very large matrices
+
+- Sparse storage of matrices
 
 ####Maybe
 
