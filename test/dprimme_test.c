@@ -65,7 +65,8 @@ int main(int argc, char *argv[]) {
 
 	mkl_free(Hs_r);
 	mkl_free(psi0);
-	// mkl_free(psi02);
+	for (int i=0; i<runs; i++) { mkl_free(psi0s[i]); }
+	mkl_free(psi0s);
 	mkl_free(energies);
 
 
