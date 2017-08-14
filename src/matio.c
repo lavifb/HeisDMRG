@@ -45,7 +45,7 @@ int readMat(char *filename, MAT_TYPE *A, int matsize) {
 
 	int count = fread(A, sizeof(MAT_TYPE), matsize, m_f);
 	if (count != matsize) {
-		errprintf("Matrix not read properly from file '%s'.\n", filename);
+		errprintf("Matrix not read properly from file '%s'. Expected %d items but read %d.\n", filename, matsize, count);
 		return -2;
 	}
 	fclose(m_f);

@@ -6,6 +6,7 @@
 #include "meas.h"
 #include "linalg.h"
 #include "logio.h"
+#include "matio.h"
 #include "uthash.h"
 #include <mkl.h>
 #include <assert.h>
