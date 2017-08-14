@@ -10,7 +10,7 @@
 #include "primme.h"
 #endif
 
-#define ZERO_TOLERANCE 10e-7
+#define ZERO_TOLERANCE 1e-9
 
 #if COMPLEX
 	#define PLUSEQ(x, y) y.real += x.real; y.imag += x.imag;
