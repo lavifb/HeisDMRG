@@ -18,6 +18,8 @@ Todo
 
 - Write to HD for very large matrices
 
+- Hermitian krons
+
 - Sparse storage of matrices
 
 ####Maybe
