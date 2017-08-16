@@ -52,8 +52,8 @@ clean-debug:
 
 clean-all: clean clean-debug
 
-src : $(filter-out $(OBJ)/main.o,  $(patsubst $(SRC)/%.c, $(OBJ)/%.o,  $(wildcard $(SRC)/[^_]*.c)))
-srcD: $(filter-out $(DBUG)/main.o, $(patsubst $(SRC)/%.c, $(DBUG)/%.o, $(wildcard $(SRC)/[^_]*.c)))
+src : $(filter-out $(OBJ)/main.o,  $(patsubst $(SRC)/%.c, $(OBJ)/%.o,  $(wildcard $(SRC)/*.c)))
+srcD: $(filter-out $(DBUG)/main.o, $(patsubst $(SRC)/%.c, $(DBUG)/%.o, $(wildcard $(SRC)/*.c)))
 
 test: $(patsubst $(TEST)/%.c, $(BIN)/%, $(wildcard $(TEST)/[^_]*.c))
 
