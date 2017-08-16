@@ -482,10 +482,14 @@ void primme_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *bloc
 	#if COMPLEX
 	const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
 	const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
-	cblas_zhemm(CblasColMajor, CblasLeft, CblasUpper, N, *blockSize, &one, (MKL_Complex16 *) primme->matrix, N,
-				(MKL_Complex16 *)x, N, &zero, (MKL_Complex16 *)y, N);
+	// cblas_zhemm(CblasColMajor, CblasLeft, CblasUpper, N, *blockSize, &one, (MKL_Complex16 *) primme->matrix, N,
+	// 			(MKL_Complex16 *)x, N, &zero, (MKL_Complex16 *)y, N);
+	cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, N, *blockSize, N, &one, (double *) primme->matrix, N,
+				(double *)x, N, &zero, (double *)y, N);
 	#else
-	cblas_dsymm(CblasColMajor, CblasLeft, CblasUpper, N, *blockSize, 1.0, (double *) primme->matrix, N,
+	// cblas_dsymm(CblasColMajor, CblasLeft, CblasUpper, N, *blockSize, 1.0, (double *) primme->matrix, N,
+	// 			(double *)x, N, 0.0, (double *)y, N);
+	cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, N, *blockSize, N, 1.0, (double *) primme->matrix, N,
 				(double *)x, N, 0.0, (double *)y, N);
 	#endif
 	*err = 0;

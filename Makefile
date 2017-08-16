@@ -43,12 +43,7 @@ CCOPTSD = ${CCOPTS} -g -O0 -DMKL_DISABLE_FAST_MM=1
 
 # SRC_FILES = $(patsubst $(PUG)/%.pug, $(TEST)/%.html, $(wildcard $(PUG)/[^_]*.pug))
 
-build: dirs proj_main test
-
-dirs:
-	@mkdir -p odir
-	@mkdir -p output
-	@mkdir -p debug
+build: proj_main test
 
 clean: 
 	-rm -rf ${BIN}/*
