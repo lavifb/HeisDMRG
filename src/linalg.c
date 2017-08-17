@@ -476,22 +476,24 @@ MAT_TYPE *unrestrictVec(const int m, const MAT_TYPE *v_r, const int num_ind, con
 void primme_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *blockSize, primme_params *primme, int *err) {
 
 	int N = primme->n;
+	MAT_TYPE *xvec;     // pointer to i-th input vector x
+	MAT_TYPE *yvec;     // pointer to i-th output vector y
+	MAT_TYPE *A = (MAT_TYPE *) primme->matrix;
 
 	__assume_aligned(primme->matrix, MEM_DATA_ALIGN);
 
-	#if COMPLEX
-	const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
-	const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
-	// cblas_zhemm(CblasColMajor, CblasLeft, CblasUpper, N, *blockSize, &one, (MKL_Complex16 *) primme->matrix, N,
-	// 			(MKL_Complex16 *)x, N, &zero, (MKL_Complex16 *)y, N);
-	cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, N, *blockSize, N, &one, (double *) primme->matrix, N,
-				(double *)x, N, &zero, (double *)y, N);
-	#else
-	// cblas_dsymm(CblasColMajor, CblasLeft, CblasUpper, N, *blockSize, 1.0, (double *) primme->matrix, N,
-	// 			(double *)x, N, 0.0, (double *)y, N);
-	cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, N, *blockSize, N, 1.0, (double *) primme->matrix, N,
-				(double *)x, N, 0.0, (double *)y, N);
-	#endif
+	for (int i=0; i<*blockSize; i++) {
+		xvec = (MAT_TYPE *)x + *ldx*i;
+		yvec = (MAT_TYPE *)y + *ldy*i;
+
+		#if COMPLEX
+		const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
+		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+		cblas_zhemv(CblasColMajor, CblasLower, N, &one, A, N, xvec, 1, &zero, yvec, 1);
+		#else
+		cblas_dsymv(CblasColMajor, CblasLower, N, 1.0, A, N, xvec, 1, 0.0, yvec, 1);
+		#endif
+	}
 	*err = 0;
 }
 

@@ -6,14 +6,16 @@
 #include "dmrg.h"
 #include "input_parser.h"
 #include "logio.h"
+#include "matio.h"
 #include <mkl.h>
 #include <math.h>
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
-int main() {
+int main(int argc, char *argv[]) {
 
 	#define N    2
 	#define L    100
@@ -53,15 +55,6 @@ int main() {
 
 	compileParams(model);
 
-	// f_log = fopen("test_log.log", "w");
-	// if (f_log == NULL) {
-	//	errprintf("Cannot open file '%s'.\n", "test_log.log");
-	//	return -1;
-	// }
-	// fprintf(f_log, "%-5s%-20s%-20s\n"
-	//			"---------------------------------------------\n"
-	//			 , "L", "Energy", "Truncation Error");
-
 	clock_t t_start = clock();
 
 	meas_data_t *meas = fin_dmrgR(L, minf, n_ms, ms, model);
@@ -71,14 +64,28 @@ int main() {
 
 	printf("Quick Test finished in %.3f seconds.\n\n", runtime);
 
+
+	// Getting path of binary
+	char cwd[1024];
+	if (getcwd(cwd, sizeof(cwd)) == NULL) {
+		errprintf("getcwd() error. Cannot check solution.\n");
+	}
+	char path[1024];
+	sprintf(path, "%s/%s", cwd, argv[0]);
+	char *pathpos = strrchr(path, '/');
+	if (pathpos != NULL) {
+	   *pathpos = '\0';
+	}
+
+
 	int success = 0;
 
 	// Expected test results
 	#define ETE  -.441271
-	#define Sz13 -0x1.ebp-52
-	#define Sz20 0x1.bap-49
-	#define SS6  -0x1.c1f45da2c588p-9
-	#define SS43 0x1.8fb3d2733c562p-6
+	// #define Sz13 -0x1.ebp-52
+	// #define Sz20 0x1.bap-49
+	// #define SS6  -0x1.c1f45da2c588p-9
+	// #define SS43 0x1.8fb3d2733c562p-6
 
 	#define TOLERANCE 1e-5
 
@@ -90,21 +97,64 @@ int main() {
 		success = -1;
 	}
 
-	if (fabs(meas->Szs[13] - Sz13) < TOLERANCE && fabs(meas->Szs[20] - Sz20) < TOLERANCE) {
+	const int n_sites = meas->num_sites;
+
+	char path_Szs[1024];
+	char path_SSs[1024];
+	sprintf(path_Szs, "%s/quick_test_Szs.dat", path);
+	sprintf(path_SSs, "%s/quick_test_SSs.dat", path);
+
+	MAT_TYPE *test_Szs = mkl_malloc(n_sites * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	MAT_TYPE *test_SSs = mkl_malloc(n_sites * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	readMat(path_Szs, test_Szs, n_sites);
+	readMat(path_SSs, test_SSs, n_sites);
+
+
+	int mat_errs = 0;
+
+	for (int i=0; i<n_sites; i++) {
+		if (fabs(meas->Szs[i] - test_Szs[i]) > TOLERANCE) {
+			mat_errs += 1;
+		}
+	}
+	if (mat_errs == 0) {
 		printf( TERM_GREEN "Sz Test Passed!\n" TERM_RESET );
 	} else {
-		errprintf("Sz Test Failed!\n");
-		success = -1;
+		errprintf("Sz Test Failed! %d/%d values incorrect.\n", mat_errs, n_sites);
 	}
 
-	if (fabs(meas->SSs[6] - SS6) < TOLERANCE && fabs(meas->SSs[43] - SS43) < TOLERANCE) {
-		printf( TERM_GREEN "SS correleation Test Passed!\n" TERM_RESET );
+	mat_errs = 0;
+
+	for (int i=0; i<n_sites; i++) {
+		if (fabs(meas->SSs[i] - test_SSs[i]) > TOLERANCE) {
+			mat_errs += 1;
+		}
+	}
+	if (mat_errs == 0) {
+		printf( TERM_GREEN "SS Test Passed!\n" TERM_RESET );
 	} else {
-		errprintf("SS correleation Test Failed!\n");
-		success = -1;
+		errprintf("SS Test Failed! %d/%d values incorrect.\n", mat_errs, n_sites);
 	}
 
-	// fclose(f_log);
+	// if (fabs(meas->Szs[13] - Sz13) < TOLERANCE && fabs(meas->Szs[20] - Sz20) < TOLERANCE) {
+	// 	printf( TERM_GREEN "Sz Test Passed!\n" TERM_RESET );
+	// } else {
+	// 	errprintf("Sz Test Failed!\n");
+	// 	success = -1;
+	// }
+
+	// if (fabs(meas->SSs[6] - SS6) < TOLERANCE && fabs(meas->SSs[43] - SS43) < TOLERANCE) {
+	// 	printf( TERM_GREEN "SS correleation Test Passed!\n" TERM_RESET );
+	// } else {
+	// 	errprintf("SS correleation Test Failed!\n");
+	// 	success = -1;
+	// }
+
+	// saveMat("quick_test_Szs.dat", meas->Szs, meas->num_sites);
+	// saveMat("quick_test_SSs.dat", meas->SSs, meas->num_sites);
+
+	mkl_free(test_Szs);
+	mkl_free(test_SSs);
 	freeMeas(meas);
 	freeModel(model);
 
