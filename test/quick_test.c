@@ -72,7 +72,11 @@ int main(int argc, char *argv[]) {
 	}
 	char path[1024];
 	sprintf(path, "%s/%s", cwd, argv[0]);
+	// remove filename and go up 1 dir
 	char *pathpos = strrchr(path, '/');
+	if (pathpos != NULL) {
+	   *pathpos = '\0';
+	} pathpos = strrchr(path, '/');
 	if (pathpos != NULL) {
 	   *pathpos = '\0';
 	}
@@ -101,8 +105,8 @@ int main(int argc, char *argv[]) {
 
 	char path_Szs[1024];
 	char path_SSs[1024];
-	sprintf(path_Szs, "%s/quick_test_Szs.dat", path);
-	sprintf(path_SSs, "%s/quick_test_SSs.dat", path);
+	sprintf(path_Szs, "%s/test/quick_test_Szs.dat", path);
+	sprintf(path_SSs, "%s/test/quick_test_SSs.dat", path);
 
 	MAT_TYPE *test_Szs = mkl_malloc(n_sites * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	MAT_TYPE *test_SSs = mkl_malloc(n_sites * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
