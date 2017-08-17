@@ -54,8 +54,10 @@ clean-debug:
 
 clean-all: clean clean-debug
 
-src : $(filter-out $(OBJ)/main.o,  $(patsubst $(SRC)/%.c, $(OBJ)/%.o,  $(wildcard $(SRC)/*.c)))
-srcD: $(filter-out $(DBUG)/main.o, $(patsubst $(SRC)/%.c, $(DBUG)/%.o, $(wildcard $(SRC)/*.c)))
+src : $(filter-out $(OBJ)/main.c, $(wildcard $(SRC)/*.c))
+
+objs : $(filter-out $(OBJ)/main.o,  $(patsubst $(SRC)/%.c, $(OBJ)/%.o,  $(wildcard $(SRC)/*.c)))
+objsD: $(filter-out $(DBUG)/main.o, $(patsubst $(SRC)/%.c, $(DBUG)/%.o, $(wildcard $(SRC)/*.c)))
 
 tests: $(patsubst $(TEST)/%.c, $(BIN)/%, $(wildcard $(TEST)/[^_]*.c))
 
@@ -65,12 +67,12 @@ ${OBJ}/%.o: ${SRC}/%.c
 ${DBUG}/%.o: ${SRC}/%.c
 	${CC} -c ${INCDIRS} ${CCOPTSD} ${LIB} $< -o $@
 
-${BIN}/dmrg: src
+${BIN}/dmrg: objs src
 	 ${CC} ${INCDIRS} ${CCOPTSR} ${LIB} -o ${BIN}/dmrg ${OBJ}/* ${SRC}/main.c
 
-debug: clean-debug srcD
+debug: clean-debug objsD src
 	 ${CC} ${INCDIRS} ${CCOPTSD} ${LIB} -o ${BIN}/dmrg_debug ${DBUG}/* ${SRC}/main.c
 	 ${CC} ${INCDIRS} ${CCOPTSD} ${LIB} -o ${BIN}/quick_test_debug ${DBUG}/* ${TEST}/quick_test.c
 	 
-${BIN}/%: ${TEST}/%.c src
+${BIN}/%: ${TEST}/%.c objs src
 	${CC} ${INCDIRS} ${CCOPTSR} ${LIB} -o $@ $< ${OBJ}/*
