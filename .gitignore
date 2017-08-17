@@ -9,4 +9,3 @@ output/*
 *.dSYM/
 
 !*.gitkeep
-!bin/*.dat
