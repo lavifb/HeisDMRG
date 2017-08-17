@@ -244,7 +244,8 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	// Transform operators into new basis
 	transformOps(sys_enl->num_ops, dimSys, mm, trans, sys_enl->ops);
 	sys_enl->d_block = mm; // set block basis size to transformed value
-	mkl_free(trans);
+	sys_enl->d_trans = dimSys;
+	sys_enl->trans = trans;
 
 	freeSectors(sys_enl_sectors);
 	// Free enlarged environment block

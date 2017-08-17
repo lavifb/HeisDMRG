@@ -17,6 +17,9 @@ typedef struct DMRGBlock {
 	int *mzs;   	// 2*mz quantum number for each state
 	model_t *model;
 
+	int d_trans;    // dimension of basis before transfoming
+	MAT_TYPE *trans;// transformation matrix used to truncate the block
+
 	MAT_TYPE *psi;	// tracked state
 	MAT_TYPE *A;  	// operator that takes ground to desired state: A|psi0> = |psi>
 

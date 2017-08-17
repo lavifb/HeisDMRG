@@ -34,6 +34,9 @@ DMRGBlock *createDMRGBlock(model_t *model, int fullLength) {
 	block->psi = (MAT_TYPE *)mkl_malloc(dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	block->A = (MAT_TYPE *)mkl_malloc(dim*dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
+	block->d_trans = 0;
+	block->trans = NULL;
+
 	// Set energy to ridiculous value
 	block->energy = DBL_MAX;
 	block->trunc_err = 0;
@@ -69,6 +72,10 @@ DMRGBlock *copyDMRGBlock(DMRGBlock *orig) {
 	newBlock->A = (MAT_TYPE *)mkl_malloc(dim*dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	memcpy(newBlock->A, orig->A, dim*dim * sizeof(MAT_TYPE));
 
+	newBlock->d_trans = orig->d_trans;
+	newBlock->A = (MAT_TYPE *)mkl_malloc(dim*newBlock->d_trans * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	memcpy(newBlock->trans, orig->trans, dim*newBlock->d_trans * sizeof(MAT_TYPE));
+
 	newBlock->energy = orig->energy;
 	newBlock->trunc_err = orig->trunc_err;
 
@@ -83,6 +90,7 @@ void freeDMRGBlock(DMRGBlock *block) {
 	}
 	mkl_free(block->ops);
 	mkl_free(block->mzs);
+	if (block->trans) { mkl_free(block->trans); }
 	mkl_free(block->psi);
 	mkl_free(block->A);
 
@@ -153,6 +161,9 @@ DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 			enl_block->mzs[i*d_model + j] = block->mzs[i] + block->model->init_mzs[j];
 		}
 	}
+
+	enl_block->d_trans = 0;
+	enl_block->trans = NULL;
 
 	return enl_block;
 }
