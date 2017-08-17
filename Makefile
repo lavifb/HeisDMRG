@@ -41,7 +41,9 @@ CCOPTSR = ${CCOPTS} -DNDEBUG -O2
 # CCOPTSR = ${CCOPTS} -DNDEBUG -pg -O2
 CCOPTSD = ${CCOPTS} -g -O0 -DMKL_DISABLE_FAST_MM=1
 
-build: proj_main test
+build: proj_main tests
+
+proj_main: ${BIN}/dmrg
 
 clean: 
 	-rm -rf ${BIN}/*
@@ -55,7 +57,7 @@ clean-all: clean clean-debug
 src : $(filter-out $(OBJ)/main.o,  $(patsubst $(SRC)/%.c, $(OBJ)/%.o,  $(wildcard $(SRC)/*.c)))
 srcD: $(filter-out $(DBUG)/main.o, $(patsubst $(SRC)/%.c, $(DBUG)/%.o, $(wildcard $(SRC)/*.c)))
 
-test: $(patsubst $(TEST)/%.c, $(BIN)/%, $(wildcard $(TEST)/[^_]*.c))
+tests: $(patsubst $(TEST)/%.c, $(BIN)/%, $(wildcard $(TEST)/[^_]*.c))
 
 ${OBJ}/%.o: ${SRC}/%.c
 	${CC} -c ${INCDIRS} ${CCOPTSR} ${LIB} $< -o $@
@@ -63,7 +65,7 @@ ${OBJ}/%.o: ${SRC}/%.c
 ${DBUG}/%.o: ${SRC}/%.c
 	${CC} -c ${INCDIRS} ${CCOPTSD} ${LIB} $< -o $@
 
-proj_main: src
+${BIN}/dmrg: src
 	 ${CC} ${INCDIRS} ${CCOPTSR} ${LIB} -o ${BIN}/dmrg ${OBJ}/* ${SRC}/main.c
 
 debug: clean-debug srcD
