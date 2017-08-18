@@ -37,8 +37,9 @@ int main(int argc, char *argv[]) {
 		memcpy(psi0s[i], psi0, N*sizeof(double));
 	}
 
-
 	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
+
+	printf("Running dprimme test on version "VERSION".\n\n");
 
 	clock_t t_start = clock();
 

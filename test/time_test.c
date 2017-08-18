@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
 	minf = mm;
 	for (i = 0; i < n_ms; i++) { ms[i] = mm; }
 
-	printf("Running quick test on version "VERSION".\n\n");
+	printf("Running time test on version "VERSION".\n\n");
 
 	clock_t t_start = clock();
 
