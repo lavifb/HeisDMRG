@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
 
 	// file path for output dir
 	char out_dir[1024];
-	sprintf(out_dir, "L%d_M%d_sim_%d/", params.L, params.ms[params.num_ms-1], *params.start_time);
+	sprintf(out_dir, "L%d_M%d_sim_%ld/", params.L, params.ms[params.num_ms-1], *params.start_time);
 
 	mkdir(out_dir, 0755);
 
