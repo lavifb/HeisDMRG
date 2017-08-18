@@ -37,6 +37,7 @@ int main(int argc, char *argv[]) {
 	// Record start time
 	time_t start_time = time(NULL);
 	params.start_time = &start_time;
+	params.end_time = NULL;
 
 	// file path for output dir
 	char out_dir[1024];
@@ -61,6 +62,8 @@ int main(int argc, char *argv[]) {
 
 	meas_data_t *meas;
 
+	printf("Running quick test on version "VERSION".\n\n");
+
 	// Start cpu timer
 	clock_t t_start = clock();
 
@@ -75,6 +78,9 @@ int main(int argc, char *argv[]) {
 	printf("\n\nSimulation finished in %.3f seconds.\n", params.runtime);
 
 	fclose(f_log);
+
+	time_t end_time = time(NULL);
+	params.end_time = &end_time;
 
 	// Save sim params to a log file
 	char plog_filename[1024];

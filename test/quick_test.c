@@ -55,6 +55,8 @@ int main(int argc, char *argv[]) {
 
 	compileParams(model);
 
+	printf("Running quick test on version "VERSION".\n\n");
+
 	clock_t t_start = clock();
 
 	meas_data_t *meas = fin_dmrgR(L, minf, n_ms, ms, model);
