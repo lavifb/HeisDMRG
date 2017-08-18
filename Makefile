@@ -18,7 +18,7 @@ PRIMMEDIR = ../../Repos/primme
 # COMPLEX = true
 
 # compiler options
-CCOPTS  = -Wall -xHost -restrict -std=c99 -DMEM_DATA_ALIGN=64
+CCOPTS  = -Wall -xHost -restrict -std=c99 -DMEM_DATA_ALIGN=64 -DVERSION=\"$(shell git describe --always)\"
 
 # MKL Library
 MKL = -mkl=sequential

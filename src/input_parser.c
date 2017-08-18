@@ -248,6 +248,12 @@ void printSimParams(FILE *stream, const sim_params_t *params) {
 			, params->model->J, params->model->Jz,
 			ctime(params->start_time) );
 
+	if (params->end_time != NULL) {
+		fprintf(stream,
+			"End   Time : %s"
+			, ctime(params->end_time) );
+	}
+
 	if (params->runtime > 0) {
 		fprintf(stream,
 			"CPU Runtime: %.3f seconds\n"
@@ -255,6 +261,8 @@ void printSimParams(FILE *stream, const sim_params_t *params) {
 	}
 
 	fprintf(stream,
+			"\n"
+			"Compiled on git version "VERSION
 			"\n"
 			"******************************\n\n\n");
 }

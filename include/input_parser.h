@@ -14,6 +14,7 @@ typedef struct {
 	model_t *model; // model params for the simulation
 
 	time_t *start_time;
+	time_t *end_time;
 	double runtime;
 
 } sim_params_t;
