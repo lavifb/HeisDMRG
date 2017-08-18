@@ -24,17 +24,17 @@ int main(int argc, char *argv[]) {
 
 	#define N 116
 
-	double *Hs_r = mkl_malloc(N*N * sizeof(double), MEM_DATA_ALIGN);
-	double *psi0 = mkl_malloc(N * sizeof(double), MEM_DATA_ALIGN);
+	MAT_TYPE *Hs_r = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	MAT_TYPE *psi0 = mkl_malloc(N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 	readMat("Hs.dat", Hs_r, N*N);
 	readMat("psi0.dat", psi0, N);
 
-	double **psi0s = mkl_malloc(runs * sizeof(double *), MEM_DATA_ALIGN);
+	MAT_TYPE **psi0s = mkl_malloc(runs * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
 
 	for (int i=0; i<runs; i++) {
-		psi0s[i] = mkl_malloc(N * sizeof(double), MEM_DATA_ALIGN);
-		memcpy(psi0s[i], psi0, N*sizeof(double));
+		psi0s[i] = mkl_malloc(N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		memcpy(psi0s[i], psi0, N*sizeof(MAT_TYPE));
 	}
 
 	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
@@ -56,12 +56,18 @@ int main(int argc, char *argv[]) {
 
 	#define TOLERANCE 1e-5
 
+	int mat_errs = 0;
 	for (int i=0; i<N; i++) {
 		if (fabs(psi0[i])-fabs(psi0s[runs-1][i]) > TOLERANCE) {
-			success = -1;
-			errprintf("Result does not match! %.8f =/= %.8f\n", psi0[i], psi0s[runs-1][i]);
-			return -1;
+			mat_errs++;
 		}
+	}
+
+	if (mat_errs == 0) {
+		printf( TERM_GREEN "dprimme Test Passed!\n" TERM_RESET );
+	} else {
+		errprintf("dprimme Test Failed! %d/%d values incorrect.\n", mat_errs, N);
+		success = -1;
 	}
 
 	mkl_free(Hs_r);

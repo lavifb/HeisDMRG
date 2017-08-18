@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
 
 	for (int i=0; i<n_sites; i++) {
 		if (fabs(meas->Szs[i] - test_Szs[i]) > TOLERANCE) {
-			mat_errs += 1;
+			mat_errs++;
 		}
 	}
 	if (mat_errs == 0) {
