@@ -42,9 +42,9 @@ CCOPTSR = ${CCOPTS} -DNDEBUG -O2
 CCOPTSD = ${CCOPTS} -g -O0 -DMKL_DISABLE_FAST_MM=1
 
 
-srcs  = $(filter-out ${OBJ}/main.c,  $(wildcard ${SRC}/*.c))
-objs  = $(filter-out ${OBJ}/main.o,  $(patsubst ${SRC}/%.c, ${OBJ}/%.o,  $(wildcard ${SRC}/*.c)))
-objsD = $(filter-out ${DBUG}/main.o, $(patsubst ${SRC}/%.c, ${DBUG}/%.o, $(wildcard ${SRC}/*.c)))
+srcs  = $(filter-out ${SRC}/main.c, $(wildcard ${SRC}/*.c))
+objs  = $(patsubst ${SRC}/%.c, ${OBJ}/%.o,  ${srcs})
+objsD = $(patsubst ${SRC}/%.c, ${DBUG}/%.o, ${srcs})
 
 .PHONY: build
 build: proj_main tests
