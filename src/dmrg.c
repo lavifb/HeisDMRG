@@ -149,12 +149,10 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 		// psi0_sec needs to be arranged as a dimSys * dimEnv to trace out env
 		// Put sys_basis on rows and env_basis on the cols by taking transpose
-		// To not take transpose twice, take conj and take conjTrans on left side of dgemm bellow
+		// To not take transpose twice, just take conj and take conjTrans on left side of dgemm bellow
 		#if COMPLEX
 		const MKL_Complex16 one = {.real=1.0, .imag=0.0};
 		mkl_zimatcopy('C', 'R', dimEnv_sec, dimSys_sec, one, psi0_sec, dimEnv_sec, dimEnv_sec);
-		#else
-		mkl_dimatcopy('C', 'R', dimEnv_sec, dimSys_sec, 1.0, psi0_sec, dimEnv_sec, dimEnv_sec);
 		#endif
 
 		// Density matrix rho_sec
