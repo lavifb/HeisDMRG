@@ -13,7 +13,7 @@ DBUG:= debug
 # Comment out this line if do not have the PRIMME library
 PRIMMEDIR = ../../Repos/primme
 
-# Comment out this line if you want a purely real calculation
+# Comment out this line if you want a purely real calculation. (You must clean and do a full recompile.)
 # This gives a reasonable performance boost for real calcualtions
 #COMPLEX = true
 
@@ -53,7 +53,7 @@ build: proj_main tests
 proj_main: ${BIN}/dmrg
 
 .PHONY: debug
-debug: clean-debug ${BIN}/dmrg_debug ${BIN}/quick_test_debug
+debug: ${BIN}/dmrg_debug ${BIN}/quick_test_debug
 
 .PHONY: clean
 clean: 
@@ -82,7 +82,7 @@ ${BIN}/dmrg: ${SRC}/main.c ${objs}
 ${BIN}/dmrg_debug: ${SRC}/main.c ${objsD}
 	${CC} ${INCDIRS} ${CCOPTSD} -o ${BIN}/dmrg_debug ${DBUG}/* ${SRC}/main.c ${LIB}
 
-${BIN}/quick_test_debug: ${SRC}/quick_test.c ${objsD}
+${BIN}/quick_test_debug: ${TEST}/quick_test.c ${objsD}
 	${CC} ${INCDIRS} ${CCOPTSD} -o ${BIN}/quick_test_debug ${DBUG}/* ${TEST}/quick_test.c ${LIB}
 	 
 ${BIN}/%: ${TEST}/%.c ${objs}

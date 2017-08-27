@@ -544,6 +544,23 @@ void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, con
 	free(rnorms);
 	primme_free(&primme);
 }
+
+/* Reorder vector v so that basis can be used to guess next ground state.
+*/
+MAT_TYPE *reorderKron(MAT_TYPE *v, const int dimSys, const int dimEnv, const int dimSite) {
+
+	MAT_TYPE *new_v = mkl_malloc(dimSys*dimEnv*dimSite * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+
+	for (int i=0; i<dimSys; i++) {
+		for (int j=0; j<dimEnv; j++) {
+			for (int k=0; k<dimSite; k++) {
+				new_v[(i*dimSys + k)*dimSys*dimSite + j] = v[i*dimSys + (j*dimEnv + k)];
+			}
+		}
+	}
+
+	return new_v;
+}
 #endif
 
 

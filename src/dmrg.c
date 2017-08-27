@@ -15,9 +15,13 @@
    
    m: truncation dimension size
 
+   psi0_guessp: pointer to guess for psi0. Calculated psi0 is returned in theis pointer.
+                Set  psi0_guessp = NULL to not use eigenstate guessing and not return eigenstate.
+                Set *psi0_guessp = NULL to not use eigenstate guessing but return eigenstate for future guessing.
+
    returns enlarged system block
 */
-DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz) {
+DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz, MAT_TYPE **const psi0_guessp) {
 
 	DMRGBlock *sys_enl, *env_enl;
 	sector_t *sys_enl_sectors, *env_enl_sectors;
@@ -78,10 +82,15 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
 	kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
 
-	mkl_free(restr_basis_inds);
+	// Setup ground state guess
+	MAT_TYPE *psi0_r;
+	if (psi0_guessp != NULL && *psi0_guessp != NULL) {
+		psi0_r  = restrictVec(*psi0_guessp, num_restr_ind, restr_basis_inds);
+	} else {
+		psi0_r = (MAT_TYPE *)mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	}
 
 	// Find ground state
-	MAT_TYPE *psi0_r = (MAT_TYPE *)mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	double *energies = (double *)mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
 
 	// Use the faster PRIMME library if available. Otherwise, default to LAPACK.
@@ -209,7 +218,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		mkl_free(trans_sec);
 	}
 
-	mkl_free(psi0_r);
 	freeSectors(sup_sectors);
 
 	// Some dimensions may already be dropped
@@ -245,6 +253,29 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	sys_enl->d_trans = dimSys;
 	sys_enl->trans = trans;
 
+	// realloc and return psi0_guessp for later guess
+	if (psi0_guessp != NULL) {
+		// full psi0 for later eigenstate prediction
+		MAT_TYPE *psi0 = unrestrictVec(dimSup, psi0_r, num_restr_ind, restr_basis_inds);
+
+		if (*psi0_guessp == NULL) {
+			*psi0_guessp = mkl_malloc(mm*dimEnv * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		} else {
+			*psi0_guessp = mkl_realloc(*psi0_guessp, mm*dimEnv * sizeof(MAT_TYPE));
+
+			// Check overlap of guess and calculated eigenstate
+			// TODO: Check overlap for complex
+			double overlap = cblas_ddot(dimSup, psi0, 1, *psi0_guessp, 1);
+			overlap /= cblas_dnrm2(dimSup, psi0, 1) * cblas_dnrm2(dimSup, *psi0_guessp, 1);
+		}
+
+		cblas_dgemm(CblasColMajor, CblasConjTrans, CblasTrans, mm, dimEnv, dimSys, 
+						1.0, trans, dimSys, psi0, dimEnv, 0.0, *psi0_guessp, mm);
+		mkl_free(psi0);
+	}
+
+	mkl_free(restr_basis_inds);
+	mkl_free(psi0_r);
 	freeSectors(sys_enl_sectors);
 	// Free enlarged environment block
 	if (sys != env) {
@@ -420,7 +451,7 @@ void inf_dmrg(const int L, const int m, model_t *model) {
 	while (2*sys->length < L) {
 		int currL = sys->length * 2 + 2;
 		printf("\nL = %d\n", currL);
-		sys = single_step(sys, sys, m, 0);
+		sys = single_step(sys, sys, m, 0, NULL);
 
 		printf("E/L = % .12f\n", sys->energy / currL);
 	}
@@ -449,7 +480,7 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 
 	// run infinite algorithm to build up system
 	while (2*sys->length < L) {
-		sys = single_step(sys, sys, m_inf, 0);
+		sys = single_step(sys, sys, m_inf, 0, NULL);
 
 		saved_blocksL[sys->length-1] = sys;
 		saved_blocksR[sys->length-1] = copyDMRGBlock(sys);
@@ -496,7 +527,7 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 			}
 
 			// printGraphic(sys, env);
-			sys = single_step(sys, env, m, 0);
+			sys = single_step(sys, env, m, 0, NULL);
 			logBlock(sys);
 
 			// Save new block
@@ -553,7 +584,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 	// Run infinite algorithm to build up system
 	while (2*sys->length < L) {
 		// printGraphic(sys, sys);
-		sys = single_step(sys, sys, m_inf, 0);
+		sys = single_step(sys, sys, m_inf, 0, NULL);
 		saved_blocks[sys->length-1] = sys;
 	}
 
@@ -589,7 +620,10 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 			}
 
 			// printGraphic(sys, env);
-			sys = single_step(sys, env, m, 0);
+			MAT_TYPE *psi0_guess = NULL;
+			MAT_TYPE **psi0_guessp = &psi0_guess;
+			sys = single_step(sys, env, m, 0, psi0_guessp);
+			mkl_free(*psi0_guessp);
 			logBlock(sys);
 
 			// Save new block
