@@ -9,6 +9,7 @@
 #include "matio.h"
 #include "uthash.h"
 #include <mkl.h>
+#include <math.h>
 #include <assert.h>
 
 /* Single DMRG step
@@ -84,8 +85,10 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	// Setup ground state guess
 	MAT_TYPE *psi0_r;
+	int numGuesses = 0;
 	if (psi0_guessp != NULL && *psi0_guessp != NULL) {
 		psi0_r  = restrictVec(*psi0_guessp, num_restr_ind, restr_basis_inds);
+		numGuesses = 1;
 	} else {
 		psi0_r = (MAT_TYPE *)mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	}
@@ -95,7 +98,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	// Use the faster PRIMME library if available. Otherwise, default to LAPACK.
 	#if USE_PRIMME
-		primmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1);
+		primmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1, numGuesses);
 	#else
 		__assume_aligned(Hs_r, MEM_DATA_ALIGN);
 		__assume_aligned(psi0_r, MEM_DATA_ALIGN);
@@ -264,9 +267,13 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 			*psi0_guessp = mkl_realloc(*psi0_guessp, mm*dimEnv * sizeof(MAT_TYPE));
 
 			// Check overlap of guess and calculated eigenstate
-			// TODO: Check overlap for complex
-			double overlap = cblas_ddot(dimSup, psi0, 1, *psi0_guessp, 1);
+			#if COMPLEX
+			// TODO: overlap for complex
+			#else
+			double overlap = fabs(cblas_ddot(dimSup, psi0, 1, *psi0_guessp, 1));
 			overlap /= cblas_dnrm2(dimSup, psi0, 1) * cblas_dnrm2(dimSup, *psi0_guessp, 1);
+			printf("Overlap <psi0|psi0_guess> = %f\n", overlap);
+			#endif
 		}
 
 		cblas_dgemm(CblasColMajor, CblasConjTrans, CblasTrans, mm, dimEnv, dimSys, 
@@ -359,7 +366,7 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	// Use the faster PRIMME library if available. Otherwise, default to LAPACK.
 	#if USE_PRIMME
-		primmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1);
+		primmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1, 0);
 	#else
 		__assume_aligned(Hs_r, MEM_DATA_ALIGN);
 		__assume_aligned(psi0_r, MEM_DATA_ALIGN);
@@ -588,8 +595,11 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 		saved_blocks[sys->length-1] = sys;
 	}
 
+	// Setup psi0_guess
+	MAT_TYPE *psi0_guess = NULL;
+	MAT_TYPE **psi0_guessp = &psi0_guess;
 	meas_data_t *meas;
-
+	
 	// Finite Sweeps
 	DMRGBlock *env;
 	for (int i = 0; i < num_sweeps; i++) {
@@ -598,6 +608,29 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 		while (1) {
 
 			env = saved_blocks[L - sys->length - 3];
+
+			if (*psi0_guessp == NULL || saved_blocks[L - sys->length - 2]->trans == NULL) {
+				if (*psi0_guessp != NULL) {
+					mkl_free(*psi0_guessp);
+					*psi0_guessp = NULL;
+				}
+			} else {
+				// Transform psi0_guess into guess for next iteration
+				int d_block_env = saved_blocks[L - sys->length - 2]->d_block;
+				int d_trans_env = saved_blocks[L - sys->length - 2]->d_trans;
+				int d_block_sys_enl = sys->d_block*model->d_model;
+				MAT_TYPE *temp_guess = reorderKron(*psi0_guessp, sys->d_block, d_block_env, model->d_model);
+				*psi0_guessp = mkl_realloc(*psi0_guessp, d_block_sys_enl*d_trans_env * sizeof(MAT_TYPE));
+				MAT_TYPE *trans_env = saved_blocks[L - sys->length - 2]->trans;
+
+				// assert(saved_blocks[]->d_trans == )
+				// printf("DGEMM for psi0_guess. Sys length = %d\n", sys->length);
+				// printf("d_block_sys_enl = %d, d_trans_env = %d, d_block_env = %d\n", d_block_sys_enl, d_trans_env, d_block_env);
+				cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_block_sys_enl, d_trans_env, d_block_env, 
+							1.0, temp_guess, d_block_sys_enl, trans_env, d_trans_env, 0.0, *psi0_guessp, d_block_sys_enl);
+				// printf("DGEMM done\n");
+				mkl_free(temp_guess);
+			}
 
 			// Switch sys and env if at the end of the chain
 			if (env->length == 1) {
@@ -620,10 +653,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 			}
 
 			// printGraphic(sys, env);
-			MAT_TYPE *psi0_guess = NULL;
-			MAT_TYPE **psi0_guessp = &psi0_guess;
 			sys = single_step(sys, env, m, 0, psi0_guessp);
-			mkl_free(*psi0_guessp);
 			logBlock(sys);
 
 			// Save new block
@@ -643,6 +673,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 		if (saved_blocks[i]) { freeDMRGBlock(saved_blocks[i]); }
 	}
 	mkl_free(saved_blocks);
+	mkl_free(*psi0_guessp);
 
 	return meas;
 }

@@ -504,8 +504,9 @@ void primme_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *bloc
 	evals    : pointer that will contain eigenvalues. Size should be numEvals
 	evecs    : pointer that will contain eigenvectors. Size should be numEvals*N
 	numEvals : number of desired eigenvectors
+	initSize : number of guesses for desired eigenvectors
 */
-void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, const int numEvals) {
+void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, const int numEvals, const int initSize) {
 
 	primme_params primme;
 
@@ -523,11 +524,11 @@ void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, con
 	primme.numEvals = numEvals;     /* Number of wanted eigenpairs */
 	primme.eps = 1e-7;             /* ||r|| <= eps * ||matrix|| */
 	primme.target = primme_smallest;
-	// primme.initSize = 1;
+	primme.initSize = initSize;
 
 	primme_set_method(PRIMME_DYNAMIC, &primme);
 
-	double *rnorms = (double*)malloc(primme.numEvals*sizeof(double));
+	double *rnorms = mkl_malloc(primme.numEvals*sizeof(double), MEM_DATA_ALIGN);
 
 	#if COMPLEX
 	ret = zprimme(evals, (complex double *) evecs, rnorms, &primme);
@@ -541,7 +542,7 @@ void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, con
 		exit(1);
 	}
 
-	free(rnorms);
+	mkl_free(rnorms);
 	primme_free(&primme);
 }
 
@@ -554,7 +555,8 @@ MAT_TYPE *reorderKron(MAT_TYPE *v, const int dimSys, const int dimEnv, const int
 	for (int i=0; i<dimSys; i++) {
 		for (int j=0; j<dimEnv; j++) {
 			for (int k=0; k<dimSite; k++) {
-				new_v[(i*dimSys + k)*dimSys*dimSite + j] = v[i*dimSys + (j*dimEnv + k)];
+				// new_v[(i*dimSite + k)*dimEnv + j] = v[(i*dimEnv + j)*dimSite + k];
+				new_v[(j*dimSys + i)*dimSite + k] = v[(j*dimSite + k)*dimSys + i];
 			}
 		}
 	}

@@ -26,7 +26,9 @@ void kronI_r(const char side, const int m, const int n, const MAT_TYPE *restrict
 	         MAT_TYPE *restrict C, const int num_ind, const int *restrict inds);
 
 #if USE_PRIMME
-void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, const int numEvals);
+void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, const int numEvals, const int initSize);
+
+MAT_TYPE *reorderKron(MAT_TYPE *v, const int dimSys, const int dimEnv, const int dimSite);
 #endif
 
 MAT_TYPE *identity(const int N);

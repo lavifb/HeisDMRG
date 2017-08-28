@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
 	clock_t t_start = clock();
 
 	for (int i=0; i<runs; i++) {
-		primmeWrapper(Hs_r, N, energies, psi0s[i], 1);
+		primmeWrapper(Hs_r, N, energies, psi0s[i], 1, 0);
 	}
 
 	clock_t t_end = clock();
