@@ -264,16 +264,25 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		if (*psi0_guessp == NULL) {
 			*psi0_guessp = mkl_malloc(mm*dimEnv * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		} else {
-			*psi0_guessp = mkl_realloc(*psi0_guessp, mm*dimEnv * sizeof(MAT_TYPE));
-
 			// Check overlap of guess and calculated eigenstate
-			#if COMPLEX
-			// TODO: overlap for complex
-			#else
-			double overlap = fabs(cblas_ddot(dimSup, psi0, 1, *psi0_guessp, 1));
-			overlap /= cblas_dnrm2(dimSup, psi0, 1) * cblas_dnrm2(dimSup, *psi0_guessp, 1);
-			printf("Overlap <psi0|psi0_guess> = %f\n", overlap);
-			#endif
+			// #if COMPLEX
+			// // TODO: overlap for complex
+			// #else
+			// double overlap = fabs(cblas_ddot(dimSup, psi0, 1, *psi0_guessp, 1));
+			// overlap /= cblas_dnrm2(dimSup, psi0, 1) * cblas_dnrm2(dimSup, *psi0_guessp, 1);
+			// printf("Overlap <psi0|psi0_guess> = %.8f\n", overlap);
+			// #endif
+
+			// if (overlap < .9) {
+			// 	// printf("Guess is bad!!\n");
+			// 	// print_matrix("psi0_guess", dimEnv, dimSys, *psi0_guessp, dimEnv);
+			// 	// print_matrix("psi0"      , dimEnv, dimSys, psi0        , dimEnv);
+
+			// 	// printf("\ndimSys = %3d  dimEnv = %3d  dimSup = %3d\n", dimSys, dimEnv, dimSup);
+			// 	// exit(1);
+			// }
+
+			*psi0_guessp = mkl_realloc(*psi0_guessp, mm*dimEnv * sizeof(MAT_TYPE));
 		}
 
 		cblas_dgemm(CblasColMajor, CblasConjTrans, CblasTrans, mm, dimEnv, dimSys, 
@@ -598,6 +607,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 	// Setup psi0_guess
 	MAT_TYPE *psi0_guess = NULL;
 	MAT_TYPE **psi0_guessp = &psi0_guess;
+
 	meas_data_t *meas;
 	
 	// Finite Sweeps
@@ -609,26 +619,24 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 
 			env = saved_blocks[L - sys->length - 3];
 
-			if (*psi0_guessp == NULL || saved_blocks[L - sys->length - 2]->trans == NULL) {
+			if (saved_blocks[L - sys->length - 2]->trans == NULL) { // || env->length < 3 || sys->length < 3 // || env->d_block != sys->d_block
 				if (*psi0_guessp != NULL) {
 					mkl_free(*psi0_guessp);
 					*psi0_guessp = NULL;
 				}
-			} else {
+			} else if (*psi0_guessp != NULL) {
 				// Transform psi0_guess into guess for next iteration
-				int d_block_env = saved_blocks[L - sys->length - 2]->d_block;
-				int d_trans_env = saved_blocks[L - sys->length - 2]->d_trans;
+				DMRGBlock *env_enl = saved_blocks[L - sys->length - 2];
+				int d_block_env_enl = env_enl->d_block;
+				int d_trans_env_enl = env_enl->d_trans;
 				int d_block_sys_enl = sys->d_block*model->d_model;
-				MAT_TYPE *temp_guess = reorderKron(*psi0_guessp, sys->d_block, d_block_env, model->d_model);
-				*psi0_guessp = mkl_realloc(*psi0_guessp, d_block_sys_enl*d_trans_env * sizeof(MAT_TYPE));
-				MAT_TYPE *trans_env = saved_blocks[L - sys->length - 2]->trans;
 
-				// assert(saved_blocks[]->d_trans == )
-				// printf("DGEMM for psi0_guess. Sys length = %d\n", sys->length);
-				// printf("d_block_sys_enl = %d, d_trans_env = %d, d_block_env = %d\n", d_block_sys_enl, d_trans_env, d_block_env);
-				cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_block_sys_enl, d_trans_env, d_block_env, 
-							1.0, temp_guess, d_block_sys_enl, trans_env, d_trans_env, 0.0, *psi0_guessp, d_block_sys_enl);
-				// printf("DGEMM done\n");
+				MAT_TYPE *temp_guess = reorderKron(*psi0_guessp, d_block_env_enl, sys->d_block, model->d_model);
+				
+				*psi0_guessp = mkl_realloc(*psi0_guessp, d_block_sys_enl*d_trans_env_enl * sizeof(MAT_TYPE));
+				MAT_TYPE *trans_env = env_enl->trans;
+				cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_trans_env_enl, d_block_sys_enl, d_block_env_enl, 
+							1.0, trans_env, d_trans_env_enl, temp_guess, d_block_sys_enl, 0.0, *psi0_guessp, d_trans_env_enl);
 				mkl_free(temp_guess);
 			}
 
@@ -637,6 +645,10 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 				DMRGBlock *tempBlock = sys;
 				sys = env;
 				env = tempBlock;
+				if (*psi0_guessp != NULL) { 
+					mkl_free(*psi0_guessp); 
+					*psi0_guessp = NULL;
+				}
 
 				if (i == num_sweeps-1) {
 					startMeasBlock(sys);
@@ -669,11 +681,11 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 		}
 	}
 
+	if (*psi0_guessp != NULL) { mkl_free(*psi0_guessp); }
 	for (int i = 0; i < L-3; i++) {
 		if (saved_blocks[i]) { freeDMRGBlock(saved_blocks[i]); }
 	}
 	mkl_free(saved_blocks);
-	mkl_free(*psi0_guessp);
 
 	return meas;
 }

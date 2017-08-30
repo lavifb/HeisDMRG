@@ -73,8 +73,13 @@ DMRGBlock *copyDMRGBlock(DMRGBlock *orig) {
 	memcpy(newBlock->A, orig->A, dim*dim * sizeof(MAT_TYPE));
 
 	newBlock->d_trans = orig->d_trans;
-	newBlock->A = (MAT_TYPE *)mkl_malloc(dim*newBlock->d_trans * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	memcpy(newBlock->trans, orig->trans, dim*newBlock->d_trans * sizeof(MAT_TYPE));
+
+	if (orig->trans == NULL) {
+		newBlock->trans = NULL;
+	} else {
+		newBlock->trans = mkl_malloc(dim*newBlock->d_trans * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		memcpy(newBlock->trans, orig->trans, dim*newBlock->d_trans * sizeof(MAT_TYPE));
+	}
 
 	newBlock->energy = orig->energy;
 	newBlock->trunc_err = orig->trunc_err;

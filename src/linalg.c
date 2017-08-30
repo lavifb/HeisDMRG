@@ -489,9 +489,9 @@ void primme_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *bloc
 		#if COMPLEX
 		const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
 		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
-		cblas_zhemv(CblasColMajor, CblasLower, N, &one, A, N, xvec, 1, &zero, yvec, 1);
+		cblas_zhemv(CblasColMajor, CblasUpper, N, &one, A, N, xvec, 1, &zero, yvec, 1);
 		#else
-		cblas_dsymv(CblasColMajor, CblasLower, N, 1.0, A, N, xvec, 1, 0.0, yvec, 1);
+		cblas_dsymv(CblasColMajor, CblasUpper, N, 1.0, A, N, xvec, 1, 0.0, yvec, 1);
 		#endif
 	}
 	*err = 0;
@@ -522,7 +522,7 @@ void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, con
 
 	primme.n = N;
 	primme.numEvals = numEvals;     /* Number of wanted eigenpairs */
-	primme.eps = 1e-7;             /* ||r|| <= eps * ||matrix|| */
+	primme.eps = 1e-10;             /* ||r|| <= eps * ||matrix|| */
 	primme.target = primme_smallest;
 	primme.initSize = initSize;
 
@@ -555,7 +555,6 @@ MAT_TYPE *reorderKron(MAT_TYPE *v, const int dimSys, const int dimEnv, const int
 	for (int i=0; i<dimSys; i++) {
 		for (int j=0; j<dimEnv; j++) {
 			for (int k=0; k<dimSite; k++) {
-				// new_v[(i*dimSite + k)*dimEnv + j] = v[(i*dimEnv + j)*dimSite + k];
 				new_v[(j*dimSys + i)*dimSite + k] = v[(j*dimSite + k)*dimSys + i];
 			}
 		}
