@@ -262,7 +262,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		if (*psi0_guessp == NULL) {
 			*psi0_guessp = mkl_malloc(mm*dimEnv * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		} else {
-			// Check overlap of guess and calculated eigenstate
+			// // Check overlap of guess and calculated eigenstate
 			// #if COMPLEX
 			// // TODO: overlap for complex
 			// #else
@@ -633,8 +633,14 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 				
 				*psi0_guessp = mkl_realloc(*psi0_guessp, d_block_sys_enl*d_trans_env_enl * sizeof(MAT_TYPE));
 				MAT_TYPE *trans_env = env_enl->trans;
-				cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_trans_env_enl, d_block_sys_enl, d_block_env_enl, 
-							1.0, trans_env, d_trans_env_enl, temp_guess, d_block_sys_enl, 0.0, *psi0_guessp, d_trans_env_enl);
+				if (env->length > 1) {
+					cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_trans_env_enl, d_block_sys_enl, d_block_env_enl, 
+								1.0, trans_env, d_trans_env_enl, temp_guess, d_block_sys_enl, 0.0, *psi0_guessp, d_trans_env_enl);
+				} else {
+					// transpose of above to account for switching sys and env
+					cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_block_sys_enl, d_trans_env_enl, d_block_env_enl, 
+								1.0, temp_guess, d_block_sys_enl, trans_env, d_trans_env_enl, 0.0, *psi0_guessp, d_block_sys_enl);
+				}
 				mkl_free(temp_guess);
 			}
 
@@ -643,10 +649,6 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 				DMRGBlock *tempBlock = sys;
 				sys = env;
 				env = tempBlock;
-				if (*psi0_guessp != NULL) { 
-					mkl_free(*psi0_guessp); 
-					*psi0_guessp = NULL;
-				}
 
 				if (i == num_sweeps-1) {
 					startMeasBlock(sys);
