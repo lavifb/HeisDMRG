@@ -137,10 +137,8 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		HASH_FIND_INT(sys_enl_sectors, &mz    , sys_enl_mz);
 		HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_mz);
 		assert(sys_enl_mz != NULL);
-		// SOMETHING WRONG HERE!!!
+		// SOMETHING WRONG HERE!!! (MAYBE??)
 		if (env_enl_mz == NULL) {
-			// if (sys == env) { printf("sys == env\n"); }
-			// printf("skip\n");
 			continue;
 		}
 		int dimSys_sec = sys_enl_mz->num_ind;
