@@ -522,7 +522,7 @@ void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, con
 
 	primme.n = N;
 	primme.numEvals = numEvals;     /* Number of wanted eigenpairs */
-	primme.eps = 1e-10;             /* ||r|| <= eps * ||matrix|| */
+	// primme.eps = 1e-10;             /* ||r|| <= eps * ||matrix|| */
 	primme.target = primme_smallest;
 	primme.initSize = initSize;
 
