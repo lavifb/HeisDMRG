@@ -87,3 +87,6 @@ ${BIN}/quick_test_debug: ${TEST}/quick_test.c ${objsD}
 	 
 ${BIN}/%: ${TEST}/%.c ${objs}
 	${CC} ${INCDIRS} ${CCOPTSR} -o $@ $< ${OBJ}/* ${LIB}
+
+${BIN}/z%: ${TEST}/%.c ${objs}
+	${CC} ${INCDIRS} ${CCOPTSR} -DCOMPLEX -o $@ $< ${OBJ}/* ${LIB}
