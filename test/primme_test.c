@@ -43,7 +43,6 @@ int main(int argc, char *argv[]) {
 	char path_Hs[1024];
 	char path_psi0[1024];
 	#if COMPLEX
-	#include <complex.h>
 	sprintf(path_Hs,   "%s/../test/test_mats/zprimme_test_Hs.dat", path);
 	sprintf(path_psi0, "%s/../test/test_mats/zprimme_test_psi0.dat", path);
 	#else
@@ -93,6 +92,7 @@ int main(int argc, char *argv[]) {
 	#define TOLERANCE 1e-5
 
 	#if COMPLEX
+	#include <complex.h>
 	complex double *psi0z   = (complex double *) psi0;
 	complex double **psi0sz = (complex double **) psi0s;
 	#endif
