@@ -13,15 +13,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 // TODO: move matrices into test/ for repeated testing
 int main(int argc, char *argv[]) {
 
-	#if COMPLEX
-	// TODO: dprimme test for complex amtrices
-	printf("dprimme test not yet working for complex amtrices.");
-	return 0;
-	#else
 	int runs = 100;
 
 	if (argc > 1) {
@@ -30,11 +26,45 @@ int main(int argc, char *argv[]) {
 
 	#define N 116
 
+	// Getting path of binary
+	char cwd[1024];
+	if (getcwd(cwd, sizeof(cwd)) == NULL) {
+		errprintf("getcwd() error. Cannot check solution.\n");
+	}
+	char path[1024];
+	sprintf(path, "%s/%s", cwd, argv[0]);
+	// remove filename
+	char *pathpos = strrchr(path, '/');
+	if (pathpos != NULL) {
+	   *pathpos = '\0';
+	}
+
+	// paths for test matrices
+	char path_Hs[1024];
+	char path_psi0[1024];
+	#if COMPLEX
+	#include <complex.h>
+	sprintf(path_Hs,   "%s/../test/test_mats/zprimme_test_Hs.dat", path);
+	sprintf(path_psi0, "%s/../test/test_mats/zprimme_test_psi0.dat", path);
+	#else
+	sprintf(path_Hs,   "%s/../test/test_mats/primme_test_Hs.dat", path);
+	sprintf(path_psi0, "%s/../test/test_mats/primme_test_psi0.dat", path);
+	#endif
+
 	MAT_TYPE *Hs_r = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	MAT_TYPE *psi0 = mkl_malloc(N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	int info;
 
-	readMat("Hs.dat", Hs_r, N*N);
-	readMat("psi0.dat", psi0, N);
+	info = readMat(path_Hs, Hs_r, N*N);
+	if (info < 0) {
+		errprintf("Could not load matrix 'Hs' from '%s'\n", path_Hs);
+		return -1;
+	}
+	readMat(path_psi0, psi0, N);
+	if (info < 0) {
+		errprintf("Could not load matrix 'psi0' from '%s'\n", path_psi0);
+		return -1;
+	}
 
 	MAT_TYPE **psi0s = mkl_malloc(runs * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
 
@@ -62,9 +92,18 @@ int main(int argc, char *argv[]) {
 
 	#define TOLERANCE 1e-5
 
+	#if COMPLEX
+	complex double *psi0z   = (complex double *) psi0;
+	complex double **psi0sz = (complex double **) psi0s;
+	#endif
+
 	int mat_errs = 0;
 	for (int i=0; i<N; i++) {
+		#if COMPLEX
+		if (cabs(psi0z[i])-cabs(psi0sz[runs-1][i]) > TOLERANCE) {
+		#else
 		if (fabs(psi0[i])-fabs(psi0s[runs-1][i]) > TOLERANCE) {
+		#endif
 			mat_errs++;
 		}
 	}
@@ -76,6 +115,8 @@ int main(int argc, char *argv[]) {
 		success = -1;
 	}
 
+	// saveMat("psi0z.dat", psi0s[runs-1], N);
+
 	mkl_free(Hs_r);
 	mkl_free(psi0);
 	for (int i=0; i<runs; i++) { mkl_free(psi0s[i]); }
@@ -84,5 +125,4 @@ int main(int argc, char *argv[]) {
 
 
 	return success;
-	#endif
 }
