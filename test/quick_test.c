@@ -87,6 +87,7 @@ int main(int argc, char *argv[]) {
 	#define ETE  -.441271
 
 	#define TOLERANCE 1e-5
+	#define SZ_TOLERANCE 1e-3
 
 	if (fabs(meas->energy - ETE) < TOLERANCE) {
 		printf( TERM_GREEN "Energy Test Passed!\n" TERM_RESET );
@@ -100,8 +101,13 @@ int main(int argc, char *argv[]) {
 
 	char path_Szs[1024];
 	char path_SSs[1024];
-	sprintf(path_Szs, "%s/../test/quick_test_Szs.dat", path);
-	sprintf(path_SSs, "%s/../test/quick_test_SSs.dat", path);
+	#if COMPLEX
+	sprintf(path_Szs, "%s/../test/test_mats/zquick_test_Szs.dat", path);
+	sprintf(path_SSs, "%s/../test/test_mats/zquick_test_SSs.dat", path);
+	#else
+	sprintf(path_Szs, "%s/../test/test_mats/quick_test_Szs.dat", path);
+	sprintf(path_SSs, "%s/../test/test_mats/quick_test_SSs.dat", path);
+	#endif
 
 	double *test_Szs = mkl_malloc(n_sites * sizeof(double), MEM_DATA_ALIGN);
 	double *test_SSs = mkl_malloc(n_sites * sizeof(double), MEM_DATA_ALIGN);
@@ -112,7 +118,7 @@ int main(int argc, char *argv[]) {
 	int mat_errs = 0;
 
 	for (int i=0; i<n_sites; i++) {
-		if (fabs(meas->Szs[i] - test_Szs[i]) > TOLERANCE) {
+		if (fabs(meas->Szs[i] - test_Szs[i]) > SZ_TOLERANCE) {
 			mat_errs++;
 		}
 	}
