@@ -75,24 +75,16 @@ int main(int argc, char *argv[]) {
 	}
 	char path[1024];
 	sprintf(path, "%s/%s", cwd, argv[0]);
-	// remove filename and go up 1 dir
+	// remove filename
 	char *pathpos = strrchr(path, '/');
-	if (pathpos != NULL) {
-	   *pathpos = '\0';
-	} pathpos = strrchr(path, '/');
 	if (pathpos != NULL) {
 	   *pathpos = '\0';
 	}
 
-
 	int success = 0;
 
-	// Expected test results
+	// Expected test result
 	#define ETE  -.441271
-	// #define Sz13 -0x1.ebp-52
-	// #define Sz20 0x1.bap-49
-	// #define SS6  -0x1.c1f45da2c588p-9
-	// #define SS43 0x1.8fb3d2733c562p-6
 
 	#define TOLERANCE 1e-5
 
@@ -108,8 +100,8 @@ int main(int argc, char *argv[]) {
 
 	char path_Szs[1024];
 	char path_SSs[1024];
-	sprintf(path_Szs, "%s/test/quick_test_Szs.dat", path);
-	sprintf(path_SSs, "%s/test/quick_test_SSs.dat", path);
+	sprintf(path_Szs, "%s/../test/quick_test_Szs.dat", path);
+	sprintf(path_SSs, "%s/../test/quick_test_SSs.dat", path);
 
 	double *test_Szs = mkl_malloc(n_sites * sizeof(double), MEM_DATA_ALIGN);
 	double *test_SSs = mkl_malloc(n_sites * sizeof(double), MEM_DATA_ALIGN);
@@ -121,10 +113,6 @@ int main(int argc, char *argv[]) {
 
 	for (int i=0; i<n_sites; i++) {
 		if (fabs(meas->Szs[i] - test_Szs[i]) > TOLERANCE) {
-		// #if COMPLEX
-		// if (cabs(meas->Szs[i] - test_Szs[i]) > TOLERANCE) {
-		// #else
-		// #endif
 			mat_errs++;
 		}
 	}
@@ -146,20 +134,6 @@ int main(int argc, char *argv[]) {
 	} else {
 		errprintf("SS Test Failed! %d/%d values incorrect.\n", mat_errs, n_sites);
 	}
-
-	// if (fabs(meas->Szs[13] - Sz13) < TOLERANCE && fabs(meas->Szs[20] - Sz20) < TOLERANCE) {
-	// 	printf( TERM_GREEN "Sz Test Passed!\n" TERM_RESET );
-	// } else {
-	// 	errprintf("Sz Test Failed!\n");
-	// 	success = -1;
-	// }
-
-	// if (fabs(meas->SSs[6] - SS6) < TOLERANCE && fabs(meas->SSs[43] - SS43) < TOLERANCE) {
-	// 	printf( TERM_GREEN "SS correleation Test Passed!\n" TERM_RESET );
-	// } else {
-	// 	errprintf("SS correleation Test Failed!\n");
-	// 	success = -1;
-	// }
 
 	// saveMat("quick_test_Szs.dat", meas->Szs, meas->num_sites);
 	// saveMat("quick_test_SSs.dat", meas->SSs, meas->num_sites);
