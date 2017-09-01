@@ -9,6 +9,7 @@
 #include "matio.h"
 #include <mkl.h>
 #include <math.h>
+#include <complex.h>
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
@@ -93,7 +94,7 @@ int main(int argc, char *argv[]) {
 	// #define SS6  -0x1.c1f45da2c588p-9
 	// #define SS43 0x1.8fb3d2733c562p-6
 
-	#define TOLERANCE 1e-5
+	#define TOLERANCE 1e-4
 
 	if (fabs(meas->energy - ETE) < TOLERANCE) {
 		printf( TERM_GREEN "Energy Test Passed!\n" TERM_RESET );
@@ -110,16 +111,20 @@ int main(int argc, char *argv[]) {
 	sprintf(path_Szs, "%s/test/quick_test_Szs.dat", path);
 	sprintf(path_SSs, "%s/test/quick_test_SSs.dat", path);
 
-	MAT_TYPE *test_Szs = mkl_malloc(n_sites * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	MAT_TYPE *test_SSs = mkl_malloc(n_sites * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	readMat(path_Szs, test_Szs, n_sites);
-	readMat(path_SSs, test_SSs, n_sites);
+	double *test_Szs = mkl_malloc(n_sites * sizeof(double), MEM_DATA_ALIGN);
+	double *test_SSs = mkl_malloc(n_sites * sizeof(double), MEM_DATA_ALIGN);
+	dreadMat(path_Szs, test_Szs, n_sites);
+	dreadMat(path_SSs, test_SSs, n_sites);
 
 
 	int mat_errs = 0;
 
 	for (int i=0; i<n_sites; i++) {
 		if (fabs(meas->Szs[i] - test_Szs[i]) > TOLERANCE) {
+		// #if COMPLEX
+		// if (cabs(meas->Szs[i] - test_Szs[i]) > TOLERANCE) {
+		// #else
+		// #endif
 			mat_errs++;
 		}
 	}

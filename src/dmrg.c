@@ -10,6 +10,7 @@
 #include "uthash.h"
 #include <mkl.h>
 #include <math.h>
+#include <complex.h>
 #include <assert.h>
 
 /* Single DMRG step
@@ -163,6 +164,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		// To not take transpose twice, just take conj and take conjTrans on left side of dgemm bellow
 		#if COMPLEX
 		const MKL_Complex16 one = {.real=1.0, .imag=0.0};
+		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
 		mkl_zimatcopy('C', 'R', dimEnv_sec, dimSys_sec, one, psi0_sec, dimEnv_sec, dimEnv_sec);
 		#endif
 
@@ -171,7 +173,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		__assume_aligned(rho_sec, MEM_DATA_ALIGN);
 		// Trace out Environment to make rho (Note transpose structure as described above)
 		#if COMPLEX
-		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
 		cblas_zgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys_sec, dimSys_sec, dimEnv_sec, 
 					&one, psi0_sec, dimEnv_sec, psi0_sec, dimEnv_sec, &zero, rho_sec, dimSys_sec);
 		#else
@@ -262,29 +263,43 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		if (*psi0_guessp == NULL) {
 			*psi0_guessp = mkl_malloc(mm*dimEnv * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		} else {
-			// // Check overlap of guess and calculated eigenstate
-			// #if COMPLEX
-			// // TODO: overlap for complex
-			// #else
-			// double overlap = fabs(cblas_ddot(dimSup, psi0, 1, *psi0_guessp, 1));
-			// overlap /= cblas_dnrm2(dimSup, psi0, 1) * cblas_dnrm2(dimSup, *psi0_guessp, 1);
-			// printf("Overlap <psi0|psi0_guess> = %.8f\n", overlap);
-			// #endif
+			// Check overlap of guess and calculated eigenstate
+			// #define PRINT_OVERLAP
+			#if PRINT_OVERLAP
+
+				#if COMPLEX
+				complex double zoverlap;
+				cblas_zdotc_sub(dimSup, psi0, 1, *psi0_guessp, 1, &zoverlap);
+				double overlap = cabs(zoverlap);
+				#else
+				double overlap = fabs(cblas_ddot(dimSup, psi0, 1, *psi0_guessp, 1));
+				// overlap /= cblas_dnrm2(dimSup, psi0, 1) * cblas_dnrm2(dimSup, *psi0_guessp, 1);
+				#endif
+				printf("Overlap <psi0|psi0_guess> = %.8f\n", overlap);
+
+			#endif
 
 			// if (overlap < .9) {
-			// 	// printf("Guess is bad!!\n");
-			// 	// print_matrix("psi0_guess", dimEnv, dimSys, *psi0_guessp, dimEnv);
-			// 	// print_matrix("psi0"      , dimEnv, dimSys, psi0        , dimEnv);
+			// 	printf("Guess is bad!!\n");
+			// 	print_matrix("psi0_guess", dimEnv, dimSys, *psi0_guessp, dimEnv);
+			// 	print_matrix("psi0"      , dimEnv, dimSys, psi0        , dimEnv);
 
-			// 	// printf("\ndimSys = %3d  dimEnv = %3d  dimSup = %3d\n", dimSys, dimEnv, dimSup);
-			// 	// exit(1);
+			// 	printf("\ndimSys = %3d  dimEnv = %3d  dimSup = %3d\n", dimSys, dimEnv, dimSup);
+			// 	exit(1);
 			// }
 
 			*psi0_guessp = mkl_realloc(*psi0_guessp, mm*dimEnv * sizeof(MAT_TYPE));
 		}
 
+		#if COMPLEX
+		const MKL_Complex16 one = {.real=1.0, .imag=0.0};
+		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+		cblas_zgemm(CblasColMajor, CblasConjTrans, CblasTrans, mm, dimEnv, dimSys, 
+						&one, trans, dimSys, psi0, dimEnv, &zero, *psi0_guessp, mm);
+		#else
 		cblas_dgemm(CblasColMajor, CblasConjTrans, CblasTrans, mm, dimEnv, dimSys, 
 						1.0, trans, dimSys, psi0, dimEnv, 0.0, *psi0_guessp, mm);
+		#endif
 		mkl_free(psi0);
 	}
 
@@ -633,13 +648,27 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 				
 				*psi0_guessp = mkl_realloc(*psi0_guessp, d_block_sys_enl*d_trans_env_enl * sizeof(MAT_TYPE));
 				MAT_TYPE *trans_env = env_enl->trans;
+				#if COMPLEX
+				const MKL_Complex16 one = {.real=1.0, .imag=0.0};
+				const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+				#endif
 				if (env->length > 1) {
+					#if COMPLEX
+					cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_trans_env_enl, d_block_sys_enl, d_block_env_enl, 
+								&one, trans_env, d_trans_env_enl, temp_guess, d_block_sys_enl, &zero, *psi0_guessp, d_trans_env_enl);
+					#else
 					cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_trans_env_enl, d_block_sys_enl, d_block_env_enl, 
 								1.0, trans_env, d_trans_env_enl, temp_guess, d_block_sys_enl, 0.0, *psi0_guessp, d_trans_env_enl);
+					#endif
 				} else {
 					// transpose of above to account for switching sys and env
+					#if COMPLEX
+					cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_block_sys_enl, d_trans_env_enl, d_block_env_enl, 
+								&one, temp_guess, d_block_sys_enl, trans_env, d_trans_env_enl, &zero, *psi0_guessp, d_block_sys_enl);
+					#else
 					cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_block_sys_enl, d_trans_env_enl, d_block_env_enl, 
 								1.0, temp_guess, d_block_sys_enl, trans_env, d_trans_env_enl, 0.0, *psi0_guessp, d_block_sys_enl);
+					#endif
 				}
 				mkl_free(temp_guess);
 			}

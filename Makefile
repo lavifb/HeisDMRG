@@ -44,13 +44,21 @@ CCOPTSD = ${CCOPTS} -g -O0 -DMKL_DISABLE_FAST_MM=1
 
 srcs  = $(filter-out ${SRC}/main.c, $(wildcard ${SRC}/*.c))
 objs  = $(patsubst ${SRC}/%.c, ${OBJ}/%.o,  ${srcs})
+zobjs = $(patsubst ${SRC}/%.c, ${OBJ}/z%.o, ${srcs})
 objsD = $(patsubst ${SRC}/%.c, ${DBUG}/%.o, ${srcs})
+zobjsD= $(patsubst ${SRC}/%.c, ${DBUG}/z%.o,${srcs})
 
 .PHONY: build
-build: proj_main tests
+build: real complex
+
+.PHONY: real
+real: ${BIN}/dmrg tests
+
+.PHONY: complex
+complex: ${BIN}/zdmrg ztests
 
 .PHONY: proj_main
-proj_main: ${BIN}/dmrg
+proj_main: ${BIN}/dmrg ${BIN}/zdmrg
 
 .PHONY: debug
 debug: ${BIN}/dmrg_debug ${BIN}/quick_test_debug
@@ -70,23 +78,38 @@ clean-all: clean clean-debug
 .PHONY: tests
 tests: $(patsubst $(TEST)/%.c, $(BIN)/%, $(wildcard $(TEST)/*.c))
 
+.PHONY: ztests
+ztests: $(patsubst $(TEST)/%.c, $(BIN)/z%, $(wildcard $(TEST)/*.c))
+
 ${OBJ}/%.o: ${SRC}/%.c ${INC}/%.h
 	${CC} -c ${INCDIRS} ${CCOPTSR} ${MKL} $< -o $@
+
+${OBJ}/z%.o: ${SRC}/%.c ${INC}/%.h
+	${CC} -c ${INCDIRS} ${CCOPTSR} -DCOMPLEX ${MKL} $< -o $@
 
 ${DBUG}/%.o: ${SRC}/%.c ${INC}/%.h
 	${CC} -c ${INCDIRS} ${CCOPTSD} ${MKL} $< -o $@
 
+${DBUG}/z%.o: ${SRC}/%.c ${INC}/%.h
+	${CC} -c ${INCDIRS} ${CCOPTSD} -DCOMPLEX ${MKL} $< -o $@
+
 ${BIN}/dmrg: ${SRC}/main.c ${objs}
-	${CC} ${INCDIRS} ${CCOPTSR} -o ${BIN}/dmrg ${OBJ}/* ${SRC}/main.c ${LIB}
+	${CC} ${INCDIRS} ${CCOPTSR} -o ${BIN}/dmrg ${objs} ${SRC}/main.c ${LIB}
+
+${BIN}/zdmrg: ${SRC}/main.c ${zobjs}
+	${CC} ${INCDIRS} ${CCOPTSR} -DCOMPLEX -o ${BIN}/zdmrg ${zobjs} ${SRC}/main.c ${LIB}
 
 ${BIN}/dmrg_debug: ${SRC}/main.c ${objsD}
-	${CC} ${INCDIRS} ${CCOPTSD} -o ${BIN}/dmrg_debug ${DBUG}/* ${SRC}/main.c ${LIB}
+	${CC} ${INCDIRS} ${CCOPTSD} -o ${BIN}/dmrg_debug ${objsD} ${SRC}/main.c ${LIB}
 
 ${BIN}/quick_test_debug: ${TEST}/quick_test.c ${objsD}
-	${CC} ${INCDIRS} ${CCOPTSD} -o ${BIN}/quick_test_debug ${DBUG}/* ${TEST}/quick_test.c ${LIB}
+	${CC} ${INCDIRS} ${CCOPTSD} -o ${BIN}/quick_test_debug ${objsD} ${TEST}/quick_test.c ${LIB}
+
+${BIN}/zquick_test_debug: ${TEST}/quick_test.c ${zobjsD}
+	${CC} ${INCDIRS} ${CCOPTSD} -DCOMPLEX -o ${BIN}/zquick_test_debug ${zobjsD} ${TEST}/quick_test.c ${LIB}
 	 
 ${BIN}/%: ${TEST}/%.c ${objs}
-	${CC} ${INCDIRS} ${CCOPTSR} -o $@ $< ${OBJ}/* ${LIB}
+	${CC} ${INCDIRS} ${CCOPTSR} -o $@ $< ${objs} ${LIB}
 
-${BIN}/z%: ${TEST}/%.c ${objs}
-	${CC} ${INCDIRS} ${CCOPTSR} -DCOMPLEX -o $@ $< ${OBJ}/* ${LIB}
+${BIN}/z%: ${TEST}/%.c ${zobjs}
+	${CC} ${INCDIRS} ${CCOPTSR} -DCOMPLEX -o $@ $< ${zobjs} ${LIB}
