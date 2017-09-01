@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
 	// #define SS6  -0x1.c1f45da2c588p-9
 	// #define SS43 0x1.8fb3d2733c562p-6
 
-	#define TOLERANCE 1e-4
+	#define TOLERANCE 1e-5
 
 	if (fabs(meas->energy - ETE) < TOLERANCE) {
 		printf( TERM_GREEN "Energy Test Passed!\n" TERM_RESET );
