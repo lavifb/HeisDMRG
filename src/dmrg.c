@@ -632,7 +632,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 
 			env = saved_blocks[L - sys->length - 3];
 
-			if (saved_blocks[L - sys->length - 2]->trans == NULL) { // || env->length < 3 || sys->length < 3 // || env->d_block != sys->d_block
+			if (saved_blocks[L - sys->length - 2]->trans == NULL) {
 				if (*psi0_guessp != NULL) {
 					mkl_free(*psi0_guessp);
 					*psi0_guessp = NULL;
