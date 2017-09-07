@@ -418,49 +418,52 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	mkl_free(energies);
 
 	// <S_i> spins
-	#pragma omp parallel for
-	for (int i = 0; i<meas->num_sites; i++) {
-		MAT_TYPE* supOp_r = (MAT_TYPE *)mkl_calloc(num_restr_ind*num_restr_ind, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		kronI_r('R', dimSys, dimEnv, sys_enl->ops[i + model->num_ops], supOp_r, num_restr_ind, restr_basis_inds);
+	#pragma omp parallel num_threads(4)
+	{
+		#pragma omp for
+		for (int i = 0; i<meas->num_sites; i++) {
+			MAT_TYPE* supOp_r = (MAT_TYPE *)mkl_calloc(num_restr_ind*num_restr_ind, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+			kronI_r('R', dimSys, dimEnv, sys_enl->ops[i + model->num_ops], supOp_r, num_restr_ind, restr_basis_inds);
 
-		transformOps(1, num_restr_ind, 1, psi0_r, &supOp_r);
+			transformOps(1, num_restr_ind, 1, psi0_r, &supOp_r);
 
-		#if COMPLEX
-		meas->Szs[i] = (*supOp_r).real;
-		#else
-		meas->Szs[i] = *supOp_r;
-		#endif
+			#if COMPLEX
+			meas->Szs[i] = (*supOp_r).real;
+			#else
+			meas->Szs[i] = *supOp_r;
+			#endif
 
-		mkl_free(supOp_r);
-	}
+			mkl_free(supOp_r);
+		}
 
-	// <S_i S_j> correlations
-	#pragma omp parallel for
-	for (int i = 0; i<meas->num_sites; i++) {
-		MAT_TYPE* SSop = (MAT_TYPE *)mkl_malloc(dimSys*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		#if COMPLEX
-		const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
-		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
-		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, &one, sys_enl->ops[i + model->num_ops], 
-			dimSys, sys_enl->ops[1], dimSys, &zero, SSop, dimSys);
-		#else
-		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, 1.0, sys_enl->ops[i + model->num_ops], 
-			dimSys, sys_enl->ops[1], dimSys, 0.0, SSop, dimSys);
-		#endif
-		MAT_TYPE* supOp_r = (MAT_TYPE *)mkl_calloc(dimSup*dimSup, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		// <S_i S_j> correlations
+		#pragma omp for
+		for (int i = 0; i<meas->num_sites; i++) {
+			MAT_TYPE* SSop = (MAT_TYPE *)mkl_malloc(dimSys*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+			#if COMPLEX
+			const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
+			const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+			cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, &one, sys_enl->ops[i + model->num_ops], 
+				dimSys, sys_enl->ops[1], dimSys, &zero, SSop, dimSys);
+			#else
+			cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, 1.0, sys_enl->ops[i + model->num_ops], 
+				dimSys, sys_enl->ops[1], dimSys, 0.0, SSop, dimSys);
+			#endif
+			MAT_TYPE* supOp_r = (MAT_TYPE *)mkl_calloc(dimSup*dimSup, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
-		kronI_r('R', dimSys, dimEnv, SSop, supOp_r, num_restr_ind, restr_basis_inds);
-		mkl_free(SSop);
+			kronI_r('R', dimSys, dimEnv, SSop, supOp_r, num_restr_ind, restr_basis_inds);
+			mkl_free(SSop);
 
-		transformOps(1, num_restr_ind, 1, psi0_r, &supOp_r);
+			transformOps(1, num_restr_ind, 1, psi0_r, &supOp_r);
 
-		#if COMPLEX
-		meas->SSs[i] = (*supOp_r).real;
-		#else
-		meas->SSs[i] = *supOp_r;
-		#endif
+			#if COMPLEX
+			meas->SSs[i] = (*supOp_r).real;
+			#else
+			meas->SSs[i] = *supOp_r;
+			#endif
 
-		mkl_free(supOp_r);
+			mkl_free(supOp_r);
+		}
 	}
 
 	freeDMRGBlock(sys_enl);
