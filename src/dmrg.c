@@ -418,6 +418,7 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	mkl_free(energies);
 
 	// <S_i> spins
+	#pragma omp parallel for
 	for (int i = 0; i<meas->num_sites; i++) {
 		MAT_TYPE* supOp_r = (MAT_TYPE *)mkl_calloc(num_restr_ind*num_restr_ind, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		kronI_r('R', dimSys, dimEnv, sys_enl->ops[i + model->num_ops], supOp_r, num_restr_ind, restr_basis_inds);
@@ -434,6 +435,7 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	}
 
 	// <S_i S_j> correlations
+	#pragma omp parallel for
 	for (int i = 0; i<meas->num_sites; i++) {
 		MAT_TYPE* SSop = (MAT_TYPE *)mkl_malloc(dimSys*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		#if COMPLEX

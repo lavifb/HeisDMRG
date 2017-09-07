@@ -13,16 +13,16 @@ DBUG:= debug
 # Comment out this line if do not have the PRIMME library
 PRIMMEDIR = ../../Repos/primme
 
-# Comment out this line if you want a purely real calculation. (You must clean and do a full recompile.)
-# This gives a reasonable performance boost for real calcualtions
-#COMPLEX = true
 
 # compiler options
 CCOPTS  = -Wall -xHost -restrict -std=c99 -DMEM_DATA_ALIGN=64 -DVERSION=\"$(shell git describe --always)\"
+# add openmp for some parallelization improvements
+CCOPTS += -qopenmp
 
 # MKL Library
-MKL = -mkl=sequential
-# MKL = -mkl=parallel
+# MKL = -mkl=sequential
+MKL = -mkl=parallel
+# MKL = -mkl=cluster
 
 LIB = ${MKL}
 INCDIRS = -I${INC}/
@@ -38,7 +38,7 @@ ifdef PRIMMEDIR
 endif
 
 CCOPTSR = ${CCOPTS} -DNDEBUG -O2
-# CCOPTSR = ${CCOPTS} -DNDEBUG -pg -O2
+# CCOPTSR += -pg
 CCOPTSD = ${CCOPTS} -g -O0 -DMKL_DISABLE_FAST_MM=1
 
 

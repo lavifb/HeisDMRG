@@ -73,6 +73,7 @@ void kron_r(const double alpha, const int m, const int n, const MAT_TYPE *restri
 	__assume_aligned(B, MEM_DATA_ALIGN);
 	__assume_aligned(C, MEM_DATA_ALIGN);
 
+	#pragma omp parallel for
 	for (int p=0; p<num_ind; p++) {
 		for (int q=0; q<num_ind; q++) {
 			int i = inds[q]/n;
@@ -168,6 +169,7 @@ void kronT_r(const char side, const double alpha, const int m, const int n, cons
 
 		case 'r':
 		case 'R':
+			#pragma omp parallel for
 			for (int p=0; p<num_ind; p++) {
 				for (int q=0; q<num_ind; q++) {
 					int i = inds[q]/n;
@@ -181,6 +183,7 @@ void kronT_r(const char side, const double alpha, const int m, const int n, cons
 			break;
 		case 'l':
 		case 'L':
+			#pragma omp parallel for
 			for (int p=0; p<num_ind; p++) {
 				for (int q=0; q<num_ind; q++) {
 					int i = inds[q]/n;
@@ -281,6 +284,7 @@ void kronI_r(const char side, const int m, const int n, const MAT_TYPE *restrict
 		default:
 		case 'r':
 		case 'R':
+			#pragma omp parallel for
 			for (int p=0; p<num_ind; p++) {
 				for (int q=0; q<num_ind; q++) {
 					int i = inds[q]/n;
@@ -295,6 +299,7 @@ void kronI_r(const char side, const int m, const int n, const MAT_TYPE *restrict
 
 		case 'l':
 		case 'L':
+			#pragma omp parallel for
 			for (int p=0; p<num_ind; p++) {
 				for (int q=0; q<num_ind; q++) {
 					int i = inds[q]%n;
