@@ -27,9 +27,6 @@ MKL = -mkl=parallel
 LIB = ${MKL}
 INCDIRS = -I${INC}/
 
-ifdef COMPLEX
-	CCOPTS += -DCOMPLEX
-endif
 
 ifdef PRIMMEDIR
 	CCOPTS += -DUSE_PRIMME
