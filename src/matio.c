@@ -155,3 +155,11 @@ int zreadMat(char *filename, MKL_Complex16 *A, int matsize) {
 
 	return 0;
 }
+
+MKL_INT64 getMemStat() {
+	int nbuffers;
+	MKL_INT64 nbytes_alloc;
+	nbytes_alloc = MKL_Mem_Stat(&nbuffers);
+
+	return nbytes_alloc;
+} 
