@@ -91,22 +91,22 @@ ${DBUG}/z%.o: ${SRC}/%.c ${INC}/%.h
 	${CC} -c ${INCDIRS} ${CCOPTSD} -DCOMPLEX ${MKL} $< -o $@
 
 ${BIN}/dmrg: ${SRC}/main.c ${objs}
-	${CC} ${INCDIRS} ${CCOPTSR} -o ${BIN}/dmrg ${objs} ${SRC}/main.c ${LIB}
+	${CC} ${INCDIRS} ${CCOPTSR} ${objs} ${SRC}/main.c ${LIB} -o ${BIN}/dmrg
 
 ${BIN}/zdmrg: ${SRC}/main.c ${zobjs}
-	${CC} ${INCDIRS} ${CCOPTSR} -DCOMPLEX -o ${BIN}/zdmrg ${zobjs} ${SRC}/main.c ${LIB}
+	${CC} ${INCDIRS} ${CCOPTSR} -DCOMPLEX ${zobjs} ${SRC}/main.c ${LIB} -o ${BIN}/zdmrg
 
 ${BIN}/dmrg_debug: ${SRC}/main.c ${objsD}
-	${CC} ${INCDIRS} ${CCOPTSD} -o ${BIN}/dmrg_debug ${objsD} ${SRC}/main.c ${LIB}
+	${CC} ${INCDIRS} ${CCOPTSD} ${objsD} ${SRC}/main.c ${LIB}  -o ${BIN}/dmrg_debug
 
 ${BIN}/quick_test_debug: ${TEST}/quick_test.c ${objsD}
-	${CC} ${INCDIRS} ${CCOPTSD} -o ${BIN}/quick_test_debug ${objsD} ${TEST}/quick_test.c ${LIB}
+	${CC} ${INCDIRS} ${CCOPTSD} ${objsD} ${TEST}/quick_test.c ${LIB}  -o ${BIN}/quick_test_debug
 
 ${BIN}/zquick_test_debug: ${TEST}/quick_test.c ${zobjsD}
-	${CC} ${INCDIRS} ${CCOPTSD} -DCOMPLEX -o ${BIN}/zquick_test_debug ${zobjsD} ${TEST}/quick_test.c ${LIB}
+	${CC} ${INCDIRS} ${CCOPTSD} -DCOMPLEX ${zobjsD} ${TEST}/quick_test.c ${LIB} -o ${BIN}/zquick_test_debug
 	 
 ${BIN}/%: ${TEST}/%.c ${objs}
-	${CC} ${INCDIRS} ${CCOPTSR} -o $@ $< ${objs} ${LIB}
+	${CC} ${INCDIRS} ${CCOPTSR} $< ${objs} ${LIB} -o $@
 
 ${BIN}/z%: ${TEST}/%.c ${zobjs}
-	${CC} ${INCDIRS} ${CCOPTSR} -DCOMPLEX -o $@ $< ${zobjs} ${LIB}
+	${CC} ${INCDIRS} ${CCOPTSR} -DCOMPLEX $< ${zobjs} ${LIB} -o $@
