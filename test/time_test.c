@@ -14,16 +14,24 @@
 
 int main(int argc, char *argv[]) {
 
-	int mm;
+	int mm   = 20;
+	int n_ms = 8;
 
-	if (argc < 2) {
-		mm = 20;
-	} else {
+	if (argc > 1) {
 		mm = atoi(argv[1]);
+		if (mm <= 0) {
+			errprintf("Basis size '%d' must be positive.", mm);
+		}
+	}
+
+	if (argc > 2) {
+		n_ms = atoi(argv[2]);
+		if (n_ms <= 0) {
+			errprintf("Number of sweeps '%d' must be positive.", n_ms);
+		}
 	}
 
 	#define L    32
-	#define n_ms 8
 	#define N    2
 	int minf;
 	int ms[n_ms];

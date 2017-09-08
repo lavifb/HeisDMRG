@@ -155,7 +155,7 @@ void kronT(const char side, const double alpha, const int m, const int n, const 
 	n: size of matrix B
 	A: m*m matrix
 	B: n*n matrix
-	C: mn*mn matrix
+	C: num_ind*num_ind matrix
 */
 void kronT_r(const char side, const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B,
 			MAT_TYPE *restrict C, const int num_ind, const int *restrict inds) {
@@ -271,7 +271,7 @@ void kronI(const char side, const int m, const int n, const MAT_TYPE *restrict A
 	n: size of identity matrix if side is 'r' or
 	   size of matrix A if side is 'l'
 	A: m*m matrix or n*n matrix
-	C: mn*mn matrix
+	C: num_ind*num_ind matrix
 */
 void kronI_r(const char side, const int m, const int n, const MAT_TYPE *restrict A, 
 	         MAT_TYPE *restrict C, const int num_ind, const int *restrict inds) {
