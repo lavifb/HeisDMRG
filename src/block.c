@@ -41,6 +41,8 @@ DMRGBlock *createDMRGBlock(model_t *model, int fullLength) {
 	block->energy = DBL_MAX;
 	block->trunc_err = 0;
 
+	block->filename[0] = '\0';
+
 	return block;
 }
 
@@ -245,4 +247,87 @@ void startMeasBlock(DMRGBlock *block) {
 	memcpy(block->ops[block->num_ops], block->ops[1], dim*dim * sizeof(MAT_TYPE));
 
 	block->num_ops++;
+}
+
+/* Returns roughly the memory footprint of DMRGBlock
+*/
+
+MKL_INT64 getBlockMemFootprint(DMRGBlock *block) {
+
+	MKL_INT64 nbytes = 0;
+
+	nbytes += sizeof(DMRGBlock);
+	// ops pointers
+	nbytes += block->num_ops * sizeof(MAT_TYPE *)
+	// ops and A
+	nbytes += (block->num_ops + 1) * block->d_block*block->d_block * sizeof(MAT_TYPE);
+	//psi
+	nbytes += block->d_block * sizeof(MAT_TYPE);
+	// mzs
+	nbytes += block->d_block * sizeof(MAT_TYPE);
+
+	// trans
+	if (block->trans != NULL) { nbytes += block->d_block*block->trans * sizeof(MAT_TYPE); }
+	
+	return nbytes;
+}
+
+int saveBlock(char *filename, DMRGBlock *block) {
+
+	FILE *m_f = fopen(filename, "wb");
+	if (m_f == NULL) {
+		errprintf("Cannot open file '%s'.\n", filename);
+		return -1;
+	}
+
+	int matsize = block->d_block*block->d_block;
+	int count;
+	for (int i=0; i<block->num_ops; i++) {
+		count = fwrite(block->ops[i], sizeof(MAT_TYPE), matsize, m_f);
+		if (count != matsize) {
+			errprintf("Matrix '%d' not written properly to file '%s'.\n", i, filename);
+			return -2;
+		}
+	}
+
+	// matrix A
+	count = fwrite(block->A, sizeof(MAT_TYPE), matsize, m_f);
+	if (count != matsize) {
+		errprintf("Matrix 'A' not written properly to file '%s'.\n", filename);
+		return -2;
+	}
+
+	// psi
+	count = fwrite(block->psi, sizeof(MAT_TYPE), block->d_block, m_f);
+	if (count != block->d_block) {
+		errprintf("Vector 'psi' not written properly to file '%s'.\n", filename);
+		return -2;
+	}
+
+	// mzs
+	count = fwrite(block->mzs, sizeof(MAT_TYPE), block->d_block, m_f);
+	if (count != block->d_block) {
+		errprintf("Vector 'mzs' not written properly to file '%s'.\n", filename);
+		return -2;
+	}
+
+	// trans
+	if (block->trans != NULL) {
+		count = fwrite(block->trans, sizeof(MAT_TYPE), block->d_block*block->d_trans, m_f);
+		if (count != block->d_block*block->d_trans) {
+			errprintf("Matrix 'trans' not written properly to file '%s'.\n", filename);
+			return -2;
+		}
+	}
+
+	fclose(m_f);
+
+	// if save succeeded, free all the saved memory
+	for (int i=0; i<block->num_ops; i++) { mkl_free(block->ops[i]); }
+	mkl_free(block->A);
+	mkl_free(block->psi);
+	mkl_free(block->mzs);
+	if (block->trans != NULL) { mkl_free(block->trans); }
+
+	return 0;
 }

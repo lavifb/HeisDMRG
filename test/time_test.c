@@ -97,10 +97,10 @@ int main(int argc, char *argv[]) {
 	freeMeas(meas);
 	freeModel(model);
 
-	MKL_Free_Buffers();
+	mkl_free_buffers();
 	int nbuffers;
 	MKL_INT64 nbytes_alloc, nbytes_alloc_peak;
-	nbytes_alloc = MKL_Mem_Stat(&nbuffers);
+	nbytes_alloc = mkl_mem_stat(&nbuffers);
 	if (nbytes_alloc > 0) {
 		errprintf("MKL reports a memory leak of %lld bytes in %d buffer(s).\n", nbytes_alloc, nbuffers);
 		success = -1;
