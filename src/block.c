@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <float.h>
+#include <input_parser.h>
 
 
 DMRGBlock *createDMRGBlock(model_t *model, int fullLength) {
@@ -40,8 +41,6 @@ DMRGBlock *createDMRGBlock(model_t *model, int fullLength) {
 	// Set energy to ridiculous value
 	block->energy = DBL_MAX;
 	block->trunc_err = 0;
-
-	block->filename[0] = '\0';
 
 	return block;
 }
@@ -256,9 +255,10 @@ MKL_INT64 getBlockMemFootprint(DMRGBlock *block) {
 
 	MKL_INT64 nbytes = 0;
 
-	nbytes += sizeof(DMRGBlock);
+	// nbytes += sizeof(DMRGBlock);
 	// ops pointers
-	nbytes += block->num_ops * sizeof(MAT_TYPE *)
+	// nbytes += block->num_ops * sizeof(MAT_TYPE *);
+	
 	// ops and A
 	nbytes += (block->num_ops + 1) * block->d_block*block->d_block * sizeof(MAT_TYPE);
 	//psi
@@ -267,7 +267,7 @@ MKL_INT64 getBlockMemFootprint(DMRGBlock *block) {
 	nbytes += block->d_block * sizeof(MAT_TYPE);
 
 	// trans
-	if (block->trans != NULL) { nbytes += block->d_block*block->trans * sizeof(MAT_TYPE); }
+	if (block->trans != NULL) { nbytes += block->d_block*block->d_trans * sizeof(MAT_TYPE); }
 	
 	return nbytes;
 }
@@ -328,6 +328,64 @@ int saveBlock(char *filename, DMRGBlock *block) {
 	mkl_free(block->psi);
 	mkl_free(block->mzs);
 	if (block->trans != NULL) { mkl_free(block->trans); }
+
+	return 0;
+}
+
+int readBlock(char *filename, DMRGBlock *block) {
+
+	FILE *m_f = fopen(filename, "rb");
+	if (m_f == NULL) {
+		errprintf("Cannot open file '%s'.\n", filename);
+		return -1;
+	}
+
+	int matsize = block->d_block*block->d_block;
+	int count;
+	for (int i=0; i<block->num_ops; i++) {
+		block->ops[i] = mkl_malloc(matsize * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		count = fread(block->ops[i], sizeof(MAT_TYPE), matsize, m_f);
+		if (count != matsize) {
+			errprintf("Matrix '%d' not read properly from file '%s'. Expected %d items but read %d.\n", i, filename, matsize, count);
+			return -2;
+		}
+	}
+
+	// matrix A
+	block->A = mkl_malloc(matsize * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	count = fread(block->A, sizeof(MAT_TYPE), matsize, m_f);
+	if (count != matsize) {
+		errprintf("Matrix 'A' not read properly from file '%s'. Expected %d items but read %d.\n", filename, matsize, count);
+		return -2;
+	}
+
+	// psi
+	block->psi = mkl_malloc(block->d_block * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	count = fread(block->psi, sizeof(MAT_TYPE), block->d_block, m_f);
+	if (count != block->d_block) {
+		errprintf("Vector 'psi' not read properly from file '%s'. Expected %d items but read %d.\n", filename, matsize, count);
+		return -2;
+	}
+
+	// mzs
+	block->mzs = mkl_malloc(block->d_block * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	count = fread(block->mzs, sizeof(MAT_TYPE), block->d_block, m_f);
+	if (count != block->d_block) {
+		errprintf("Vector 'mzs' not read properly from file '%s'. Expected %d items but read %d.\n", filename, matsize, count);
+		return -2;
+	}
+
+	// trans
+	if (block->trans != NULL) {
+		block->trans = mkl_malloc(block->d_block*block->d_trans * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		count = fread(block->trans, sizeof(MAT_TYPE), block->d_block*block->d_trans, m_f);
+		if (count != block->d_block*block->d_trans) {
+			errprintf("Matrix 'trans' not read properly from file '%s'. Expected %d items but read %d.\n", filename, matsize, count);
+			return -2;
+		}
+	}
+
+	fclose(m_f);
 
 	return 0;
 }

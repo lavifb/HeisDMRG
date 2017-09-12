@@ -47,4 +47,6 @@ MKL_INT64 getBlockMemFootprint(DMRGBlock *block);
 
 int saveBlock(char *filename, DMRGBlock *block);
 
+int readBlock(char *filename, DMRGBlock *block);
+
 #endif
