@@ -9,6 +9,7 @@
 #include "matio.h"
 #include "uthash.h"
 #include <mkl.h>
+#include <string.h>
 #include <math.h>
 #include <complex.h>
 #include <assert.h>
@@ -605,7 +606,8 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 */
 meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model) {
 
-	DMRGBlock **saved_blocks = (DMRGBlock **)mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+	DMRGBlock **saved_blocks  = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+	char (*disk_filenames)[16] = mkl_calloc((L-3), sizeof(char[16]), MEM_DATA_ALIGN);
 
 	DMRGBlock *sys = createDMRGBlock(model, L);
 
@@ -632,7 +634,12 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 
 		while (1) {
 
-			env = saved_blocks[L - sys->length - 3];
+			int env_index = L - sys->length - 3;
+			if (disk_filenames[env_index][0] != '\0') {
+				readBlock(disk_filenames[env_index], saved_blocks[env_index]);
+				disk_filenames[env_index][0] = '\0';
+			}
+			env = saved_blocks[env_index];
 
 			if (saved_blocks[L - sys->length - 2]->trans == NULL) {
 				if (*psi0_guessp != NULL) {
@@ -700,7 +707,20 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 			logBlock(sys);
 
 			// Save new block
-			if (saved_blocks[sys->length-1]) { freeDMRGBlock(saved_blocks[sys->length-1]); }
+			int sys_index = sys->length-1;
+			if (disk_filenames[sys_index][0] != '\0') {
+				readBlock(disk_filenames[sys_index], saved_blocks[sys_index]);
+				disk_filenames[sys_index][0] = '\0';
+			}
+			if (saved_blocks[sys_index]) { freeDMRGBlock(saved_blocks[sys_index]); }
+			saved_blocks[sys_index] = sys;
+
+			if (sys->length > 1) {
+				int save_index = sys->length-2;
+				sprintf(disk_filenames[save_index], "temp/%05d.temp\0", save_index);
+				saveBlock(disk_filenames[save_index], saved_blocks[save_index]);
+			}
+
 			saved_blocks[sys->length-1] = sys;
 
 			// Check if sweep is done
@@ -714,9 +734,11 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 
 	if (*psi0_guessp != NULL) { mkl_free(*psi0_guessp); }
 	for (int i = 0; i < L-3; i++) {
+		if (disk_filenames[i][0] != '\0') { readBlock(disk_filenames[i], saved_blocks[i]); }
 		if (saved_blocks[i]) { freeDMRGBlock(saved_blocks[i]); }
 	}
 	mkl_free(saved_blocks);
+	mkl_free(disk_filenames);
 
 	return meas;
 }

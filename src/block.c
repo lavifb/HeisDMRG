@@ -248,17 +248,45 @@ void startMeasBlock(DMRGBlock *block) {
 	block->num_ops++;
 }
 
-/* Returns roughly the memory footprint of DMRGBlock
+/* Returns roughly the memory footprint of a DMRGBlock with given d_block.
+   This is meant as an estimate to now when it is necessary to save blocks to disk.
+   It is assumed that trans is saved as long as PRIMME is used.
 */
 
-MKL_INT64 getBlockMemFootprint(DMRGBlock *block) {
+MKL_INT64 estimateBlockMemFootprint(int d_block, int num_ops) {
 
 	MKL_INT64 nbytes = 0;
 
 	// nbytes += sizeof(DMRGBlock);
 	// ops pointers
 	// nbytes += block->num_ops * sizeof(MAT_TYPE *);
+
+	// ops and A
+	nbytes += (num_ops + 1) * d_block*d_block * sizeof(MAT_TYPE);
+	//psi
+	nbytes += d_block * sizeof(MAT_TYPE);
+	// mzs
+	nbytes += d_block * sizeof(MAT_TYPE);
+
+	#if USE_PRIMME
+	// trans
+	nbytes += d_block*2*d_block * sizeof(MAT_TYPE);
+	#endif
 	
+	return nbytes;
+}
+
+/* Returns the memory footprint of saving DMRGBlock block
+*/
+
+MKL_INT64 getSavedBlockMemFootprint(DMRGBlock *block) {
+
+	MKL_INT64 nbytes = 0;
+
+	// nbytes += sizeof(DMRGBlock);
+	// ops pointers
+	// nbytes += block->num_ops * sizeof(MAT_TYPE *);
+
 	// ops and A
 	nbytes += (block->num_ops + 1) * block->d_block*block->d_block * sizeof(MAT_TYPE);
 	//psi

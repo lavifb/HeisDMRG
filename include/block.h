@@ -43,7 +43,7 @@ MAT_TYPE **enlargeOps(const DMRGBlock *block);
 
 void startMeasBlock(DMRGBlock *block);
 
-MKL_INT64 getBlockMemFootprint(DMRGBlock *block);
+MKL_INT64 getSavedBlockMemFootprint(DMRGBlock *block);
 
 int saveBlock(char *filename, DMRGBlock *block);
 
