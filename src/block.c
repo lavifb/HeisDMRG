@@ -90,8 +90,7 @@ DMRGBlock *copyDMRGBlock(DMRGBlock *orig) {
 
 void freeDMRGBlock(DMRGBlock *block) {
 
-	int i;
-	for (i=0; i<block->num_ops; i++) {
+	for (int i=0; i<block->num_ops; i++) {
 		mkl_free(block->ops[i]);
 	}
 	mkl_free(block->ops);
@@ -258,9 +257,9 @@ MKL_INT64 estimateBlockMemFootprint(int d_block, int num_ops) {
 	MKL_INT64 nbytes = 0;
 
 	// nbytes += sizeof(DMRGBlock);
-	// ops pointers
-	// nbytes += block->num_ops * sizeof(MAT_TYPE *);
 
+	// ops pointers
+	nbytes += num_ops * sizeof(MAT_TYPE *);
 	// ops and A
 	nbytes += (num_ops + 1) * d_block*d_block * sizeof(MAT_TYPE);
 	//psi
@@ -284,9 +283,9 @@ MKL_INT64 getSavedBlockMemFootprint(DMRGBlock *block) {
 	MKL_INT64 nbytes = 0;
 
 	// nbytes += sizeof(DMRGBlock);
-	// ops pointers
-	// nbytes += block->num_ops * sizeof(MAT_TYPE *);
 
+	// ops pointers
+	nbytes += block->num_ops * sizeof(MAT_TYPE *);
 	// ops and A
 	nbytes += (block->num_ops + 1) * block->d_block*block->d_block * sizeof(MAT_TYPE);
 	//psi
@@ -352,6 +351,7 @@ int saveBlock(char *filename, DMRGBlock *block) {
 
 	// if save succeeded, free all the saved memory
 	for (int i=0; i<block->num_ops; i++) { mkl_free(block->ops[i]); }
+	mkl_free(block->ops);
 	mkl_free(block->A);
 	mkl_free(block->psi);
 	mkl_free(block->mzs);
@@ -368,6 +368,7 @@ int readBlock(char *filename, DMRGBlock *block) {
 		return -1;
 	}
 
+	block->ops = mkl_malloc(block->num_ops * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
 	int matsize = block->d_block*block->d_block;
 	int count;
 	for (int i=0; i<block->num_ops; i++) {

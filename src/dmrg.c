@@ -709,10 +709,12 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 			// Save new block
 			int sys_index = sys->length-1;
 			if (disk_filenames[sys_index][0] != '\0') {
-				readBlock(disk_filenames[sys_index], saved_blocks[sys_index]);
+				// readBlock(disk_filenames[sys_index], saved_blocks[sys_index]);
+				mkl_free(saved_blocks[sys_index]);
 				disk_filenames[sys_index][0] = '\0';
+			} else if (saved_blocks[sys_index]) {
+				freeDMRGBlock(saved_blocks[sys_index]);
 			}
-			if (saved_blocks[sys_index]) { freeDMRGBlock(saved_blocks[sys_index]); }
 			saved_blocks[sys_index] = sys;
 
 			if (sys->length > 1) {
@@ -734,8 +736,8 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 
 	if (*psi0_guessp != NULL) { mkl_free(*psi0_guessp); }
 	for (int i = 0; i < L-3; i++) {
-		if (disk_filenames[i][0] != '\0') { readBlock(disk_filenames[i], saved_blocks[i]); }
-		if (saved_blocks[i]) { freeDMRGBlock(saved_blocks[i]); }
+		if (disk_filenames[i][0] != '\0') { mkl_free(saved_blocks[i]); }
+		else if (saved_blocks[i]) { freeDMRGBlock(saved_blocks[i]); }
 	}
 	mkl_free(saved_blocks);
 	mkl_free(disk_filenames);
