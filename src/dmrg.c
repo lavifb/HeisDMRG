@@ -623,11 +623,11 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 		sys = single_step(sys, sys, m_inf, 0, NULL);
 		saved_blocks[sys->length-1] = sys;
 		// write old block to disk
-		if (sys->length > 1) {
+		// if (sys->length > 1) {
 			int save_index = sys->length-2;
 			sprintf(disk_filenames[save_index], "temp/%05d.temp\0", save_index);
 			saveBlock(disk_filenames[save_index], saved_blocks[save_index]);
-		}
+		// }
 	}
 
 	// Setup psi0_guess
