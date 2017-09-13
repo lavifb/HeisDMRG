@@ -11,7 +11,8 @@ DBUG:= debug
 
 # Set directory containing PRIMME library
 # Comment out this line if do not have the PRIMME library
-PRIMMEDIR = ../../Repos/primme
+# PRIMMEDIR = ../../Repos/primme
+PRIMMEDIR = ../primme
 
 
 # compiler options
