@@ -618,7 +618,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 	while (2*sys->length < L) {
 		// printGraphic(sys, sys);
 		printf("new block should be size %lld.\n", estimateBlockMemFootprint(2*m_inf, sys->num_ops));
-		nbytes_alloc_peak = mkl_peak_mem_usage(MKL_PEAK_MEM);
+		MKL_INT64 nbytes_alloc_peak = mkl_peak_mem_usage(MKL_PEAK_MEM);
 		printf("Peak memory used is %lld bytes.\n", nbytes_alloc_peak);
 		sys = single_step(sys, sys, m_inf, 0, NULL);
 		saved_blocks[sys->length-1] = sys;
