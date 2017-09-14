@@ -41,6 +41,12 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		env_enl_sectors = sectorize(env_enl);
 	}
 
+	{
+		int nbuffers;
+		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
+		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
+	}
+
 	int dimSys = sys_enl->d_block;
 	int dimEnv = env_enl->d_block;
 	int dimSup = dimSys * dimEnv;
@@ -80,11 +86,24 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		}
 	}
 
-	mkl_free_buffers();
+	{
+		int nbuffers;
+		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
+		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
+	}
+
+
+	// mkl_free_buffers();
 	// Restricted Superblock Hamiltonian
 	MAT_TYPE *Hs_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
 	kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
 	kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
+
+	{
+		int nbuffers;
+		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
+		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
+	}
 
 	// Setup ground state guess
 	MAT_TYPE *psi0_r;
@@ -128,7 +147,13 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	sys_enl->energy = energies[0]; // record ground state energy
 	mkl_free(energies);
-	mkl_free_buffers();
+	// mkl_free_buffers();
+
+	{
+		int nbuffers;
+		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
+		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
+	}
 
 	// Transformation Matrix
 	int mm = (dimSys < m) ? dimSys : m; // use min(dimSys, m) 
@@ -144,7 +169,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	// Loop over sectors to find what basis inds to keep
 	for (sector_t *sec=sup_sectors; sec != NULL; sec=sec->hh.next) {
 		
-		mkl_free_buffers();
+		// mkl_free_buffers();
 		int mz = sec->id;
 		// printf("mz = %d\n", mz);
 		int env_mz = target_mz - mz;
@@ -163,6 +188,12 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		int dimSys_sec = sys_enl_mz->num_ind;
 		int dimEnv_sec = env_enl_mz->num_ind;
 		assert(dimSys_sec * dimEnv_sec == n_sec);
+
+		{
+		int nbuffers;
+		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
+		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
+	}
 
 		// psi0_sec needs to be arranged as a dimSys * dimEnv to trace out env
 		// Put sys_basis on rows and env_basis on the cols by taking transpose
@@ -211,6 +242,12 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		mkl_free(rho_sec);
 		mkl_free(isuppz_sec);
 
+		{
+		int nbuffers;
+		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
+		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
+	}
+
 		// copy trans_sec into trans using the proper basis
 		for (int i = 0; i < mm_sec; i++) {
 			for (int j = 0; j < dimSys_sec; j++) {
@@ -222,11 +259,17 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 			lamb_i++;
 		}
 		
-	mkl_free_buffers();
+		// mkl_free_buffers();
 		mkl_free(trans_sec);
 	}
 
 	freeSectors(sup_sectors);
+
+	{
+		int nbuffers;
+		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
+		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
+	}
 
 	// Some dimensions may already be dropped
 	int newDimSys = lamb_i;
@@ -260,6 +303,12 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	sys_enl->d_block = mm; // set block basis size to transformed value
 	sys_enl->d_trans = dimSys;
 	sys_enl->trans = trans;
+
+	{
+		int nbuffers;
+		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
+		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
+	}
 
 	// realloc and return psi0_guessp for later guess
 	if (psi0_guessp != NULL) {
@@ -316,6 +365,12 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	if (sys != env) {
 		freeDMRGBlock(env_enl);
 		freeSectors(env_enl_sectors);
+	}
+
+	{
+		int nbuffers;
+		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
+		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
 	}
 
 	return sys_enl;
@@ -622,7 +677,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 	// Run infinite algorithm to build up system
 	while (2*sys->length < L) {
 		// printGraphic(sys, sys);
-		mkl_free_buffers();
+		// mkl_free_buffers();
 		printf("new block should be size %lld.\n", estimateBlockMemFootprint(2*sys->d_block, sys->num_ops));
 		MKL_INT64 nbytes_alloc_peak = mkl_peak_mem_usage(MKL_PEAK_MEM);
 		int nbuffers;
@@ -740,7 +795,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 				int save_index = sys->length-2;
 				sprintf(disk_filenames[save_index], "temp/%05d.temp\0", save_index);
 				saveBlock(disk_filenames[save_index], saved_blocks[save_index]);
-				mkl_free_buffers();
+				// mkl_free_buffers();
 			}
 
 			saved_blocks[sys->length-1] = sys;
