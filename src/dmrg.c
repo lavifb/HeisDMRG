@@ -80,6 +80,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		}
 	}
 
+	mkl_free_buffers();
 	// Restricted Superblock Hamiltonian
 	MAT_TYPE *Hs_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
 	kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
@@ -127,6 +128,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	sys_enl->energy = energies[0]; // record ground state energy
 	mkl_free(energies);
+	mkl_free_buffers();
 
 	// Transformation Matrix
 	int mm = (dimSys < m) ? dimSys : m; // use min(dimSys, m) 
@@ -141,6 +143,8 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	// Loop over sectors to find what basis inds to keep
 	for (sector_t *sec=sup_sectors; sec != NULL; sec=sec->hh.next) {
+		
+		mkl_free_buffers();
 		int mz = sec->id;
 		// printf("mz = %d\n", mz);
 		int env_mz = target_mz - mz;
@@ -218,6 +222,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 			lamb_i++;
 		}
 		
+	mkl_free_buffers();
 		mkl_free(trans_sec);
 	}
 
@@ -617,9 +622,13 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 	// Run infinite algorithm to build up system
 	while (2*sys->length < L) {
 		// printGraphic(sys, sys);
-		printf("new block should be size %lld.\n", estimateBlockMemFootprint(2*m_inf, sys->num_ops));
+		mkl_free_buffers();
+		printf("new block should be size %lld.\n", estimateBlockMemFootprint(2*sys->d_block, sys->num_ops));
 		MKL_INT64 nbytes_alloc_peak = mkl_peak_mem_usage(MKL_PEAK_MEM);
+		int nbuffers;
+		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
 		printf("Peak memory used is %lld bytes.\n", nbytes_alloc_peak);
+		printf("Current memory used is %lld bytes in %d buffers.\n\n", nbytes_alloc, nbuffers);
 		sys = single_step(sys, sys, m_inf, 0, NULL);
 		saved_blocks[sys->length-1] = sys;
 		// write old block to disk
@@ -731,6 +740,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 				int save_index = sys->length-2;
 				sprintf(disk_filenames[save_index], "temp/%05d.temp\0", save_index);
 				saveBlock(disk_filenames[save_index], saved_blocks[save_index]);
+				mkl_free_buffers();
 			}
 
 			saved_blocks[sys->length-1] = sys;
