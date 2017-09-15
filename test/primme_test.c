@@ -76,14 +76,16 @@ int main(int argc, char *argv[]) {
 
 	printf("Running dprimme test on version "VERSION".\n\n");
 
-	clock_t t_start = clock();
+	struct timespec t_start, t_end;
+	clock_gettime(CLOCK_MONOTONIC, &t_start);
 
 	for (int i=0; i<runs; i++) {
 		primmeWrapper(Hs_r, N, energies, psi0s[i], 1, 0);
 	}
 
-	clock_t t_end = clock();
-	double runtime = (double)(t_end - t_start) / CLOCKS_PER_SEC;
+	clock_gettime(CLOCK_MONOTONIC, &t_end);
+	double runtime = (t_end.tv_sec - t_start.tv_sec);
+	runtime += (t_end.tv_nsec - t_start.tv_nsec) / 1000000000.0;
 
 	printf("dprimme test finished %d runs in %.3f seconds.\n\n", runs, runtime);
 
