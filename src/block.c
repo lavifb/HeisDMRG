@@ -89,8 +89,7 @@ DMRGBlock *copyDMRGBlock(DMRGBlock *orig) {
 
 void freeDMRGBlock(DMRGBlock *block) {
 
-	int i;
-	for (i=0; i<block->num_ops; i++) {
+	for (int i=0; i<block->num_ops; i++) {
 		mkl_free(block->ops[i]);
 	}
 	mkl_free(block->ops);
