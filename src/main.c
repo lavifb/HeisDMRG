@@ -69,8 +69,8 @@ int main(int argc, char *argv[]) {
 	clock_gettime(CLOCK_MONOTONIC, &t_start);
 
 	// inf_dmrg(params.L, params.minf, model);
-	meas = fin_dmrg(params.L, params.minf, params.num_ms, params.ms, model);
-	// meas = fin_dmrgR(params.L, params.minf, params.num_ms, params.ms, model);
+	// meas = fin_dmrg(params.L, params.minf, params.num_ms, params.ms, model);
+	meas = fin_dmrgR(params.L, params.minf, params.num_ms, params.ms, model);
 
 	// Record end time
 	clock_gettime(CLOCK_MONOTONIC, &t_end);

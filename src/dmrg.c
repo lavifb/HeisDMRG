@@ -265,7 +265,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		} else {
 			// Check overlap of guess and calculated eigenstate
 			// #define PRINT_OVERLAP
-			#if PRINT_OVERLAP
+			#ifdef PRINT_OVERLAP
 
 				#if COMPLEX
 				complex double zoverlap;
@@ -280,12 +280,12 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 			#endif
 
 			// if (overlap < .9) {
-			// 	printf("Guess is bad!!\n");
-			// 	print_matrix("psi0_guess", dimEnv, dimSys, *psi0_guessp, dimEnv);
-			// 	print_matrix("psi0"      , dimEnv, dimSys, psi0        , dimEnv);
+				// printf("Guess is bad!!\n");
+				// print_matrix("psi0_guess", dimEnv, dimSys, *psi0_guessp, dimEnv);
+				// print_matrix("psi0"      , dimEnv, dimSys, psi0        , dimEnv);
 
-			// 	printf("\ndimSys = %3d  dimEnv = %3d  dimSup = %3d\n", dimSys, dimEnv, dimSup);
-			// 	exit(1);
+				// printf("\ndimSys = %3d  dimEnv = %3d  dimSup = %3d\n", dimSys, dimEnv, dimSup);
+				// exit(1);
 			// }
 
 			*psi0_guessp = mkl_realloc(*psi0_guessp, mm*dimEnv * sizeof(MAT_TYPE));
@@ -518,6 +518,10 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 		saved_blocksR[sys->length-1]->side = 'R';
 	}
 
+	// Setup psi0_guess
+	MAT_TYPE *psi0_guess = NULL;
+	MAT_TYPE **psi0_guessp = &psi0_guess;
+
 	meas_data_t *meas;
 
 	// Finite Sweeps
@@ -527,14 +531,62 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 
 		while (1) {
 
+			// block for building psi0_guess
+			DMRGBlock *env_enl;
+
 			switch (sys->side) {
 				case 'L':
 					env = saved_blocksR[L - sys->length - 3];
+					env_enl = saved_blocksR[L - sys->length - 2];
 					break;
 
 				case 'R':
 					env = saved_blocksL[L - sys->length - 3];
+					env_enl = saved_blocksL[L - sys->length - 2];
 					break;
+			}
+
+			#if COMPLEX
+			const MKL_Complex16 one = {.real=1.0, .imag=0.0};
+			const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+			#endif
+
+			if (env_enl->trans == NULL) {
+				if (*psi0_guessp != NULL) {
+					mkl_free(*psi0_guessp);
+					*psi0_guessp = NULL;
+				}
+			} else if (*psi0_guessp != NULL) {
+				// Transform psi0_guess into guess for next iteration
+				int d_block_env_enl = env_enl->d_block;
+				int d_trans_env_enl = env_enl->d_trans;
+				int d_block_sys_enl = sys->d_block*model->d_model;
+
+				MAT_TYPE *temp_guess = reorderKron(*psi0_guessp, d_block_env_enl, sys->d_block, model->d_model);
+				
+				*psi0_guessp = mkl_realloc(*psi0_guessp, d_block_sys_enl*d_trans_env_enl * sizeof(MAT_TYPE));
+				MAT_TYPE *trans_env = env_enl->trans;
+				if (env->length > 1) {
+					// normal guess
+					#if COMPLEX
+					cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_trans_env_enl, d_block_sys_enl, d_block_env_enl, 
+								&one, trans_env, d_trans_env_enl, temp_guess, d_block_sys_enl, &zero, *psi0_guessp, d_trans_env_enl);
+					#else
+					cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_trans_env_enl, d_block_sys_enl, d_block_env_enl, 
+								1.0, trans_env, d_trans_env_enl, temp_guess, d_block_sys_enl, 0.0, *psi0_guessp, d_trans_env_enl);
+					#endif
+				} else {
+					// transpose of above to account for switching sys and env when the end of the chain is reached
+					#if COMPLEX
+					cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_block_sys_enl, d_trans_env_enl, d_block_env_enl, 
+								&one, temp_guess, d_block_sys_enl, trans_env, d_trans_env_enl, &zero, *psi0_guessp, d_block_sys_enl);
+					#else
+					cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_block_sys_enl, d_trans_env_enl, d_block_env_enl, 
+								1.0, temp_guess, d_block_sys_enl, trans_env, d_trans_env_enl, 0.0, *psi0_guessp, d_block_sys_enl);
+					#endif
+
+				}
+				mkl_free(temp_guess);
 			}
 
 			// Switch sides if at the end of the chain
@@ -558,7 +610,7 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 			}
 
 			// printGraphic(sys, env);
-			sys = single_step(sys, env, m, 0, NULL);
+			sys = single_step(sys, env, m, 0, psi0_guessp);
 			logBlock(sys);
 
 			// Save new block
@@ -583,6 +635,7 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 		}
 	}
 
+	if (*psi0_guessp != NULL) { mkl_free(*psi0_guessp); }
 	for (int i = 0; i < L-3; i++) {
 		if (saved_blocksL[i]) { freeDMRGBlock(saved_blocksL[i]); }
 		if (saved_blocksR[i]) { freeDMRGBlock(saved_blocksR[i]); }
@@ -633,15 +686,15 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 		while (1) {
 
 			env = saved_blocks[L - sys->length - 3];
+			DMRGBlock *env_enl = saved_blocks[L - sys->length - 2]; // block for creating psi0_guess
 
-			if (saved_blocks[L - sys->length - 2]->trans == NULL) {
+			if (env_enl->trans == NULL) {
 				if (*psi0_guessp != NULL) {
 					mkl_free(*psi0_guessp);
 					*psi0_guessp = NULL;
 				}
 			} else if (*psi0_guessp != NULL) {
 				// Transform psi0_guess into guess for next iteration
-				DMRGBlock *env_enl = saved_blocks[L - sys->length - 2];
 				int d_block_env_enl = env_enl->d_block;
 				int d_trans_env_enl = env_enl->d_trans;
 				int d_block_sys_enl = sys->d_block*model->d_model;
@@ -655,6 +708,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 				const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
 				#endif
 				if (env->length > 1) {
+					// normal guess
 					#if COMPLEX
 					cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_trans_env_enl, d_block_sys_enl, d_block_env_enl, 
 								&one, trans_env, d_trans_env_enl, temp_guess, d_block_sys_enl, &zero, *psi0_guessp, d_trans_env_enl);
@@ -663,7 +717,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 								1.0, trans_env, d_trans_env_enl, temp_guess, d_block_sys_enl, 0.0, *psi0_guessp, d_trans_env_enl);
 					#endif
 				} else {
-					// transpose of above to account for switching sys and env
+					// transpose of above to account for switching sys and env when the end of the chain is reached
 					#if COMPLEX
 					cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_block_sys_enl, d_trans_env_enl, d_block_env_enl, 
 								&one, temp_guess, d_block_sys_enl, trans_env, d_trans_env_enl, &zero, *psi0_guessp, d_block_sys_enl);
