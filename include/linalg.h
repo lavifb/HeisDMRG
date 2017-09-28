@@ -33,6 +33,8 @@ MAT_TYPE *reorderKron(MAT_TYPE *v, const int dimSys, const int dimEnv, const int
 
 MAT_TYPE *identity(const int N);
 
+MAT_TYPE *matExp(const int N, const MAT_TYPE *A, double t);
+
 MAT_TYPE *transformOp(const int opDim, const int newDim, const MAT_TYPE *restrict trans, const MAT_TYPE *restrict op);
 
 void transformOps(const int numOps, const int opDim, const int newDim, const MAT_TYPE *restrict trans, MAT_TYPE **ops);

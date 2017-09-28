@@ -330,6 +330,65 @@ MAT_TYPE *identity(const int N) {
 	return Id;
 }
 
+/* Matrix Exponential e^(tA)
+*/
+MAT_TYPE *matExp(const int N, const MAT_TYPE *A, double t) {
+	MAT_TYPE *expAt = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+
+	__assume_aligned(A, MEM_DATA_ALIGN);
+
+	// eigenvalues
+	double *w = mkl_malloc(N * sizeof(double), MEM_DATA_ALIGN);
+
+	// copy 'A' matrix to not be overwritten
+	MAT_TYPE *U = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	__assume_aligned(U, MEM_DATA_ALIGN);
+	memcpy(U, A, N*N * sizeof(MAT_TYPE));
+
+	#if COMPLEX
+	int info = LAPACKE_zheev(LAPACK_COL_MAJOR, 'V', 'U', N, U, N, w);
+	#else
+	int info = LAPACKE_dsyev(LAPACK_COL_MAJOR, 'V', 'U', N, U, N, w);
+	#endif
+	if (info > 0) {
+		printf("Failed to find eigenvalues in matrix exponential\n");
+		exit(1);
+	}
+
+	// apply exponential to eigenvalues
+	for (int i = 0; i < N; i++) {
+		w[i] = exp(t*w[i]);
+	}
+
+	// compute U * diag(exp(lambda_i))
+	MAT_TYPE *UexpD = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	__assume_aligned(UexpD, MEM_DATA_ALIGN);
+	memcpy(UexpD, U, N*N * sizeof(MAT_TYPE));
+	for (int i = 0; i < N; i++) {
+		#if COMPLEX
+		cblas_zdscal(N, w[i], &UexpD[i*N], 1);
+		#else
+		cblas_dscal(N, w[i], &UexpD[i*N], 1);
+		#endif
+	}
+	mkl_free(w);
+
+	// compute U * diag(exp(lambda_i)) * U^T
+	#if COMPLEX
+	const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
+	const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+	cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, N, N, N, &one, UexpD, N, U, N, &zero, expAt, N);
+	#else
+	cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, N, N, N, 1.0, UexpD, N, U, N, 0.0, expAt, N);
+	#endif
+
+	mkl_free(UexpD);
+	mkl_free(U);
+
+	return expAt;
+}
+
+
 /*  Transforms matrix into new truncated basis. returns trans^T * op * trans
 */
 MAT_TYPE *transformOp(const int opDim, const int newDim, const MAT_TYPE *restrict trans, const MAT_TYPE *restrict op) {
