@@ -91,11 +91,11 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		psi0_r  = restrictVec(*psi0_guessp, num_restr_ind, restr_basis_inds);
 		numGuesses = 1;
 	} else {
-		psi0_r = (MAT_TYPE *)mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		psi0_r = mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	}
 
 	// Find ground state
-	double *energies = (double *)mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
+	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
 
 	// Use the faster PRIMME library if available. Otherwise, default to LAPACK.
 	#if USE_PRIMME
@@ -105,7 +105,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		__assume_aligned(psi0_r, MEM_DATA_ALIGN);
 		int info = 0;
 		int num_es_found;
-		int *isuppz = (int *)mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
+		int *isuppz = mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
 
 		#if COMPLEX
 		info = LAPACKE_zheevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
@@ -387,11 +387,11 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		psi0_r  = restrictVec(*psi0_guessp, num_restr_ind, restr_basis_inds);
 		numGuesses = 1;
 	} else {
-		psi0_r = (MAT_TYPE *)mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		psi0_r = mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	}
 
 	// Find ground state
-	double *energies = (double *)mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
+	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
 
 	// Use the faster PRIMME library if available. Otherwise, default to LAPACK.
 	#if USE_PRIMME
@@ -401,7 +401,7 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		__assume_aligned(psi0_r, MEM_DATA_ALIGN);
 		int info = 0;
 		int num_es_found;
-		int *isuppz = (int *)mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
+		int *isuppz = mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
 
 		#if COMPLEX
 		info = LAPACKE_zheevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
