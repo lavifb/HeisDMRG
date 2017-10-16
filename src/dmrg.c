@@ -321,7 +321,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
    returns enlarged system block
 */
-meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz) {
+meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz, MAT_TYPE **const psi0_guessp) {
 
 	DMRGBlock *sys_enl, *env_enl;
 	sector_t *sys_enl_sectors, *env_enl_sectors;
@@ -367,28 +367,35 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 			}
 		}
 	}
+	freeSectors(sys_enl_sectors);
 
 	// RestrictedSuperblock Hamiltonian
 	MAT_TYPE *Hs_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
 	kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
 	kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
 
-	freeSectors(sys_enl_sectors);
 	// Free enlarged environment block
 	if (sys != env) {
 		freeDMRGBlock(env_enl);
 		freeSectors(env_enl_sectors);
 	}
 
-	__assume_aligned(Hs_r, MEM_DATA_ALIGN);
+	// Setup ground state guess
+	MAT_TYPE *psi0_r;
+	int numGuesses = 0;
+	if (psi0_guessp != NULL && *psi0_guessp != NULL) {
+		psi0_r  = restrictVec(*psi0_guessp, num_restr_ind, restr_basis_inds);
+		numGuesses = 1;
+	} else {
+		psi0_r = (MAT_TYPE *)mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	}
 
 	// Find ground state
-	MAT_TYPE *psi0_r = (MAT_TYPE *)mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	double *energies = (double *)mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
 
 	// Use the faster PRIMME library if available. Otherwise, default to LAPACK.
 	#if USE_PRIMME
-		primmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1, 0);
+		primmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1, numGuesses);
 	#else
 		__assume_aligned(Hs_r, MEM_DATA_ALIGN);
 		__assume_aligned(psi0_r, MEM_DATA_ALIGN);
@@ -605,7 +612,7 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 			if (i == num_sweeps-1 && 2 * sys->length == L-2 && sys->side == 'L') {
 				printf("Done with sweep %d/%d\n", num_sweeps, num_sweeps);
 				printf("\nTaking measurements...\n");
-				meas = meas_step(sys, env, m, 0);
+				meas = meas_step(sys, env, m, 0, psi0_guessp);
 				break;
 			}
 
@@ -745,7 +752,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 			if (i == num_sweeps-1 && 2 * sys->length == L-2) {
 				printf("Done with sweep %d/%d\n", num_sweeps, num_sweeps);
 				printf("\nTaking measurements...\n");
-				meas = meas_step(sys, env, m, 0);
+				meas = meas_step(sys, env, m, 0, psi0_guessp);
 				break;
 			}
 
