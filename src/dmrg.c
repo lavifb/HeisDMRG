@@ -91,11 +91,11 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		psi0_r  = restrictVec(*psi0_guessp, num_restr_ind, restr_basis_inds);
 		numGuesses = 1;
 	} else {
-		psi0_r = (MAT_TYPE *)mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		psi0_r = mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	}
 
 	// Find ground state
-	double *energies = (double *)mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
+	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
 
 	// Use the faster PRIMME library if available. Otherwise, default to LAPACK.
 	#if USE_PRIMME
@@ -105,7 +105,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		__assume_aligned(psi0_r, MEM_DATA_ALIGN);
 		int info = 0;
 		int num_es_found;
-		int *isuppz = (int *)mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
+		int *isuppz = mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
 
 		#if COMPLEX
 		info = LAPACKE_zheevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
@@ -129,14 +129,14 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	// Transformation Matrix
 	int mm = (dimSys < m) ? dimSys : m; // use min(dimSys, m) 
-	MAT_TYPE *trans_full = (MAT_TYPE *)mkl_calloc(dimSys*dimSys, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	MAT_TYPE *trans_full = mkl_calloc(dimSys*dimSys, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
-	// Eigenvalues
+	// Eigenvalues of density matrix
 	int lamb_i = 0;
-	double *lambs = (double *)mkl_malloc(dimSys * sizeof(double), MEM_DATA_ALIGN);
+	double *lambs = mkl_malloc(dimSys * sizeof(double), MEM_DATA_ALIGN);
 
 	// state mzs to eventually truncate and put into sys_enl->mzs
-	int *sys_mzs_full = (int *)mkl_malloc(dimSys * sizeof(int), MEM_DATA_ALIGN);
+	int *sys_mzs_full = mkl_malloc(dimSys * sizeof(int), MEM_DATA_ALIGN);
 
 	// Loop over sectors to find what basis inds to keep
 	for (sector_t *sec=sup_sectors; sec != NULL; sec=sec->hh.next) {
@@ -163,15 +163,13 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 		// define target states
 		targets[0] = restrictVec(psi0_r, n_sec, sec->inds); // ground state
-		// targets[1] = restrictVec(psi0_r, n_sec, sec->inds); // tracked state
-
-		// MAT_TYPE *psi0_sec = restrictVec(psi0_r, n_sec, sec->inds);
+		// targets[1] = restrictVec(psi_r, n_sec, sec->inds); // tracked state
 
 		// Density matrix rho_sec
 		MAT_TYPE *rho_sec = mkl_calloc(dimSys_sec*dimSys_sec, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		__assume_aligned(rho_sec, MEM_DATA_ALIGN);
 
-		// psi0_sec needs to be arranged as a dimSys * dimEnv to trace out env
+		// target state needs to be arranged as a dimSys * dimEnv to trace out env
 		// Put sys_basis on rows and env_basis on the cols by taking transpose
 		// To not take transpose twice, just take conj and take conjTrans on left side of dgemm bellow
 
@@ -191,7 +189,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 			cblas_zgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys_sec, dimSys_sec, dimEnv_sec, 
 						&zalpha, targets[i], dimEnv_sec, targets[i], dimEnv_sec, &one, rho_sec, dimSys_sec);
 			#else
-			// Trace out Environment to make rho (No transpose conjugation needed here)
+			// Trace out Environment to make rho (No conjugation needed here)
 			cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys_sec, dimSys_sec, dimEnv_sec, 
 						alpha, targets[i], dimEnv_sec, targets[i], dimEnv_sec, 1.0, rho_sec, dimSys_sec);
 			#endif
