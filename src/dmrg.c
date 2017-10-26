@@ -145,8 +145,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		int env_mz = target_mz - mz;
 		int n_sec = sec->num_ind;
 
-		MAT_TYPE *psi0_sec = restrictVec(psi0_r, n_sec, sec->inds);
-
 		sector_t *sys_enl_mz, *env_enl_mz;
 		HASH_FIND_INT(sys_enl_sectors, &mz    , sys_enl_mz);
 		HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_mz);
@@ -159,28 +157,49 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		int dimEnv_sec = env_enl_mz->num_ind;
 		assert(dimSys_sec * dimEnv_sec == n_sec);
 
+		// target states
+		int num_targets = 1;
+		MAT_TYPE **targets = mkl_malloc(num_targets * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
+
+		// define target states
+		targets[0] = restrictVec(psi0_r, n_sec, sec->inds); // ground state
+		// targets[1] = restrictVec(psi0_r, n_sec, sec->inds); // tracked state
+
+		// MAT_TYPE *psi0_sec = restrictVec(psi0_r, n_sec, sec->inds);
+
+		// Density matrix rho_sec
+		MAT_TYPE *rho_sec = mkl_calloc(dimSys_sec*dimSys_sec, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		__assume_aligned(rho_sec, MEM_DATA_ALIGN);
+
 		// psi0_sec needs to be arranged as a dimSys * dimEnv to trace out env
 		// Put sys_basis on rows and env_basis on the cols by taking transpose
 		// To not take transpose twice, just take conj and take conjTrans on left side of dgemm bellow
+
+		// set weights for target states to be equal
+		const double alpha = 1.0/num_targets;
 		#if COMPLEX
 		const MKL_Complex16 one = {.real=1.0, .imag=0.0};
-		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
-		mkl_zimatcopy('C', 'R', dimEnv_sec, dimSys_sec, one, psi0_sec, dimEnv_sec, dimEnv_sec);
-		#endif
-
-		// Density matrix rho_sec
-		MAT_TYPE *rho_sec = (MAT_TYPE *)mkl_malloc(dimSys_sec*dimSys_sec * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		__assume_aligned(rho_sec, MEM_DATA_ALIGN);
-		// Trace out Environment to make rho (Note transpose structure as described above)
-		#if COMPLEX
-		cblas_zgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys_sec, dimSys_sec, dimEnv_sec, 
-					&one, psi0_sec, dimEnv_sec, psi0_sec, dimEnv_sec, &zero, rho_sec, dimSys_sec);
+		const MKL_Complex16 zalpha = {.real=alpha, .imag=0.0};
 		#else
-		cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys_sec, dimSys_sec, dimEnv_sec, 
-					1.0, psi0_sec, dimEnv_sec, psi0_sec, dimEnv_sec, 0.0, rho_sec, dimSys_sec);
 		#endif
 
-		mkl_free(psi0_sec);
+		for (int i=0; i<num_targets; i++) {
+
+			#if COMPLEX
+			mkl_zimatcopy('C', 'R', dimEnv_sec, dimSys_sec, one, targets[i], dimEnv_sec, dimEnv_sec);
+			// Trace out Environment to make rho (Note transpose structure as described above)
+			cblas_zgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys_sec, dimSys_sec, dimEnv_sec, 
+						&zalpha, targets[i], dimEnv_sec, targets[i], dimEnv_sec, &one, rho_sec, dimSys_sec);
+			#else
+			// Trace out Environment to make rho (No transpose conjugation needed here)
+			cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys_sec, dimSys_sec, dimEnv_sec, 
+						alpha, targets[i], dimEnv_sec, targets[i], dimEnv_sec, 1.0, rho_sec, dimSys_sec);
+			#endif
+
+			mkl_free(targets[i]);
+		}
+
+		mkl_free(targets);
 
 		// diagonalize rho_sec and add to list of eigenvalues
 		// LAPACK faster since we need many eigenvalues
