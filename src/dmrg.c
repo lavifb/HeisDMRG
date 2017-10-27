@@ -101,8 +101,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	#if USE_PRIMME
 		primmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1, numGuesses);
 	#else
-		__assume_aligned(Hs_r, MEM_DATA_ALIGN);
-		__assume_aligned(psi0_r, MEM_DATA_ALIGN);
 		int info = 0;
 		int num_es_found;
 		int *isuppz = mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
@@ -167,7 +165,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 		// Density matrix rho_sec
 		MAT_TYPE *rho_sec = mkl_calloc(dimSys_sec*dimSys_sec, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		__assume_aligned(rho_sec, MEM_DATA_ALIGN);
 
 		// target state needs to be arranged as a dimSys * dimEnv to trace out env
 		// Put sys_basis on rows and env_basis on the cols by taking transpose
@@ -203,7 +200,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		// LAPACK faster since we need many eigenvalues
 		int mm_sec = (dimSys_sec < mm) ? dimSys_sec : mm;
 		MAT_TYPE *trans_sec = (MAT_TYPE *)mkl_malloc(dimSys_sec*mm_sec * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		__assume_aligned(trans_sec, MEM_DATA_ALIGN);
 		int *isuppz_sec = (int *)mkl_malloc(2*dimSys_sec * sizeof(int), MEM_DATA_ALIGN);
 		int num_es_found;
 		assert(lamb_i + mm_sec - 1 < dimSys);
@@ -244,7 +240,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	assert(newDimSys <= dimSys);
 
 	MAT_TYPE *trans = (MAT_TYPE *)mkl_malloc(dimSys*mm * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	__assume_aligned(trans, MEM_DATA_ALIGN);
 
 	assert(mm <= newDimSys);
 	int *sorted_inds = dsort2(newDimSys, lambs);
@@ -414,8 +409,6 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	#if USE_PRIMME
 		primmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1, numGuesses);
 	#else
-		__assume_aligned(Hs_r, MEM_DATA_ALIGN);
-		__assume_aligned(psi0_r, MEM_DATA_ALIGN);
 		int info = 0;
 		int num_es_found;
 		int *isuppz = (int *)mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
