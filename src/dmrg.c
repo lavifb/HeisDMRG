@@ -21,9 +21,11 @@
                 Set  psi0_guessp = NULL to not use eigenstate guessing and not return eigenstate.
                 Set *psi0_guessp = NULL to not use eigenstate guessing but return eigenstate for future guessing.
 
+   tau: time advance for TDMRG (set to 0 for normal dmrg)
+
    returns enlarged system block
 */
-DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz, MAT_TYPE **const psi0_guessp) {
+DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz, MAT_TYPE **const psi0_guessp, const double tau) {
 
 	DMRGBlock *sys_enl, *env_enl;
 	sector_t *sys_enl_sectors, *env_enl_sectors;
@@ -120,6 +122,31 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		mkl_free(isuppz);
 	#endif
 
+	// time tracked state psi
+	MAT_TYPE *psiT_r;
+	if (tau != 0) {
+		MAT_TYPE *psiTprev_r = restrictVec(sys_enl->psi, num_restr_ind, restr_basis_inds);
+
+		MAT_TYPE *H_int = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
+
+		MAT_TYPE *expH = matExp(num_restr_ind, H_int, -1*tau*I);
+		mkl_free(H_int);
+
+		const MKL_Complex16 one = {.real=1.0, .imag=0.0};
+		const MKL_Complex16 zalpha = {.real=alpha, .imag=0.0};
+
+		// time evolve psi(t)
+		psiT_r = mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		cblas_zgemv(CblasColMajor, CblasNoTrans, num_restr_ind, num_restr_ind, &one, expH, num_restr_ind, 
+			psiTprev_r, num_restr_ind, &zero, psiT_r, num_restr_ind);
+
+		// time evolve psi_0(t)
+		complex double *cpsi0_r = psi0_r;
+		for (int j=0; j<num_restr_ind; j++) {
+			cpsi0_r[j] = cexp(-1*tau*energies[0]*I) * cpsi0_r[j];
+		}
+	}
+
 	mkl_free(Hs_r);
 
 	sys_enl->energy = energies[0]; // record ground state energy
@@ -161,7 +188,10 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 		// define target states
 		targets[0] = restrictVec(psi0_r, n_sec, sec->inds); // ground state
-		// targets[1] = restrictVec(psi_r, n_sec, sec->inds); // tracked state
+		// tdmrg also track target state
+		if (tau != 0) {
+			targets[1] = restrictVec(psiT_r, n_sec, sec->inds); // tracked state
+		}
 
 		// Density matrix rho_sec
 		MAT_TYPE *rho_sec = mkl_calloc(dimSys_sec*dimSys_sec, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
@@ -317,6 +347,9 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	mkl_free(restr_basis_inds);
 	mkl_free(psi0_r);
+	if (tau != 0) {
+		mkl_free(psiT_r);
+	}
 	freeSectors(sys_enl_sectors);
 	// Free enlarged environment block
 	if (sys != env) {
@@ -399,11 +432,11 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		psi0_r  = restrictVec(*psi0_guessp, num_restr_ind, restr_basis_inds);
 		numGuesses = 1;
 	} else {
-		psi0_r = mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		psi0_r = (MAT_TYPE *)mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	}
 
 	// Find ground state
-	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
+	double *energies = (double *)mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
 
 	// Use the faster PRIMME library if available. Otherwise, default to LAPACK.
 	#if USE_PRIMME
@@ -411,7 +444,7 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	#else
 		int info = 0;
 		int num_es_found;
-		int *isuppz = mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
+		int *isuppz = (int *)mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
 
 		#if COMPLEX
 		info = LAPACKE_zheevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
@@ -499,7 +532,7 @@ void inf_dmrg(const int L, const int m, model_t *model) {
 	while (2*sys->length < L) {
 		int currL = sys->length * 2 + 2;
 		printf("\nL = %d\n", currL);
-		sys = single_step(sys, sys, m, 0, NULL);
+		sys = single_step(sys, sys, m, 0, NULL, 0);
 
 		printf("E/L = % .12f\n", sys->energy / currL);
 	}
@@ -528,7 +561,7 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 
 	// run infinite algorithm to build up system
 	while (2*sys->length < L) {
-		sys = single_step(sys, sys, m_inf, 0, NULL);
+		sys = single_step(sys, sys, m_inf, 0, NULL, 0);
 
 		saved_blocksL[sys->length-1] = sys;
 		saved_blocksR[sys->length-1] = copyDMRGBlock(sys);
@@ -627,7 +660,7 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 			}
 
 			// printGraphic(sys, env);
-			sys = single_step(sys, env, m, 0, psi0_guessp);
+			sys = single_step(sys, env, m, 0, psi0_guessp, 0);
 			logBlock(sys);
 
 			// Save new block
@@ -685,7 +718,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 	// Run infinite algorithm to build up system
 	while (2*sys->length < L) {
 		// printGraphic(sys, sys);
-		sys = single_step(sys, sys, m_inf, 0, NULL);
+		sys = single_step(sys, sys, m_inf, 0, NULL, 0);
 		saved_blocks[sys->length-1] = sys;
 	}
 
@@ -767,7 +800,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 			}
 
 			// printGraphic(sys, env);
-			sys = single_step(sys, env, m, 0, psi0_guessp);
+			sys = single_step(sys, env, m, 0, psi0_guessp, 0);
 			logBlock(sys);
 
 			// Save new block
