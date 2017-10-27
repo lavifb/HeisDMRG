@@ -101,8 +101,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	#if USE_PRIMME
 		primmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1, numGuesses);
 	#else
-		__assume_aligned(Hs_r, MEM_DATA_ALIGN);
-		__assume_aligned(psi0_r, MEM_DATA_ALIGN);
 		int info = 0;
 		int num_es_found;
 		int *isuppz = mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
@@ -129,14 +127,14 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	// Transformation Matrix
 	int mm = (dimSys < m) ? dimSys : m; // use min(dimSys, m) 
-	MAT_TYPE *trans_full = (MAT_TYPE *)mkl_calloc(dimSys*dimSys, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	MAT_TYPE *trans_full = mkl_calloc(dimSys*dimSys, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
-	// Eigenvalues
+	// Eigenvalues of density matrix
 	int lamb_i = 0;
-	double *lambs = (double *)mkl_malloc(dimSys * sizeof(double), MEM_DATA_ALIGN);
+	double *lambs = mkl_malloc(dimSys * sizeof(double), MEM_DATA_ALIGN);
 
 	// state mzs to eventually truncate and put into sys_enl->mzs
-	int *sys_mzs_full = (int *)mkl_malloc(dimSys * sizeof(int), MEM_DATA_ALIGN);
+	int *sys_mzs_full = mkl_malloc(dimSys * sizeof(int), MEM_DATA_ALIGN);
 
 	// Loop over sectors to find what basis inds to keep
 	for (sector_t *sec=sup_sectors; sec != NULL; sec=sec->hh.next) {
@@ -144,8 +142,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		// printf("mz = %d\n", mz);
 		int env_mz = target_mz - mz;
 		int n_sec = sec->num_ind;
-
-		MAT_TYPE *psi0_sec = restrictVec(psi0_r, n_sec, sec->inds);
 
 		sector_t *sys_enl_mz, *env_enl_mz;
 		HASH_FIND_INT(sys_enl_sectors, &mz    , sys_enl_mz);
@@ -159,34 +155,51 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		int dimEnv_sec = env_enl_mz->num_ind;
 		assert(dimSys_sec * dimEnv_sec == n_sec);
 
-		// psi0_sec needs to be arranged as a dimSys * dimEnv to trace out env
-		// Put sys_basis on rows and env_basis on the cols by taking transpose
-		// To not take transpose twice, just take conj and take conjTrans on left side of dgemm bellow
-		#if COMPLEX
-		const MKL_Complex16 one = {.real=1.0, .imag=0.0};
-		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
-		mkl_zimatcopy('C', 'R', dimEnv_sec, dimSys_sec, one, psi0_sec, dimEnv_sec, dimEnv_sec);
-		#endif
+		// target states
+		int num_targets = 1;
+		MAT_TYPE **targets = mkl_malloc(num_targets * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
+
+		// define target states
+		targets[0] = restrictVec(psi0_r, n_sec, sec->inds); // ground state
+		// targets[1] = restrictVec(psi_r, n_sec, sec->inds); // tracked state
 
 		// Density matrix rho_sec
-		MAT_TYPE *rho_sec = (MAT_TYPE *)mkl_malloc(dimSys_sec*dimSys_sec * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		__assume_aligned(rho_sec, MEM_DATA_ALIGN);
-		// Trace out Environment to make rho (Note transpose structure as described above)
+		MAT_TYPE *rho_sec = mkl_calloc(dimSys_sec*dimSys_sec, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+
+		// target state needs to be arranged as a dimSys * dimEnv to trace out env
+		// Put sys_basis on rows and env_basis on the cols by taking transpose
+		// To not take transpose twice, just take conj and take conjTrans on left side of dgemm bellow
+
+		// set weights for target states to be equal
+		const double alpha = 1.0/num_targets;
 		#if COMPLEX
-		cblas_zgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys_sec, dimSys_sec, dimEnv_sec, 
-					&one, psi0_sec, dimEnv_sec, psi0_sec, dimEnv_sec, &zero, rho_sec, dimSys_sec);
+		const MKL_Complex16 one = {.real=1.0, .imag=0.0};
+		const MKL_Complex16 zalpha = {.real=alpha, .imag=0.0};
 		#else
-		cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys_sec, dimSys_sec, dimEnv_sec, 
-					1.0, psi0_sec, dimEnv_sec, psi0_sec, dimEnv_sec, 0.0, rho_sec, dimSys_sec);
 		#endif
 
-		mkl_free(psi0_sec);
+		for (int i=0; i<num_targets; i++) {
+
+			#if COMPLEX
+			mkl_zimatcopy('C', 'R', dimEnv_sec, dimSys_sec, one, targets[i], dimEnv_sec, dimEnv_sec);
+			// Trace out Environment to make rho (Note transpose structure as described above)
+			cblas_zgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys_sec, dimSys_sec, dimEnv_sec, 
+						&zalpha, targets[i], dimEnv_sec, targets[i], dimEnv_sec, &one, rho_sec, dimSys_sec);
+			#else
+			// Trace out Environment to make rho (No conjugation needed here)
+			cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys_sec, dimSys_sec, dimEnv_sec, 
+						alpha, targets[i], dimEnv_sec, targets[i], dimEnv_sec, 1.0, rho_sec, dimSys_sec);
+			#endif
+
+			mkl_free(targets[i]);
+		}
+
+		mkl_free(targets);
 
 		// diagonalize rho_sec and add to list of eigenvalues
 		// LAPACK faster since we need many eigenvalues
 		int mm_sec = (dimSys_sec < mm) ? dimSys_sec : mm;
 		MAT_TYPE *trans_sec = (MAT_TYPE *)mkl_malloc(dimSys_sec*mm_sec * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		__assume_aligned(trans_sec, MEM_DATA_ALIGN);
 		int *isuppz_sec = (int *)mkl_malloc(2*dimSys_sec * sizeof(int), MEM_DATA_ALIGN);
 		int num_es_found;
 		assert(lamb_i + mm_sec - 1 < dimSys);
@@ -227,7 +240,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	assert(newDimSys <= dimSys);
 
 	MAT_TYPE *trans = (MAT_TYPE *)mkl_malloc(dimSys*mm * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	__assume_aligned(trans, MEM_DATA_ALIGN);
 
 	assert(mm <= newDimSys);
 	int *sorted_inds = dsort2(newDimSys, lambs);
@@ -397,8 +409,6 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	#if USE_PRIMME
 		primmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1, numGuesses);
 	#else
-		__assume_aligned(Hs_r, MEM_DATA_ALIGN);
-		__assume_aligned(psi0_r, MEM_DATA_ALIGN);
 		int info = 0;
 		int num_es_found;
 		int *isuppz = mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
