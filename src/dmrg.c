@@ -44,40 +44,14 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	int dimEnv = env_enl->d_block;
 	int dimSup = dimSys * dimEnv;
 
-	// Create sectors to treat separately
-	sector_t *sup_sectors = NULL;
-
 	// indexes used for restricting Hs
-	int num_restr_ind = 0;
-	int *restr_basis_inds = (int *)mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
+	int *restr_basis_inds = mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
+	int num_restr_ind;
 
-	// loop over sys_enl_sectors and find only desired indexes
-	for (sector_t *sys_enl_sec=sys_enl_sectors; sys_enl_sec != NULL; sys_enl_sec=sys_enl_sec->hh.next) {
+	// Get restricted basis
+	// sup_sectors stores sectors for superblock
+	sector_t *sup_sectors = getRestrictedBasis(sys_enl_sectors, env_enl_sectors, target_mz, dimEnv, &num_restr_ind, restr_basis_inds);
 
-		int sys_mz = sys_enl_sec->id;
-
-		sector_t *sup_sec;
-		sup_sec = createSector(sys_mz);
-		HASH_ADD_INT(sup_sectors, id, sup_sec);
-
-		int env_mz = target_mz - sys_mz;
-
-		// pick out env_enl_sector with mz = env_mz
-		sector_t *env_enl_sec;
-		HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_sec);
-		if (env_enl_sec != NULL) {
-			int i, j;
-			for (i = 0; i < sys_enl_sec->num_ind; i++) {
-				for (j = 0; j < env_enl_sec->num_ind; j++) {
-					// save restricted index and save into sup_sectors
-					sectorPush(sup_sec, num_restr_ind);
-					assert(num_restr_ind < dimSup);
-					restr_basis_inds[num_restr_ind] = sys_enl_sec->inds[i]*dimEnv + env_enl_sec->inds[j];
-					num_restr_ind++;
-				}
-			}
-		}
-	}
 
 	// Restricted Superblock Hamiltonian
 	MAT_TYPE *Hs_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
@@ -355,30 +329,13 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	int dimSup = dimSys * dimEnv;
 
 	// indexes used for restricting Hs
-	int num_restr_ind = 0;
-	int *restr_basis_inds = (int *)mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
+	int *restr_basis_inds = mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
+	int num_restr_ind;
 
-	// loop over sys_enl_sectors and find only desired indexes
-	for (sector_t *sys_enl_sec=sys_enl_sectors; sys_enl_sec != NULL; sys_enl_sec=sys_enl_sec->hh.next) {
-
-		int sys_mz = sys_enl_sec->id;
-		int env_mz = target_mz - sys_mz;
-
-		// pick out env_enl_sector with mz = env_mz
-		sector_t *env_enl_sec;
-		HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_sec);
-		if (env_enl_sec != NULL) {
-			int i, j;
-			for (i = 0; i < sys_enl_sec->num_ind; i++) {
-				for (j = 0; j < env_enl_sec->num_ind; j++) {
-					// save restricted index and save into sup_sectors
-					assert(num_restr_ind < dimSup);
-					restr_basis_inds[num_restr_ind] = sys_enl_sec->inds[i]*dimEnv + env_enl_sec->inds[j];
-					num_restr_ind++;
-				}
-			}
-		}
-	}
+	// Get restricted basis
+	// sup_sectors stores sectors for superblock
+	sector_t *sup_sectors = getRestrictedBasis(sys_enl_sectors, env_enl_sectors, target_mz, dimEnv, &num_restr_ind, restr_basis_inds);
+	freeSectors(sup_sectors);
 	freeSectors(sys_enl_sectors);
 
 	// RestrictedSuperblock Hamiltonian
