@@ -71,6 +71,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	// Find ground state
 	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
 
+	// TODO: move this to its own function.
 	// Use the faster PRIMME library if available. Otherwise, default to LAPACK.
 	#if USE_PRIMME
 		primmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1, numGuesses);
