@@ -551,15 +551,14 @@ void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, con
 void block_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *blockSize, primme_params *primme, int *err) {
 
 	int N = primme->n;
-	MAT_TYPE *xvec;     // pointer to i-th input vector x
-	MAT_TYPE *yvec;     // pointer to i-th output vector y
+	MAT_TYPE *xvec = x;
+	MAT_TYPE *yvec = y;
 
 	Hamil_mats *hamil_mats = primme->matrix;
+	int dimSys = hamil_mats->dimSys;
+	int dimEnv = hamil_mats->dimEnv;
 
-	MAT_TYPE *temp = mkl_malloc(N*N  * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-
-	xvec = (MAT_TYPE *)x;
-	yvec = (MAT_TYPE *)y;
+	MAT_TYPE *temp = mkl_malloc(dimSys*dimEnv * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 	#if COMPLEX
 	const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
@@ -568,12 +567,14 @@ void block_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *block
 	// cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, N, N, N, &one, temp, N, trans, N, &zero, newOp, N);
 	#else
 
-	cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, N, N, N, 1.0, hamil_mats->Hsys, N, xvec, N, 0.0, yvec, N);
-	cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, N, N, N, 1.0, xvec, N, hamil_mats->Henv, N, 1.0, yvec, N);
+	cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimEnv, dimSys, 1.0, hamil_mats->Hsys, dimSys, xvec, dimSys, 0.0, yvec, dimSys);
+	cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimEnv, dimEnv, 1.0, xvec, dimSys, hamil_mats->Henv, dimEnv, 1.0, yvec, dimSys);
 
 	for (int i=0; i<hamil_mats->num_int_terms; i++) {
-		cblas_dgemm(CblasColMajor, hamil_mats->trans[2*i], CblasNoTrans  , N, N, N, hamil_mats->int_alphas[i], hamil_mats->Hsys_ints[i], N, xvec, N, 0.0, temp, N);
-		cblas_dgemm(CblasColMajor, CblasNoTrans, hamil_mats->trans[2*i+1], N, N, N, 1.0                      , temp, N, hamil_mats->Henv_ints[i], N, 1.0, yvec, N);
+		cblas_dgemm(CblasColMajor, hamil_mats->trans[2*i], CblasNoTrans  , dimSys, dimEnv, dimSys, 
+					hamil_mats->int_alphas[i], hamil_mats->Hsys_ints[i], dimSys, xvec, dimSys, 0.0, temp, dimSys);
+		cblas_dgemm(CblasColMajor, CblasNoTrans, hamil_mats->trans[2*i+1], dimSys, dimEnv, dimEnv, 
+					1.0, temp, dimSys, hamil_mats->Henv_ints[i], dimEnv, 1.0, yvec, dimSys);
 	}
 	
 	#endif

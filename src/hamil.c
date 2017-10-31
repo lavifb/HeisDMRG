@@ -60,6 +60,8 @@ Hamil_mats *HeisenH_int_mats(double *H_params, const DMRGBlock *block1, const DM
 
 	Hamil_mats *hamil_mats = mkl_malloc(sizeof(Hamil_mats), MEM_DATA_ALIGN);
 
+	hamil_mats->dimSys = block1->d_block;
+	hamil_mats->dimEnv = block2->d_block;
 	hamil_mats->Hsys = block1->ops[0];
 	hamil_mats->Henv = block2->ops[0];
 	hamil_mats->num_int_terms = 3;

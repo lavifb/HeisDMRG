@@ -31,6 +31,8 @@ void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, con
 
 typedef struct Hamil_mats {
 
+	int dimSys;             // dimension of Sys block
+	int dimEnv;             // dimension of Env block
 	MAT_TYPE *Hsys;         // Sys block hamiltonian
 	MAT_TYPE *Henv;         // Env block hamiltonian
 	int num_int_terms;      // pointer to number of interaction t
