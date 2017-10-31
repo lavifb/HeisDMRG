@@ -52,33 +52,42 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	// sup_sectors stores sectors for superblock
 	sector_t *sup_sectors = getRestrictedBasis(sys_enl_sectors, env_enl_sectors, target_mz, dimEnv, &num_restr_ind, restr_basis_inds);
 
-	// Setup ground state guess
-	MAT_TYPE *psi0_r;
 	int numGuesses = 0;
-	if (psi0_guessp != NULL && *psi0_guessp != NULL) {
-		psi0_r  = restrictVec(*psi0_guessp, num_restr_ind, restr_basis_inds);
-		numGuesses = 1;
-	} else {
-		psi0_r = mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	}
 
 	// Find ground state
 	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
+	MAT_TYPE *psi0_r;
 
 	// TODO: move this to its own function.
 	// Use the faster PRIMME library if available. Otherwise, default to LAPACK.
 	#if USE_PRIMME
-		// primmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1, numGuesses);
+		// Setup ground state guess
+		MAT_TYPE *psi0 = mkl_malloc(dimSup * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		if (psi0_guessp != NULL && *psi0_guessp != NULL) {
+			memcpy(psi0, *psi0_guessp, dimSup * sizeof(MAT_TYPE));
+			numGuesses = 1;
+		}
 
 		Hamil_mats *hamils_mats = HeisenH_int_mats(model->H_params, sys_enl, env_enl);
-		primmeBlockWrapper(hamils_mats, num_restr_ind, energies, psi0_r, 1, numGuesses);
+		primmeBlockWrapper(hamils_mats, dimSup, energies, psi0, 1, numGuesses);
 		freeHamil_mats(hamils_mats);
+
+		psi0_r = restrictVec(psi0, num_restr_ind, restr_basis_inds);
+		mkl_free(psi0);
 
 	#else
 		// Restricted Superblock Hamiltonian
 		MAT_TYPE *Hs_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
 		kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
 		kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
+
+		// Setup ground state guess
+		if (psi0_guessp != NULL && *psi0_guessp != NULL) {
+			psi0_r = restrictVec(*psi0_guessp, num_restr_ind, restr_basis_inds);
+			numGuesses = 1;
+		} else {
+			psi0_r = mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		}
 
 		int info = 0;
 		int num_es_found;
