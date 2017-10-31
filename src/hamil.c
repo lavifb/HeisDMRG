@@ -55,3 +55,44 @@ MAT_TYPE *HeisenH_int_r(const double* H_params, const DMRGBlock *block1, const D
 
 	return H_int;
 }
+
+Hamil_mats *HeisenH_int_mats(double *H_params, const DMRGBlock *block1, const DMRGBlock *block2) {
+
+	Hamil_mats *hamil_mats = mkl_malloc(sizeof(Hamil_mats), MEM_DATA_ALIGN);
+
+	hamil_mats->Hsys = block1->ops[0];
+	hamil_mats->Henv = block2->ops[0];
+	hamil_mats->num_int_terms = 3;
+	hamil_mats->int_alphas = H_params;
+	
+	// Set the right trans array
+	hamil_mats->trans = mkl_malloc(6 * sizeof(CBLAS_TRANSPOSE), MEM_DATA_ALIGN);
+	hamil_mats->trans[0] = CblasNoTrans;
+	hamil_mats->trans[1] = CblasTrans;
+	hamil_mats->trans[2] = CblasTrans;
+	hamil_mats->trans[3] = CblasNoTrans;
+	hamil_mats->trans[4] = CblasNoTrans;
+	hamil_mats->trans[5] = CblasNoTrans;
+
+	// Sys interaction mats
+	hamil_mats->Hsys_ints = mkl_malloc(3 * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
+	hamil_mats->Hsys_ints[0] = block1->ops[2];
+	hamil_mats->Hsys_ints[1] = block1->ops[2];
+	hamil_mats->Hsys_ints[2] = block1->ops[1];
+
+	// Env interaction mats
+	hamil_mats->Henv_ints = mkl_malloc(3 * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
+	hamil_mats->Henv_ints[0] = block1->ops[2];
+	hamil_mats->Henv_ints[1] = block1->ops[2];
+	hamil_mats->Henv_ints[2] = block1->ops[1];
+
+	return hamil_mats;
+}
+
+void freeHamil_mats(Hamil_mats *hamil_mats) {
+
+	if (hamil_mats->trans) { mkl_free(hamil_mats->trans); }
+	if (hamil_mats->Hsys_ints) { mkl_free(hamil_mats->Hsys_ints); }
+	if (hamil_mats->Henv_ints) { mkl_free(hamil_mats->Henv_ints); }
+	mkl_free(hamil_mats);
+}

@@ -10,7 +10,7 @@ TEST:= test
 DBUG:= debug
 
 # Set directory containing PRIMME library
-# Comment out this line if do not have the PRIMME library
+# Comment out this line if do not have the PRIMME library (The code will be WAY slower)
 PRIMMEDIR = ../../Repos/primme
 
 

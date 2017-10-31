@@ -2,6 +2,7 @@
 #define LINALG_H
 
 #include <mkl_types.h>
+#include <mkl.h>
 
 #if COMPLEX
 #define MAT_TYPE MKL_Complex16
@@ -27,6 +28,20 @@ void kronI_r(const char side, const int m, const int n, const MAT_TYPE *restrict
 
 #if USE_PRIMME
 void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, const int numEvals, const int initSize);
+
+typedef struct Hamil_mats {
+
+	MAT_TYPE *Hsys;         // Sys block hamiltonian
+	MAT_TYPE *Henv;         // Env block hamiltonian
+	int num_int_terms;      // pointer to number of interaction t
+	double *int_alphas;     // cooefficients for interaction term
+	CBLAS_TRANSPOSE *trans; // cooefficients for interaction term (size 2*num_int_terms) arranged LT1, RT1, LT2, RT2, ...
+	MAT_TYPE **Hsys_ints;   // pointer to sys interaction terms
+	MAT_TYPE **Henv_ints;   // pointer to sys interaction terms
+	
+} Hamil_mats;
+
+void primmeBlockWrapper(Hamil_mats *hamil_mats, int N, double *evals, MAT_TYPE *evecs, const int numEvals, const int initSize);
 
 MAT_TYPE *reorderKron(MAT_TYPE *v, const int dimSys, const int dimEnv, const int dimSite);
 #endif
