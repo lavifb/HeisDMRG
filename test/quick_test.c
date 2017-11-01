@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
 	// Expected test result
 	#define ETE  -.441271
 
-	#define TOLERANCE 1e-5
+	#define TOLERANCE 1e-4
 	#define SZ_TOLERANCE 1e-3
 
 	if (fabs(meas->energy - ETE) < TOLERANCE) {

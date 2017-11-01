@@ -52,54 +52,42 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	// sup_sectors stores sectors for superblock
 	sector_t *sup_sectors = getRestrictedBasis(sys_enl_sectors, env_enl_sectors, target_mz, dimEnv, &num_restr_ind, restr_basis_inds);
 
-	//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// RestrictedSuperblock Hamiltonian
-	MAT_TYPE *Hs_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
-	kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
-	kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
-
-	// Setup ground state guess
-	MAT_TYPE *psi0_r;
-	int numGuesses = 0;
-	if (psi0_guessp != NULL && *psi0_guessp != NULL) {
-		psi0_r  = restrictVec(*psi0_guessp, num_restr_ind, restr_basis_inds);
-		numGuesses = 1;
-	} else {
-		psi0_r = (MAT_TYPE *)mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	}
-	//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 	// Find ground state
 	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
 
 	// TODO: move this to its own function.
 	// Use the faster PRIMME library if available. Otherwise, default to LAPACK.
 	#if USE_PRIMME
-		primmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1, numGuesses);
 		// Setup ground state guess
 		MAT_TYPE *psi0 = mkl_malloc(dimSup * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		int numGuesses = 0;
 		if (psi0_guessp != NULL && *psi0_guessp != NULL) {
 			memcpy(psi0, *psi0_guessp, dimSup * sizeof(MAT_TYPE));
+			numGuesses = 1;
 		}
 
-		double *energies2 = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
 		Hamil_mats *hamils_mats = HeisenH_int_mats(model->H_params, sys_enl, env_enl);
-		// primmeBlockWrapper(hamils_mats, dimSup, energies2, psi0, 1, numGuesses);
+		primmeBlockWrapper(hamils_mats, dimSup, energies, psi0, 1, numGuesses);
 		freeHamil_mats(hamils_mats);
 
-		MAT_TYPE *psi0_r2 = restrictVec(psi0, num_restr_ind, restr_basis_inds);
-		double diff = 0;
-		for (int i=0; i<num_restr_ind; i++) {
-			diff += fabs(psi0_r[i] - psi0_r2[i]);
-		}
-		printf("GS diff: %f\n", diff/(sys_enl->length + env_enl->length));
-		printf("Delta E: %f\n", energies[0] - energies2[0]);
-
+		MAT_TYPE *psi0_r = restrictVec(psi0, num_restr_ind, restr_basis_inds);
 		mkl_free(psi0);
-		mkl_free(energies2);
-		mkl_free(psi0_r2);
-
 	#else
+		// RestrictedSuperblock Hamiltonian
+		MAT_TYPE *Hs_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
+		kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
+		kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
+
+		// Setup ground state guess
+		MAT_TYPE *psi0_r;
+		int numGuesses = 0;
+		if (psi0_guessp != NULL && *psi0_guessp != NULL) {
+			psi0_r  = restrictVec(*psi0_guessp, num_restr_ind, restr_basis_inds);
+			numGuesses = 1;
+		} else {
+			psi0_r = (MAT_TYPE *)mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		}
+
 		int info = 0;
 		int num_es_found;
 		int *isuppz = mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
@@ -117,8 +105,8 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 			exit(1);
 		}
 		mkl_free(isuppz);
+		mkl_free(Hs_r);
 	#endif
-	mkl_free(Hs_r);
 
 	sys_enl->energy = energies[0]; // record ground state energy
 	mkl_free(energies);
@@ -665,7 +653,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 
 	// Run infinite algorithm to build up system
 	while (2*sys->length < L) {
-		printGraphic(sys, sys);
+		// printGraphic(sys, sys);
 		sys = single_step(sys, sys, m_inf, 0, NULL);
 		saved_blocks[sys->length-1] = sys;
 	}
