@@ -567,14 +567,14 @@ void block_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *block
 	// cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, N, N, N, &one, temp, N, trans, N, &zero, newOp, N);
 	#else
 
-	cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimEnv, dimSys, 1.0, hamil_mats->Hsys, dimSys, xvec, dimSys, 0.0, yvec, dimSys);
-	cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimEnv, dimEnv, 1.0, xvec, dimSys, hamil_mats->Henv, dimEnv, 1.0, yvec, dimSys);
+	cblas_dgemm(CblasColMajor, CblasTrans, CblasNoTrans, dimSys, dimEnv, dimSys, 1.0, hamil_mats->Hsys, dimSys, xvec, dimSys, 0.0, yvec, dimSys);
+	cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimSys, dimEnv, dimEnv, 1.0, xvec, dimSys, hamil_mats->Henv, dimEnv, 1.0, yvec, dimSys);
 
 	for (int i=0; i<hamil_mats->num_int_terms; i++) {
 		cblas_dgemm(CblasColMajor, hamil_mats->trans[2*i], CblasNoTrans  , dimSys, dimEnv, dimSys, 
-					hamil_mats->int_alphas[i], hamil_mats->Hsys_ints[i], dimSys, xvec, dimSys, 0.0, temp, dimSys);
+					1.0, hamil_mats->Hsys_ints[i], dimSys, xvec, dimSys, 0.0, temp, dimSys);
 		cblas_dgemm(CblasColMajor, CblasNoTrans, hamil_mats->trans[2*i+1], dimSys, dimEnv, dimEnv, 
-					1.0, temp, dimSys, hamil_mats->Henv_ints[i], dimEnv, 1.0, yvec, dimSys);
+					hamil_mats->int_alphas[i], temp, dimSys, hamil_mats->Henv_ints[i], dimEnv, 1.0, yvec, dimSys);
 	}
 	
 	#endif
