@@ -72,7 +72,9 @@ Hamil_mats *HeisenH_int_mats(double *H_params, const DMRGBlock *block1, const DM
 	hamil_mats->int_alphas[1] = H_params[0];
 	hamil_mats->int_alphas[2] = H_params[1];
 	
-	// Set the right trans array (left side gets an extra trans for this calculation)
+	// Set the right trans array
+	// Note: For the right matvec calculation you need an extra transpose on one side of the calculation.
+	//       Here we chose the left side (even indexes) to have an extra transpose.
 	hamil_mats->trans = mkl_malloc(6 * sizeof(CBLAS_TRANSPOSE), MEM_DATA_ALIGN);
 	hamil_mats->trans[0] = CblasTrans;
 	hamil_mats->trans[1] = CblasTrans;
@@ -89,9 +91,9 @@ Hamil_mats *HeisenH_int_mats(double *H_params, const DMRGBlock *block1, const DM
 
 	// Env interaction mats
 	hamil_mats->Henv_ints = mkl_malloc(3 * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
-	hamil_mats->Henv_ints[0] = block1->ops[2];
-	hamil_mats->Henv_ints[1] = block1->ops[2];
-	hamil_mats->Henv_ints[2] = block1->ops[1];
+	hamil_mats->Henv_ints[0] = block2->ops[2];
+	hamil_mats->Henv_ints[1] = block2->ops[2];
+	hamil_mats->Henv_ints[2] = block2->ops[1];
 
 	return hamil_mats;
 }

@@ -560,6 +560,9 @@ void block_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *block
 
 	MAT_TYPE *temp = mkl_malloc(dimSys*dimEnv * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
+	// Note that the matrix calulation is done in transpose due to the ColMajor format of Psi.
+	// As a result, env block mats are multiplied on the left and sys block mats on the right.
+
 	#if COMPLEX
 	const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
 	const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
@@ -567,14 +570,14 @@ void block_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *block
 	// cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, N, N, N, &one, temp, N, trans, N, &zero, newOp, N);
 	#else
 
-	cblas_dgemm(CblasColMajor, CblasTrans, CblasNoTrans, dimSys, dimEnv, dimSys, 1.0, hamil_mats->Hsys, dimSys, xvec, dimSys, 0.0, yvec, dimSys);
-	cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimSys, dimEnv, dimEnv, 1.0, xvec, dimSys, hamil_mats->Henv, dimEnv, 1.0, yvec, dimSys);
+	cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimEnv, dimSys, dimEnv, 1.0, hamil_mats->Henv, dimEnv, xvec, dimEnv, 0.0, yvec, dimEnv);
+	cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans  , dimEnv, dimSys, dimSys, 1.0, xvec, dimEnv, hamil_mats->Hsys, dimSys, 1.0, yvec, dimEnv);
 
 	for (int i=0; i<hamil_mats->num_int_terms; i++) {
-		cblas_dgemm(CblasColMajor, hamil_mats->trans[2*i], CblasNoTrans  , dimSys, dimEnv, dimSys, 
-					1.0, hamil_mats->Hsys_ints[i], dimSys, xvec, dimSys, 0.0, temp, dimSys);
-		cblas_dgemm(CblasColMajor, CblasNoTrans, hamil_mats->trans[2*i+1], dimSys, dimEnv, dimEnv, 
-					hamil_mats->int_alphas[i], temp, dimSys, hamil_mats->Henv_ints[i], dimEnv, 1.0, yvec, dimSys);
+		cblas_dgemm(CblasColMajor, hamil_mats->trans[2*i+1], CblasNoTrans, dimEnv, dimSys, dimEnv,
+					1.0, hamil_mats->Henv_ints[i], dimEnv, xvec, dimEnv, 0.0, temp, dimEnv);
+		cblas_dgemm(CblasColMajor, CblasNoTrans, hamil_mats->trans[2*i]  , dimEnv, dimSys, dimSys, 
+					hamil_mats->int_alphas[i], temp, dimEnv, hamil_mats->Hsys_ints[i], dimSys, 1.0, yvec, dimEnv);
 	}
 	
 	#endif
