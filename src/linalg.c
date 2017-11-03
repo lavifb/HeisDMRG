@@ -485,8 +485,6 @@ void primme_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *bloc
 	MAT_TYPE *yvec;     // pointer to i-th output vector y
 	MAT_TYPE *A = (MAT_TYPE *) primme->matrix;
 
-	__assume_aligned(primme->matrix, MEM_DATA_ALIGN);
-
 	for (int i=0; i<*blockSize; i++) {
 		xvec = (MAT_TYPE *)x + *ldx*i;
 		yvec = (MAT_TYPE *)y + *ldy*i;
@@ -516,7 +514,6 @@ void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, con
 	primme_params primme;
 
 	int ret;
-	int i;
 
 	/* Set default values in PRIMME configuration struct */
 	primme_initialize(&primme);
@@ -530,6 +527,104 @@ void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, con
 	// primme.eps = 1e-10;             /* ||r|| <= eps * ||matrix|| */
 	primme.target = primme_smallest;
 	primme.initSize = initSize;
+
+	primme_set_method(PRIMME_DYNAMIC, &primme);
+
+	double *rnorms = mkl_malloc(primme.numEvals*sizeof(double), MEM_DATA_ALIGN);
+
+	#if COMPLEX
+	ret = zprimme(evals, (complex double *) evecs, rnorms, &primme);
+	#else
+	ret = dprimme(evals, evecs, rnorms, &primme);
+	#endif
+
+	if (ret != 0) {
+		fprintf(primme.outputFile, 
+			"Error: primme returned with nonzero exit status: %d \n", ret);
+		exit(1);
+	}
+
+	mkl_free(rnorms);
+	primme_free(&primme);
+}
+
+void block_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *blockSize, primme_params *primme, int *err) {
+
+	int N = primme->n;
+	MAT_TYPE *xvec = x;
+	MAT_TYPE *yvec = y;
+
+	Hamil_mats *hamil_mats = primme->matrix;
+	int dimSys = hamil_mats->dimSys;
+	int dimEnv = hamil_mats->dimEnv;
+
+	MAT_TYPE *temp = mkl_malloc(dimSys*dimEnv * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+
+	// Note that the matrix calulation is done in transpose due to the ColMajor format of Psi.
+	// As a result, env block mats are multiplied on the left and sys block mats on the right.
+
+	#if COMPLEX
+		const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
+		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+
+		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimEnv, dimSys, dimEnv, &one, hamil_mats->Henv, dimEnv, xvec, dimEnv, &zero, yvec, dimEnv);
+		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans  , dimEnv, dimSys, dimSys, &one, xvec, dimEnv, hamil_mats->Hsys, dimSys, &one , yvec, dimEnv);
+
+		for (int i=0; i<hamil_mats->num_int_terms; i++) {
+			const MKL_Complex16 alpha = {.real=hamil_mats->int_alphas[i], .imag=0.0};
+			cblas_zgemm(CblasColMajor, hamil_mats->trans[2*i+1], CblasNoTrans, dimEnv, dimSys, dimEnv,
+						&one  , hamil_mats->Henv_ints[i], dimEnv, xvec, dimEnv, &zero, temp, dimEnv);
+			cblas_zgemm(CblasColMajor, CblasNoTrans, hamil_mats->trans[2*i]  , dimEnv, dimSys, dimSys, 
+						&alpha, temp, dimEnv, hamil_mats->Hsys_ints[i], dimSys, &one , yvec, dimEnv);
+		}
+	#else
+		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimEnv, dimSys, dimEnv, 1.0, hamil_mats->Henv, dimEnv, xvec, dimEnv, 0.0, yvec, dimEnv);
+		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans  , dimEnv, dimSys, dimSys, 1.0, xvec, dimEnv, hamil_mats->Hsys, dimSys, 1.0, yvec, dimEnv);
+
+		for (int i=0; i<hamil_mats->num_int_terms; i++) {
+			cblas_dgemm(CblasColMajor, hamil_mats->trans[2*i+1], CblasNoTrans, dimEnv, dimSys, dimEnv,
+						1.0, hamil_mats->Henv_ints[i], dimEnv, xvec, dimEnv, 0.0, temp, dimEnv);
+			cblas_dgemm(CblasColMajor, CblasNoTrans, hamil_mats->trans[2*i]  , dimEnv, dimSys, dimSys, 
+						hamil_mats->int_alphas[i], temp, dimEnv, hamil_mats->Hsys_ints[i], dimSys, 1.0, yvec, dimEnv);
+		}
+	#endif
+	mkl_free(temp);
+
+	*err = 0;
+}
+
+/*  Finds eigenvalues and eigenvectors of .
+
+	hamil_mats : Struct containing Hamiltonian matrices
+
+	Matvec is computed using
+	H|Psi> = Hsys*Psi + Psi*Henv + Sum_i[ int_alphas[i] * Hsys_ints*Psi*Henv_ints ]
+	
+	N        : Size of matrix A
+	evals    : pointer that will contain eigenvalues. Size should be numEvals
+	evecs    : pointer that will contain eigenvectors. Size should be numEvals*N
+	numEvals : number of desired eigenvectors
+	initSize : number of guesses for desired eigenvectors
+*/
+void primmeBlockWrapper(Hamil_mats *hamil_mats, int N, double *evals, MAT_TYPE *evecs, const int numEvals, const int initSize) {
+
+	primme_params primme;
+
+	int ret;
+
+	/* Set default values in PRIMME configuration struct */
+	primme_initialize(&primme);
+
+	/* Set problem matrix */
+	primme.matrixMatvec = block_matvec;
+	primme.matrix = hamil_mats;
+
+	primme.n = N;
+	primme.numEvals = numEvals;     /* Number of wanted eigenpairs */
+	// primme.eps = 1e-10;             /* ||r|| <= eps * ||matrix|| */
+	primme.target = primme_smallest;
+	primme.initSize = initSize;
+	primme.maxBlockSize = 1;
 
 	primme_set_method(PRIMME_DYNAMIC, &primme);
 

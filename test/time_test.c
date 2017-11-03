@@ -78,15 +78,12 @@ int main(int argc, char *argv[]) {
 	printf("Running time test on version "VERSION".\n\n");
 
 	struct timespec t_start, t_end;
-	// clock_t t_start = clock();
 	clock_gettime(CLOCK_MONOTONIC, &t_start);
 
 	meas_data_t *meas = fin_dmrgR(L, minf, n_ms, ms, model);
 	// meas_data_t *meas = fin_dmrg(L, minf, n_ms, ms, model);
 
-	// clock_t t_end = clock();
 	clock_gettime(CLOCK_MONOTONIC, &t_end);
-	// double runtime = (double)(t_end - t_start) / CLOCKS_PER_SEC;
 	double runtime = (t_end.tv_sec - t_start.tv_sec);
 	runtime += (t_end.tv_nsec - t_start.tv_nsec) / 1000000000.0;
 
