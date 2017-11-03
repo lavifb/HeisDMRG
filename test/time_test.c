@@ -14,6 +14,8 @@
 
 int main(int argc, char *argv[]) {
 
+	mkl_peak_mem_usage(MKL_PEAK_MEM_ENABLE);
+
 	int mm   = 20;
 	int n_ms = 8;
 
@@ -94,12 +96,15 @@ int main(int argc, char *argv[]) {
 
 	MKL_Free_Buffers();
 	int nbuffers;
-	MKL_INT64 nbytes_alloc;
+	MKL_INT64 nbytes_alloc, nbytes_alloc_peak;
 	nbytes_alloc = MKL_Mem_Stat(&nbuffers);
 	if (nbytes_alloc > 0) {
 		errprintf("MKL reports a memory leak of %lld bytes in %d buffer(s).\n", nbytes_alloc, nbuffers);
 		success = -1;
 	}
+
+	nbytes_alloc_peak = mkl_peak_mem_usage(MKL_PEAK_MEM);
+	printf("Peak memory used is %lld bytes.\n", nbytes_alloc_peak);
 
 	return 0;
 }
