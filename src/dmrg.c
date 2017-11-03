@@ -575,21 +575,9 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 		if (sys->length > 1) {
 			int save_index = sys->length-2;
 			sprintf(disk_filenames[save_index], "temp/%05d.temp\0", save_index);
-
-			// mkl_free_buffers();
-			int nbuffers;
-			MKL_INT64 nbytes_alloc = MKL_Mem_Stat(&nbuffers);
-			printf("MKL reports allocated memory as %lld bytes in %d buffer(s).\n", nbytes_alloc, nbuffers);
-
 			saveBlock(disk_filenames[save_index], saved_blocks[save_index]);
-
-			MKL_INT64 nbytes_alloc2 = MKL_Mem_Stat(&nbuffers);
-			printf("MKL reports allocated memory as %lld bytes in %d buffer(s).\n", nbytes_alloc2, nbuffers);
-			printf("%lld bytes saved.\n\n", nbytes_alloc - nbytes_alloc2);
 		}
 	}
-
-	exit(0);
 
 	// Setup psi0_guess
 	MAT_TYPE *psi0_guess = NULL;
