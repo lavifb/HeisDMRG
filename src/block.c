@@ -197,7 +197,7 @@ MAT_TYPE **enlargeOps(const DMRGBlock *block) {
 	int d_enl  	= d_model * d_block;
 
 	// H_enl
-	enl_ops[0] = model->H_int(model->H_params, block, model->single_block);
+	enl_ops[0] = model->H_int(model, block, model->single_block);
 	kronI('R', d_block, d_model, block->ops[0], enl_ops[0]);
 	kronI('L', d_block, d_model, model->H1, enl_ops[0]);
 

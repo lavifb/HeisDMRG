@@ -41,7 +41,7 @@ MAT_TYPE *getLowestEStates(const DMRGBlock *sys_enl, const DMRGBlock *env_enl, c
 		mkl_free(psi0);
 	#else
 		// RestrictedSuperblock Hamiltonian
-		MAT_TYPE *Hs_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
+		MAT_TYPE *Hs_r = model->H_int_r(model, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
 		kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
 		kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
 
@@ -82,7 +82,7 @@ MAT_TYPE *getLowestEStates(const DMRGBlock *sys_enl, const DMRGBlock *env_enl, c
 /*  Interaction part of Heisenberg Hamiltonian
 	H_int = J/2 (kron(Sp1, Sm2) + kron(Sm1, Sp2)) + Jz kron(Sz1, Sz2)
 */
-MAT_TYPE *HeisenH_int(const double* H_params, const DMRGBlock *block1, const DMRGBlock *block2) {
+MAT_TYPE *HeisenH_int(const model_t* model, const DMRGBlock *block1, const DMRGBlock *block2) {
 
 	int dim1 = block1->d_block;
 	int dim2 = block2->d_block;
@@ -96,6 +96,7 @@ MAT_TYPE *HeisenH_int(const double* H_params, const DMRGBlock *block1, const DMR
 
 	MAT_TYPE *H_int = mkl_calloc(N*N, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
+	double *H_params = model->H_params;
 	double J2 = H_params[0]; // J/2
 	double Jz = H_params[1];
 
@@ -109,7 +110,7 @@ MAT_TYPE *HeisenH_int(const double* H_params, const DMRGBlock *block1, const DMR
 /*  Interaction part of Heisenberg Hamiltonian with basis restriction
 	H_int = J/2 (kron(Sp1, Sm2) + kron(Sm1, Sp2)) + Jz kron(Sz1, Sz2)
 */
-MAT_TYPE *HeisenH_int_r(const double* H_params, const DMRGBlock *block1, const DMRGBlock *block2, 
+MAT_TYPE *HeisenH_int_r(const model_t* model, const DMRGBlock *block1, const DMRGBlock *block2, 
 	const int num_ind, const int *restrict inds) {
 
 	int dim1 = block1->d_block;
@@ -122,6 +123,7 @@ MAT_TYPE *HeisenH_int_r(const double* H_params, const DMRGBlock *block1, const D
 
 	MAT_TYPE *H_int = mkl_calloc(num_ind*num_ind, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
+	double *H_params = model->H_params;
 	double J2 = H_params[0]; // J/2
 	double Jz = H_params[1];
 
@@ -143,10 +145,11 @@ hamil_mats_t *HeisenH_int_mats(const model_t *model, const DMRGBlock *block1, co
 	hamil_mats->num_int_terms = 3;
 
 	// Coefs from H_params
+	double *H_params = model->H_params;
 	hamil_mats->int_alphas = mkl_malloc(3 * sizeof(int), MEM_DATA_ALIGN);
-	hamil_mats->int_alphas[0] = model->H_params[0];
-	hamil_mats->int_alphas[1] = model->H_params[0];
-	hamil_mats->int_alphas[2] = model->H_params[1];
+	hamil_mats->int_alphas[0] = H_params[0];
+	hamil_mats->int_alphas[1] = H_params[0];
+	hamil_mats->int_alphas[2] = H_params[1];
 	
 	// Set the right trans array
 	// Note: For the right matvec calculation you need an extra transpose on one side of the calculation.
