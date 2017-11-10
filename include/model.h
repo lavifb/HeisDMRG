@@ -18,8 +18,6 @@ typedef struct model_t {
 
 	int fullLength; // Full length of system
 	
-	double J;
-	double Jz;
 	void *H_params;
 	// Pointer to interaction Hamiltonian
 	MAT_TYPE *(*H_int)(const model_t *model, const DMRGBlock *block1, const DMRGBlock *block2);

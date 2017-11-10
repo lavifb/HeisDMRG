@@ -44,8 +44,8 @@ void compileParams(model_t *model) {
 
 	// Set Hamiltonian parameters
 	double *H_params = mkl_malloc(2 * sizeof(double), MEM_DATA_ALIGN);
-	H_params[0] = model->J/2;
-	H_params[1] = model->Jz;
+	H_params[0] = 1.0;
+	H_params[1] = 1.0;
 	model->H_params = H_params;
 
 	// TODO: don't copy init_ops into block (doesn't really matter though...)
@@ -71,8 +71,6 @@ model_t *newNullModel() {
 	model->Sz = NULL;
 	model->Sp = NULL;
 	model->Id = NULL;
-	model->J  = 0;
-	model->Jz = 0;
 	model->init_mzs = NULL;
 	model->num_ops = 0;
 	model->init_ops = NULL;

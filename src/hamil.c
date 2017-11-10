@@ -97,7 +97,7 @@ MAT_TYPE *HeisenH_int(const model_t* model, const DMRGBlock *block1, const DMRGB
 	MAT_TYPE *H_int = mkl_calloc(N*N, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 	double *H_params = model->H_params;
-	double J2 = H_params[0]; // J/2
+	double J2 = H_params[0]/2; // J/2
 	double Jz = H_params[1];
 
 	kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
@@ -147,8 +147,8 @@ hamil_mats_t *HeisenH_int_mats(const model_t *model, const DMRGBlock *block1, co
 	// Coefs from H_params
 	double *H_params = model->H_params;
 	hamil_mats->int_alphas = mkl_malloc(3 * sizeof(int), MEM_DATA_ALIGN);
-	hamil_mats->int_alphas[0] = H_params[0];
-	hamil_mats->int_alphas[1] = H_params[0];
+	hamil_mats->int_alphas[0] = H_params[0]/2;
+	hamil_mats->int_alphas[1] = H_params[0]/2;
 	hamil_mats->int_alphas[2] = H_params[1];
 	
 	// Set the right trans array

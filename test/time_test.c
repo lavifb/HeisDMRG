@@ -41,8 +41,6 @@ int main(int argc, char *argv[]) {
 	model_t *model = newNullModel();
 	model->fullLength = L;
 	model->d_model = N;
-	model->J  = 1;
-	model->Jz = 1;
 
 	#if COMPLEX
 	#include <complex.h>

@@ -209,10 +209,12 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 		// TODO: generic interaction Hamiltonian
 		else if (strcmp(paramName, "J") == 0) {
 			int J = atof(vals[0]);
-			params->model->J = J;
+			double *H_params = params->model->H_params;
+			H_params[0] = J;
 		} else if (strcmp(paramName, "Jz") == 0) {
 			int Jz = atof(vals[0]);
-			params->model->Jz = Jz;
+			double *H_params = params->model->H_params;
+			H_params[1] = Jz;
 		} 
 		// TODO: select model
 		// else if (strcmp(paramName, "Model") == 0) {
@@ -255,13 +257,15 @@ void printSimParams(FILE *stream, const sim_params_t *params) {
 		fprintf(stream, "%d, ", params->ms[i]);
 	} fprintf(stream, "%d\n", params->ms[params->num_ms-1]);
 
+	double *H_params = params->model->H_params;
+
 	fprintf(stream, 
 			"\n"
 			"J  = % .4f\n"
 			"Jz = % .4f\n"
 			"\n"
 			"Start Time : %s"
-			, params->model->J, params->model->Jz,
+			, H_params[0], H_params[1],
 			ctime(params->start_time) );
 
 	if (params->end_time != NULL) {
