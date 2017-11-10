@@ -27,7 +27,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	DMRGBlock *sys_enl, *env_enl;
 	sector_t *sys_enl_sectors, *env_enl_sectors;
-	model_t *model = sys->model;
+	const model_t *model = sys->model;
 
 	sys_enl = enlargeBlock(sys);
 	sys_enl_sectors = sectorize(sys_enl);
@@ -271,7 +271,7 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	DMRGBlock *sys_enl, *env_enl;
 	sector_t *sys_enl_sectors, *env_enl_sectors;
-	model_t *model = sys->model;
+	const model_t *model = sys->model;
 
 	sys_enl = enlargeBlock(sys);
 	sys_enl_sectors = sectorize(sys_enl);
@@ -374,7 +374,7 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 */
 void inf_dmrg(const int L, const int m, model_t *model) {
 	// TODO: measurement (copy from fin_dmrgR)
-	DMRGBlock *sys = createDMRGBlock(model, L);
+	DMRGBlock *sys = createDMRGBlock(model);
 
 	while (2*sys->length < L) {
 		int currL = sys->length * 2 + 2;
@@ -399,7 +399,7 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 	DMRGBlock **saved_blocksL = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 	DMRGBlock **saved_blocksR = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 
-	DMRGBlock *sys = createDMRGBlock(model, L);
+	DMRGBlock *sys = createDMRGBlock(model);
 
 	// Note: saved_blocksL[i] has length i+1
 	saved_blocksL[0] = sys;
@@ -557,7 +557,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 
 	DMRGBlock **saved_blocks = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 
-	DMRGBlock *sys = createDMRGBlock(model, L);
+	DMRGBlock *sys = createDMRGBlock(model);
 
 	// Note: saved_blocks[i] has length i+1
 	saved_blocks[0] = sys;

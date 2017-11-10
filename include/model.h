@@ -15,6 +15,8 @@ typedef struct model_t {
 	MAT_TYPE **init_ops; // single site block tracked operators
 
 	DMRGBlock *single_block; // block for single site
+
+	int fullLength; // Full length of system
 	
 	double J;
 	double Jz;

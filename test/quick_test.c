@@ -25,6 +25,7 @@ int main(int argc, char *argv[]) {
 	int ms[n_ms] = {10, 10, 20};
 
 	model_t *model = newNullModel();
+	model->fullLength = L;
 	model->d_model = N;
 	model->J  = 1;
 	model->Jz = 1;

@@ -90,6 +90,7 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 				return -2;
 			}
 			params->L = L;
+			params->model->fullLength = L;
 		} else if (strcmp(paramName, "ms") == 0) {
 			int *ms = mkl_malloc(num_vals * sizeof(int), MEM_DATA_ALIGN);
 

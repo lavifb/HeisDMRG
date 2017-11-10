@@ -7,12 +7,11 @@
 #include <float.h>
 
 
-DMRGBlock *createDMRGBlock(model_t *model, int fullLength) {
+DMRGBlock *createDMRGBlock(const model_t *model) {
 
-	DMRGBlock *block = (DMRGBlock *)mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
+	DMRGBlock *block = mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
 
 	block->length = 1;
-	block->fullLength = fullLength;
 	block->side = 'L';
 	block->meas = 'N';
 
@@ -44,12 +43,11 @@ DMRGBlock *createDMRGBlock(model_t *model, int fullLength) {
 	return block;
 }
 
-DMRGBlock *copyDMRGBlock(DMRGBlock *orig) {
+DMRGBlock *copyDMRGBlock(const DMRGBlock *orig) {
 
 	DMRGBlock *newBlock = mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
 
 	newBlock->length  = orig->length;
-	newBlock->fullLength = orig->fullLength;
 	newBlock->side  = orig->side;
 	newBlock->meas  = orig->meas;
 	int dim = orig->d_block;
@@ -141,7 +139,6 @@ DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 
 	DMRGBlock *enl_block = mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
 	enl_block->length  = block->length + 1;
-	enl_block->fullLength = block->fullLength;
 	int d_model = block->model->d_model;
 	int dim = block->d_block * d_model;
 	enl_block->d_block = dim;
@@ -194,7 +191,7 @@ MAT_TYPE **enlargeOps(const DMRGBlock *block) {
 
 	MAT_TYPE **enl_ops = mkl_malloc(numOps * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
 
-	model_t *model = block->model;
+	const model_t *model = block->model;
 	int d_model	= model->d_model;
 	int d_block	= block->d_block;
 	int d_enl  	= d_model * d_block;
