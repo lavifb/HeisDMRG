@@ -1,5 +1,6 @@
 #include "input_parser.h"
 #include "model.h"
+#include "hamil.h"
 #include "linalg.h"
 #include <mkl.h>
 #include <math.h>
@@ -203,13 +204,27 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 				#endif
 			}
 			params->model->Sp = Sp;
-		} else if (strcmp(paramName, "J") == 0) {
+		} 
+		// TODO: generic interaction Hamiltonian
+		else if (strcmp(paramName, "J") == 0) {
 			int J = atof(vals[0]);
 			params->model->J = J;
 		} else if (strcmp(paramName, "Jz") == 0) {
 			int Jz = atof(vals[0]);
 			params->model->Jz = Jz;
-		}
+		} 
+		// TODO: select model
+		// else if (strcmp(paramName, "Model") == 0) {
+		// 	if (strcmp(vals[0], "Heisenberg") == 0) {
+		// 		// Set Hamiltonian interaction functions
+		// 		params->model->H_int = &HeisenH_int;
+		// 		#if USE_PRIMME
+		// 		params->model->H_int_mats = &HeisenH_int_mats;
+		// 		#else
+		// 		params->model->H_int_r = &HeisenH_int_r;
+		// 		#endif
+		// 	}
+		// }
 	}
 
 	fclose(fd);

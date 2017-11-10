@@ -27,12 +27,12 @@ void compileParams(model_t *model) {
 	model->Id = identity(dim);
 
 	model->num_ops  = 3;
-	model->init_ops = (MAT_TYPE **)mkl_malloc(3 * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
+	model->init_ops = mkl_malloc(3 * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
 	model->init_ops[0] = model->H1;
 	model->init_ops[1] = model->Sz;
 	model->init_ops[2] = model->Sp;
 
-	model->init_mzs = (int *)mkl_malloc(dim * sizeof(int), MEM_DATA_ALIGN);
+	model->init_mzs = mkl_malloc(dim * sizeof(int), MEM_DATA_ALIGN);
 	for (int i=0; i<dim; i++) {
 		// init_mzs stores 2*mz to make it an integer
 		#if COMPLEX
@@ -43,7 +43,7 @@ void compileParams(model_t *model) {
 	}
 
 	// Set Hamiltonian parameters
-	model->H_params = (double *)mkl_malloc(2 * sizeof(double), MEM_DATA_ALIGN);
+	model->H_params = mkl_malloc(2 * sizeof(double), MEM_DATA_ALIGN);
 	model->H_params[0] = model->J/2;
 	model->H_params[1] = model->Jz;
 
@@ -63,7 +63,7 @@ void compileParams(model_t *model) {
 */
 model_t *newNullModel() {
 
-	model_t *model = (model_t *)mkl_calloc(sizeof(model_t), 1, MEM_DATA_ALIGN);
+	model_t *model = mkl_calloc(sizeof(model_t), 1, MEM_DATA_ALIGN);
 
 	model->d_model = 0;
 	model->H1 = NULL;
@@ -76,7 +76,6 @@ model_t *newNullModel() {
 	model->num_ops = 0;
 	model->init_ops = NULL;
 	model->H_params = NULL;
-	model->H_int = NULL;
 
 	return model;
 }
