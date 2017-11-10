@@ -19,7 +19,7 @@
 	returns  : ground state
 */
 MAT_TYPE *getLowestEStates(const DMRGBlock *sys_enl, const DMRGBlock *env_enl, const model_t* model, int num_restr_ind,
-						   const int *restr_basis_inds, int num_states, MAT_TYPE **psi0_guessp, double *energies) {
+	const int *restr_basis_inds, int num_states, MAT_TYPE **psi0_guessp, double *energies) {
 
 	// Use the faster PRIMME library if available. Otherwise, default to LAPACK.
 	#if USE_PRIMME
@@ -95,7 +95,7 @@ MAT_TYPE *HeisenH_int(const double* H_params, const DMRGBlock *block1, const DMR
 
 	int N = dim1*dim2; // size of new basis
 
-	MAT_TYPE *H_int = (MAT_TYPE *)mkl_calloc(N*N, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	MAT_TYPE *H_int = mkl_calloc(N*N, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 	double J2 = H_params[0]; // J/2
 	double Jz = H_params[1];
@@ -121,7 +121,7 @@ MAT_TYPE *HeisenH_int_r(const double* H_params, const DMRGBlock *block1, const D
 	MAT_TYPE *Sp1 = block1->ops[2];
 	MAT_TYPE *Sp2 = block2->ops[2];
 
-	MAT_TYPE *H_int = (MAT_TYPE *)mkl_calloc(num_ind*num_ind, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	MAT_TYPE *H_int = mkl_calloc(num_ind*num_ind, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 	double J2 = H_params[0]; // J/2
 	double Jz = H_params[1];

@@ -66,8 +66,7 @@ void kron(const double alpha, const int m, const int n, const MAT_TYPE *restrict
 	inds:    restricted basis inds
 	C: num_ind*num_ind matrix
 */
-void kron_r(const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B,
-	        MAT_TYPE *restrict C, const int num_ind, const int *restrict inds) {
+void kron_r(const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B, MAT_TYPE *restrict C, const int num_ind, const int *restrict inds) {
 
 	__assume_aligned(A, MEM_DATA_ALIGN);
 	__assume_aligned(B, MEM_DATA_ALIGN);
@@ -157,8 +156,7 @@ void kronT(const char side, const double alpha, const int m, const int n, const 
 	B: n*n matrix
 	C: num_ind*num_ind matrix
 */
-void kronT_r(const char side, const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B,
-			MAT_TYPE *restrict C, const int num_ind, const int *restrict inds) {
+void kronT_r(const char side, const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B, MAT_TYPE *restrict C, const int num_ind, const int *restrict inds) {
 	int ldac = m*n;
 
 	__assume_aligned(A, MEM_DATA_ALIGN);
@@ -317,7 +315,7 @@ void kronI_r(const char side, const int m, const int n, const MAT_TYPE *restrict
 /* Creates identity matrix of size N*N
 */
 MAT_TYPE *identity(const int N) {
-	MAT_TYPE *Id = (MAT_TYPE *)mkl_calloc(N*N, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	MAT_TYPE *Id = mkl_calloc(N*N, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 	for (int i = 0; i < N; i++) {
 		#if COMPLEX
@@ -334,8 +332,8 @@ MAT_TYPE *identity(const int N) {
 */
 MAT_TYPE *transformOp(const int opDim, const int newDim, const MAT_TYPE *restrict trans, const MAT_TYPE *restrict op) {
 
-	MAT_TYPE *newOp = (MAT_TYPE *)mkl_malloc(newDim*newDim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	MAT_TYPE *temp  = (MAT_TYPE *)mkl_malloc(newDim*opDim  * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	MAT_TYPE *newOp = mkl_malloc(newDim*newDim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	MAT_TYPE *temp  = mkl_malloc(newDim*opDim  * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	__assume_aligned(op   , MEM_DATA_ALIGN);
 	__assume_aligned(trans, MEM_DATA_ALIGN);
 	__assume_aligned(newOp, MEM_DATA_ALIGN);
@@ -360,7 +358,7 @@ MAT_TYPE *transformOp(const int opDim, const int newDim, const MAT_TYPE *restric
 */
 void transformOps(const int numOps, const int opDim, const int newDim, const MAT_TYPE *restrict trans, MAT_TYPE **ops) {
 
-	MAT_TYPE *temp  = (MAT_TYPE *)mkl_malloc(newDim*opDim  * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	MAT_TYPE *temp = mkl_malloc(newDim*opDim  * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	__assume_aligned(trans, MEM_DATA_ALIGN);
 	__assume_aligned(temp , MEM_DATA_ALIGN);
 
@@ -370,11 +368,11 @@ void transformOps(const int numOps, const int opDim, const int newDim, const MAT
 		const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
 		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
 		cblas_zgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, newDim, opDim , opDim, &one, trans, opDim, ops[i], opDim, &zero, temp, newDim);
-		ops[i] = (MAT_TYPE *)mkl_realloc(ops[i], newDim*newDim * sizeof(MAT_TYPE));
+		ops[i] = mkl_realloc(ops[i], newDim*newDim * sizeof(MAT_TYPE));
 		cblas_zgemm(CblasColMajor, CblasNoTrans  , CblasNoTrans, newDim, newDim, opDim, &one, temp, newDim, trans, opDim, &zero, ops[i], newDim);
 		#else
 		cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, newDim, opDim , opDim, 1.0, trans, opDim, ops[i], opDim, 0.0, temp, newDim);
-		ops[i] = (MAT_TYPE *)mkl_realloc(ops[i], newDim*newDim * sizeof(MAT_TYPE));
+		ops[i] = mkl_realloc(ops[i], newDim*newDim * sizeof(MAT_TYPE));
 		cblas_dgemm(CblasColMajor, CblasNoTrans  , CblasNoTrans, newDim, newDim, opDim, 1.0, temp, newDim, trans, opDim, 0.0, ops[i], newDim);
 		#endif
 	}
@@ -391,7 +389,7 @@ void transformOps(const int numOps, const int opDim, const int newDim, const MAT
 */
 MAT_TYPE *restrictOp(const int m, const MAT_TYPE *op, const int num_ind, const int *inds) {
 
-	MAT_TYPE *op_r = (MAT_TYPE *)mkl_malloc(num_ind*num_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	MAT_TYPE *op_r = mkl_malloc(num_ind*num_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 	for (int i = 0; i < num_ind; i++) {
 		for (int j = 0; j < num_ind; j++) {
@@ -411,7 +409,7 @@ MAT_TYPE *restrictOp(const int m, const MAT_TYPE *op, const int num_ind, const i
 */
 MAT_TYPE *restrictVec(const MAT_TYPE *v, const int num_ind, const int *inds) {
 
-	MAT_TYPE *v_r = (MAT_TYPE *)mkl_malloc(num_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	MAT_TYPE *v_r = mkl_malloc(num_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 	for (int i = 0; i < num_ind; i++) {
 		v_r[i] = v[inds[i]];
@@ -432,7 +430,7 @@ MAT_TYPE *restrictVec(const MAT_TYPE *v, const int num_ind, const int *inds) {
 int *restrictVecToNonzero(const int m, MAT_TYPE *v, int *num_indp) {
 
 	int num_ind = 0;
-	MAT_TYPE *v_r = (MAT_TYPE *)mkl_malloc(m * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	MAT_TYPE *v_r = mkl_malloc(m * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	int *inds = (int *)mkl_malloc(m * sizeof(int), MEM_DATA_ALIGN);
 
 	for (int i = 0; i < m; i++) {
@@ -467,7 +465,7 @@ int *restrictVecToNonzero(const int m, MAT_TYPE *v, int *num_indp) {
 */
 MAT_TYPE *unrestrictVec(const int m, const MAT_TYPE *v_r, const int num_ind, const int *inds) {
 
-	MAT_TYPE *v = (MAT_TYPE *)mkl_calloc(m, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	MAT_TYPE *v = mkl_calloc(m, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 	for (int i = 0; i < num_ind; i++) {
 		v[inds[i]] = v_r[i];
@@ -572,20 +570,16 @@ void block_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *block
 
 		for (int i=0; i<hamil_mats->num_int_terms; i++) {
 			const MKL_Complex16 alpha = {.real=hamil_mats->int_alphas[i], .imag=0.0};
-			cblas_zgemm(CblasColMajor, hamil_mats->trans[2*i+1], CblasNoTrans, dimEnv, dimSys, dimEnv,
-						&one  , hamil_mats->Henv_ints[i], dimEnv, xvec, dimEnv, &zero, temp, dimEnv);
-			cblas_zgemm(CblasColMajor, CblasNoTrans, hamil_mats->trans[2*i]  , dimEnv, dimSys, dimSys, 
-						&alpha, temp, dimEnv, hamil_mats->Hsys_ints[i], dimSys, &one , yvec, dimEnv);
+			cblas_zgemm(CblasColMajor, hamil_mats->trans[2*i+1], CblasNoTrans, dimEnv, dimSys, dimEnv, &one  , hamil_mats->Henv_ints[i], dimEnv, xvec, dimEnv, &zero, temp, dimEnv);
+			cblas_zgemm(CblasColMajor, CblasNoTrans, hamil_mats->trans[2*i]  , dimEnv, dimSys, dimSys, &alpha, temp, dimEnv, hamil_mats->Hsys_ints[i], dimSys, &one , yvec, dimEnv);
 		}
 	#else
 		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimEnv, dimSys, dimEnv, 1.0, hamil_mats->Henv, dimEnv, xvec, dimEnv, 0.0, yvec, dimEnv);
 		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans  , dimEnv, dimSys, dimSys, 1.0, xvec, dimEnv, hamil_mats->Hsys, dimSys, 1.0, yvec, dimEnv);
 
 		for (int i=0; i<hamil_mats->num_int_terms; i++) {
-			cblas_dgemm(CblasColMajor, hamil_mats->trans[2*i+1], CblasNoTrans, dimEnv, dimSys, dimEnv,
-						1.0, hamil_mats->Henv_ints[i], dimEnv, xvec, dimEnv, 0.0, temp, dimEnv);
-			cblas_dgemm(CblasColMajor, CblasNoTrans, hamil_mats->trans[2*i]  , dimEnv, dimSys, dimSys, 
-						hamil_mats->int_alphas[i], temp, dimEnv, hamil_mats->Hsys_ints[i], dimSys, 1.0, yvec, dimEnv);
+			cblas_dgemm(CblasColMajor, hamil_mats->trans[2*i+1], CblasNoTrans, dimEnv, dimSys, dimEnv, 1.0                      , hamil_mats->Henv_ints[i], dimEnv, xvec, dimEnv, 0.0, temp, dimEnv);
+			cblas_dgemm(CblasColMajor, CblasNoTrans, hamil_mats->trans[2*i]  , dimEnv, dimSys, dimSys, hamil_mats->int_alphas[i], temp, dimEnv, hamil_mats->Hsys_ints[i], dimSys, 1.0, yvec, dimEnv);
 		}
 	#endif
 	mkl_free(temp);
@@ -677,8 +671,8 @@ int dcmp(const void *pa, const void *pb){
 */
 int *dsort2(const int n, double *a) {
 
-	double **ais = (double **)mkl_malloc(n * sizeof(double *), MEM_DATA_ALIGN);
-	double *temp = (double *)mkl_malloc(n * sizeof(double), MEM_DATA_ALIGN);
+	double **ais = mkl_malloc(n * sizeof(double *), MEM_DATA_ALIGN);
+	double *temp = mkl_malloc(n * sizeof(double), MEM_DATA_ALIGN);
 	memcpy(temp, a, n * sizeof(double));
 
 	for (int i = 0; i < n; i++) {
@@ -688,7 +682,7 @@ int *dsort2(const int n, double *a) {
 	double *ai0 = ais[0];
 	qsort(ais, n, sizeof(ais[0]), dcmp);
 	
-	int *inds = (int *)mkl_malloc(n * sizeof(int), MEM_DATA_ALIGN);
+	int *inds = mkl_malloc(n * sizeof(int), MEM_DATA_ALIGN);
 	for (int i = 0; i < n; i++) {
 		inds[i] = (int) (ais[i] - ai0);
 		a[i] = *ais[i];

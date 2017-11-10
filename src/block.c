@@ -21,18 +21,18 @@ DMRGBlock *createDMRGBlock(model_t *model, int fullLength) {
 	block->num_ops = model->num_ops;
 	block->model   = model;
 
-	block->mzs = (int *)mkl_malloc(dim * sizeof(int), MEM_DATA_ALIGN);
+	block->mzs = mkl_malloc(dim * sizeof(int), MEM_DATA_ALIGN);
 	memcpy(block->mzs, model->init_mzs, dim * sizeof(int));
 
 	// copy operators
-	block->ops = (MAT_TYPE **)mkl_malloc(block->num_ops * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
+	block->ops = mkl_malloc(block->num_ops * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
 	for (int i = 0; i < block->num_ops; i++) {
-		block->ops[i] = (MAT_TYPE *)mkl_malloc(dim*dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		block->ops[i] = mkl_malloc(dim*dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		memcpy(block->ops[i], model->init_ops[i], dim*dim * sizeof(MAT_TYPE));
 	}
 
-	block->psi = (MAT_TYPE *)mkl_malloc(dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	block->A = (MAT_TYPE *)mkl_malloc(dim*dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	block->psi = mkl_malloc(dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	block->A   = mkl_malloc(dim*dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 	block->d_trans = 0;
 	block->trans = NULL;
@@ -46,7 +46,7 @@ DMRGBlock *createDMRGBlock(model_t *model, int fullLength) {
 
 DMRGBlock *copyDMRGBlock(DMRGBlock *orig) {
 
-	DMRGBlock *newBlock = (DMRGBlock *)mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
+	DMRGBlock *newBlock = mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
 
 	newBlock->length  = orig->length;
 	newBlock->fullLength = orig->fullLength;
@@ -57,19 +57,19 @@ DMRGBlock *copyDMRGBlock(DMRGBlock *orig) {
 	newBlock->num_ops = orig->num_ops;
 	newBlock->model   = orig->model;
 
-	newBlock->mzs = (int *)mkl_malloc(dim * sizeof(int), MEM_DATA_ALIGN);
+	newBlock->mzs = mkl_malloc(dim * sizeof(int), MEM_DATA_ALIGN);
 	memcpy(newBlock->mzs, orig->mzs, dim * sizeof(int));
 
 	// Copy all matrices (not just pointers)
-	newBlock->ops = (MAT_TYPE **)mkl_malloc(newBlock->num_ops * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
+	newBlock->ops = mkl_malloc(newBlock->num_ops * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
 	for (int i = 0; i < newBlock->num_ops; i++) {
-		newBlock->ops[i] = (MAT_TYPE *)mkl_malloc(dim*dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		newBlock->ops[i] = mkl_malloc(dim*dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		memcpy(newBlock->ops[i], orig->ops[i], dim*dim * sizeof(MAT_TYPE));
 	}
 
-	newBlock->psi = (MAT_TYPE *)mkl_malloc(dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	newBlock->psi = mkl_malloc(dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	memcpy(newBlock->psi, orig->psi, dim * sizeof(MAT_TYPE));
-	newBlock->A = (MAT_TYPE *)mkl_malloc(dim*dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	newBlock->A = mkl_malloc(dim*dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	memcpy(newBlock->A, orig->A, dim*dim * sizeof(MAT_TYPE));
 
 	newBlock->d_trans = orig->d_trans;
@@ -119,8 +119,8 @@ void printDMRGBlock(const char *desc, DMRGBlock *block) {
 */
 void printGraphic(DMRGBlock *sys, DMRGBlock *env) {
 
-	char *sys_g = (char *)malloc((sys->length +1) * sizeof(char));
-	char *env_g = (char *)malloc((env->length +1) * sizeof(char));
+	char *sys_g = malloc((sys->length +1) * sizeof(char));
+	char *env_g = malloc((env->length +1) * sizeof(char));
 
 	memset(sys_g, '=', sys->length);
 	memset(env_g, '-', env->length);
@@ -139,7 +139,7 @@ void printGraphic(DMRGBlock *sys, DMRGBlock *env) {
 
 DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 
-	DMRGBlock *enl_block = (DMRGBlock *)mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
+	DMRGBlock *enl_block = mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
 	enl_block->length  = block->length + 1;
 	enl_block->fullLength = block->fullLength;
 	int d_model = block->model->d_model;
@@ -150,8 +150,8 @@ DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 	enl_block->side    = block->side;
 	enl_block->meas    = block->meas;
 
-	enl_block->psi = (MAT_TYPE *)mkl_malloc(dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	enl_block->A = (MAT_TYPE *)mkl_malloc(dim*dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	enl_block->psi = mkl_malloc(dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	enl_block->A = mkl_malloc(dim*dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	// TODO: add enlarged block A
 
 	enl_block->ops = enlargeOps(block);
@@ -159,7 +159,7 @@ DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 		enl_block->num_ops++;
 	}
 
-	enl_block->mzs = (int *)mkl_malloc(enl_block->d_block * sizeof(int), MEM_DATA_ALIGN);
+	enl_block->mzs = mkl_malloc(enl_block->d_block * sizeof(int), MEM_DATA_ALIGN);
 	for (int i = 0; i < block->d_block; i++) {
 		for (int j = 0; j < d_model; j++) {
 			enl_block->mzs[i*d_model + j] = block->mzs[i] + block->model->init_mzs[j];
@@ -192,7 +192,7 @@ MAT_TYPE **enlargeOps(const DMRGBlock *block) {
 		numOps++; // add new s_i block
 	}
 
-	MAT_TYPE **enl_ops = (MAT_TYPE **)mkl_malloc(numOps * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
+	MAT_TYPE **enl_ops = mkl_malloc(numOps * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
 
 	model_t *model = block->model;
 	int d_model	= model->d_model;
@@ -205,23 +205,23 @@ MAT_TYPE **enlargeOps(const DMRGBlock *block) {
 	kronI('L', d_block, d_model, model->H1, enl_ops[0]);
 
 	// conn_Sz
-	enl_ops[1] = (MAT_TYPE *)mkl_calloc(d_enl*d_enl, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	enl_ops[1] = mkl_calloc(d_enl*d_enl, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	kronI('L', d_block, d_model, model->Sz, enl_ops[1]);
 
 	// conn_Sp
-	enl_ops[2] = (MAT_TYPE *)mkl_calloc(d_enl*d_enl, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	enl_ops[2] = mkl_calloc(d_enl*d_enl, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	kronI('L', d_block, d_model, model->Sp, enl_ops[2]);
 
 	for (int i = 3; i < block->num_ops; i++) { // loop over measurement ops
 		// S_i ops
-		enl_ops[i] = (MAT_TYPE *)mkl_calloc(d_enl*d_enl, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		enl_ops[i] = mkl_calloc(d_enl*d_enl, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		kronI('R', d_block, d_model, block->ops[i], enl_ops[i]);
 
 		// TODO: S_i S_j corrs for arbitary i and j
 	}
 
 	if (block->meas == 'M') {
-		enl_ops[block->num_ops] = (MAT_TYPE *)mkl_malloc(d_enl*d_enl * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		enl_ops[block->num_ops] = mkl_malloc(d_enl*d_enl * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		// New S_i is same as conn_Sz
 		memcpy(enl_ops[block->num_ops], enl_ops[1], d_enl*d_enl * sizeof(MAT_TYPE));
 	}
@@ -239,7 +239,7 @@ void startMeasBlock(DMRGBlock *block) {
 
 	int dim = block->d_block;
 
-	block->ops[block->num_ops] = (MAT_TYPE *)mkl_malloc(dim*dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	block->ops[block->num_ops] = mkl_malloc(dim*dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	// New S_i is same as conn_Sz
 	memcpy(block->ops[block->num_ops], block->ops[1], dim*dim * sizeof(MAT_TYPE));
 
