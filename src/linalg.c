@@ -552,7 +552,7 @@ void block_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *block
 	MAT_TYPE *xvec = x;
 	MAT_TYPE *yvec = y;
 
-	Hamil_mats *hamil_mats = primme->matrix;
+	hamil_mats_t *hamil_mats = primme->matrix;
 	int dimSys = hamil_mats->dimSys;
 	int dimEnv = hamil_mats->dimEnv;
 
@@ -600,7 +600,7 @@ void block_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *block
 	numEvals : number of desired eigenvectors
 	initSize : number of guesses for desired eigenvectors
 */
-void primmeBlockWrapper(Hamil_mats *hamil_mats, int N, double *evals, MAT_TYPE *evecs, const int numEvals, const int initSize) {
+void primmeBlockWrapper(hamil_mats_t *hamil_mats, int N, double *evals, MAT_TYPE *evecs, const int numEvals, const int initSize) {
 
 	primme_params primme;
 
