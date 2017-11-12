@@ -8,14 +8,13 @@ typedef struct model_t model_t;
 
 typedef struct DMRGBlock {
 	int length;
-	int fullLength;
 	char side;  	// 'L' if left block and 'R' if right block
 	char meas;  	// 'N' is normal block and 'M' if measurements are tracked
 	int d_block;	// dimension of basis
 	int num_ops;
 	MAT_TYPE **ops;
 	int *mzs;   	// 2*mz quantum number for each state
-	model_t *model;
+	const model_t *model;
 
 	int d_trans;    // dimension of basis before transfoming
 	MAT_TYPE *trans;// transformation matrix used to truncate the block
@@ -27,9 +26,9 @@ typedef struct DMRGBlock {
 	double trunc_err;
 } DMRGBlock;
 
-DMRGBlock *createDMRGBlock(model_t *model, int fullLength);
+DMRGBlock *createDMRGBlock(const model_t *model);
 
-DMRGBlock *copyDMRGBlock(DMRGBlock *orig);
+DMRGBlock *copyDMRGBlock(const DMRGBlock *orig);
 
 void freeDMRGBlock(DMRGBlock *block);
 

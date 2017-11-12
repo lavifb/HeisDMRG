@@ -39,9 +39,8 @@ int main(int argc, char *argv[]) {
 	int ms[n_ms];
 
 	model_t *model = newNullModel();
+	model->fullLength = L;
 	model->d_model = N;
-	model->J  = 1;
-	model->Jz = 1;
 
 	#if COMPLEX
 	#include <complex.h>
@@ -68,6 +67,13 @@ int main(int argc, char *argv[]) {
 	model->Sp = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	memcpy(model->Sp, Sp, N*N * sizeof(MAT_TYPE));
 
+	model->H_int   = &HeisenH_int;
+	#if USE_PRIMME
+	model->H_int_mats = &HeisenH_int_mats;
+	#else
+	model->H_int_r = &HeisenH_int_r;
+	#endif
+
 	compileParams(model);
 
 	int i;
@@ -78,15 +84,12 @@ int main(int argc, char *argv[]) {
 	printf("Running time test on version "VERSION".\n\n");
 
 	struct timespec t_start, t_end;
-	// clock_t t_start = clock();
 	clock_gettime(CLOCK_MONOTONIC, &t_start);
 
 	meas_data_t *meas = fin_dmrgR(L, minf, n_ms, ms, model);
 	// meas_data_t *meas = fin_dmrg(L, minf, n_ms, ms, model);
 
-	// clock_t t_end = clock();
 	clock_gettime(CLOCK_MONOTONIC, &t_end);
-	// double runtime = (double)(t_end - t_start) / CLOCKS_PER_SEC;
 	double runtime = (t_end.tv_sec - t_start.tv_sec);
 	runtime += (t_end.tv_nsec - t_start.tv_nsec) / 1000000000.0;
 

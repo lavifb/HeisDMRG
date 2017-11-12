@@ -65,15 +65,17 @@ int main(int argc, char *argv[]) {
 	printf("Running quick test on version "VERSION".\n\n");
 
 	// Start cpu timer
-	clock_t t_start = clock();
+	struct timespec t_start, t_end;
+	clock_gettime(CLOCK_MONOTONIC, &t_start);
 
 	// inf_dmrg(params.L, params.minf, model);
-	meas = fin_dmrg(params.L, params.minf, params.num_ms, params.ms, model);
-	// meas = fin_dmrgR(params.L, params.minf, params.num_ms, params.ms, model);
+	// meas = fin_dmrg(params.L, params.minf, params.num_ms, params.ms, model);
+	meas = fin_dmrgR(params.L, params.minf, params.num_ms, params.ms, model);
 
 	// Record end time
-	clock_t t_end = clock();
-	params.runtime = (double)(t_end - t_start) / CLOCKS_PER_SEC;
+	clock_gettime(CLOCK_MONOTONIC, &t_end);
+	params.runtime = (t_end.tv_sec - t_start.tv_sec);
+	params.runtime += (t_end.tv_nsec - t_start.tv_nsec) / 1000000000.0;
 
 	printf("\n\nSimulation finished in %.3f seconds.\n", params.runtime);
 

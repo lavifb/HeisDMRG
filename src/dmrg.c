@@ -28,7 +28,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	DMRGBlock *sys_enl, *env_enl;
 	sector_t *sys_enl_sectors, *env_enl_sectors;
-	model_t *model = sys->model;
+	const model_t *model = sys->model;
 
 	sys_enl = enlargeBlock(sys);
 	sys_enl_sectors = sectorize(sys_enl);
@@ -41,130 +41,37 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		env_enl_sectors = sectorize(env_enl);
 	}
 
-	{
-		int nbuffers;
-		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
-		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
-	}
-
 	int dimSys = sys_enl->d_block;
 	int dimEnv = env_enl->d_block;
 	int dimSup = dimSys * dimEnv;
 
-	// Create sectors to treat separately
-	sector_t *sup_sectors = NULL;
-
 	// indexes used for restricting Hs
-	int num_restr_ind = 0;
-	int *restr_basis_inds = (int *)mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
+	int *restr_basis_inds = mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
+	int num_restr_ind;
 
-	// loop over sys_enl_sectors and find only desired indexes
-	for (sector_t *sys_enl_sec=sys_enl_sectors; sys_enl_sec != NULL; sys_enl_sec=sys_enl_sec->hh.next) {
-
-		int sys_mz = sys_enl_sec->id;
-
-		sector_t *sup_sec;
-		sup_sec = createSector(sys_mz);
-		HASH_ADD_INT(sup_sectors, id, sup_sec);
-
-		int env_mz = target_mz - sys_mz;
-
-		// pick out env_enl_sector with mz = env_mz
-		sector_t *env_enl_sec;
-		HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_sec);
-		if (env_enl_sec != NULL) {
-			int i, j;
-			for (i = 0; i < sys_enl_sec->num_ind; i++) {
-				for (j = 0; j < env_enl_sec->num_ind; j++) {
-					// save restricted index and save into sup_sectors
-					sectorPush(sup_sec, num_restr_ind);
-					assert(num_restr_ind < dimSup);
-					restr_basis_inds[num_restr_ind] = sys_enl_sec->inds[i]*dimEnv + env_enl_sec->inds[j];
-					num_restr_ind++;
-				}
-			}
-		}
-	}
-
-	{
-		int nbuffers;
-		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
-		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
-	}
-
-
-	// mkl_free_buffers();
-	// Restricted Superblock Hamiltonian
-	MAT_TYPE *Hs_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
-	kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
-	kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
-
-	{
-		int nbuffers;
-		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
-		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
-	}
-
-	// Setup ground state guess
-	MAT_TYPE *psi0_r;
-	int numGuesses = 0;
-	if (psi0_guessp != NULL && *psi0_guessp != NULL) {
-		psi0_r  = restrictVec(*psi0_guessp, num_restr_ind, restr_basis_inds);
-		numGuesses = 1;
-	} else {
-		psi0_r = (MAT_TYPE *)mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	}
+	// Get restricted basis
+	// sup_sectors stores sectors for superblock
+	sector_t *sup_sectors = getRestrictedBasis(sys_enl_sectors, env_enl_sectors, target_mz, dimEnv, &num_restr_ind, restr_basis_inds);
 
 	// Find ground state
-	double *energies = (double *)mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
+	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
 
-	// Use the faster PRIMME library if available. Otherwise, default to LAPACK.
-	#if USE_PRIMME
-		primmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1, numGuesses);
-	#else
-		__assume_aligned(Hs_r, MEM_DATA_ALIGN);
-		__assume_aligned(psi0_r, MEM_DATA_ALIGN);
-		int info = 0;
-		int num_es_found;
-		int *isuppz = (int *)mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
-
-		#if COMPLEX
-		info = LAPACKE_zheevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
-				0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
-		#else
-		info = LAPACKE_dsyevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
-				0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
-		#endif
-
-		if (info > 0) {
-			printf("Failed to find eigenvalues of Superblock Hamiltonian\n");
-			exit(1);
-		}
-		mkl_free(isuppz);
-	#endif
-
-	mkl_free(Hs_r);
+	// Find lowest energy states
+	MAT_TYPE *psi0_r = getLowestEStates(sys_enl, env_enl, model, num_restr_ind, restr_basis_inds, 1, psi0_guessp, energies);
 
 	sys_enl->energy = energies[0]; // record ground state energy
 	mkl_free(energies);
-	// mkl_free_buffers();
-
-	{
-		int nbuffers;
-		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
-		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
-	}
 
 	// Transformation Matrix
 	int mm = (dimSys < m) ? dimSys : m; // use min(dimSys, m) 
-	MAT_TYPE *trans_full = (MAT_TYPE *)mkl_calloc(dimSys*dimSys, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	MAT_TYPE *trans_full = mkl_calloc(dimSys*dimSys, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
-	// Eigenvalues
+	// Eigenvalues of density matrix
 	int lamb_i = 0;
-	double *lambs = (double *)mkl_malloc(dimSys * sizeof(double), MEM_DATA_ALIGN);
+	double *lambs = mkl_malloc(dimSys * sizeof(double), MEM_DATA_ALIGN);
 
 	// state mzs to eventually truncate and put into sys_enl->mzs
-	int *sys_mzs_full = (int *)mkl_malloc(dimSys * sizeof(int), MEM_DATA_ALIGN);
+	int *sys_mzs_full = mkl_malloc(dimSys * sizeof(int), MEM_DATA_ALIGN);
 
 	// Loop over sectors to find what basis inds to keep
 	for (sector_t *sec=sup_sectors; sec != NULL; sec=sec->hh.next) {
@@ -174,8 +81,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		// printf("mz = %d\n", mz);
 		int env_mz = target_mz - mz;
 		int n_sec = sec->num_ind;
-
-		MAT_TYPE *psi0_sec = restrictVec(psi0_r, n_sec, sec->inds);
 
 		sector_t *sys_enl_mz, *env_enl_mz;
 		HASH_FIND_INT(sys_enl_sectors, &mz    , sys_enl_mz);
@@ -189,41 +94,52 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		int dimEnv_sec = env_enl_mz->num_ind;
 		assert(dimSys_sec * dimEnv_sec == n_sec);
 
-		{
-		int nbuffers;
-		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
-		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
-	}
+		// target states
+		int num_targets = 1;
+		MAT_TYPE **targets = mkl_malloc(num_targets * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
 
-		// psi0_sec needs to be arranged as a dimSys * dimEnv to trace out env
-		// Put sys_basis on rows and env_basis on the cols by taking transpose
-		// To not take transpose twice, just take conj and take conjTrans on left side of dgemm bellow
-		#if COMPLEX
-		const MKL_Complex16 one = {.real=1.0, .imag=0.0};
-		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
-		mkl_zimatcopy('C', 'R', dimEnv_sec, dimSys_sec, one, psi0_sec, dimEnv_sec, dimEnv_sec);
-		#endif
+		// define target states
+		targets[0] = restrictVec(psi0_r, n_sec, sec->inds); // ground state
+		// targets[1] = restrictVec(psi_r, n_sec, sec->inds); // tracked state
 
 		// Density matrix rho_sec
-		MAT_TYPE *rho_sec = (MAT_TYPE *)mkl_malloc(dimSys_sec*dimSys_sec * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		__assume_aligned(rho_sec, MEM_DATA_ALIGN);
-		// Trace out Environment to make rho (Note transpose structure as described above)
+		MAT_TYPE *rho_sec = mkl_calloc(dimSys_sec*dimSys_sec, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+
+		// target state needs to be arranged as a dimSys * dimEnv to trace out env
+		// Put sys_basis on rows and env_basis on the cols by taking transpose
+		// To not take transpose twice, just take conj and take conjTrans on left side of dgemm bellow
+
+		// set weights for target states to be equal
+		const double alpha = 1.0/num_targets;
 		#if COMPLEX
-		cblas_zgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys_sec, dimSys_sec, dimEnv_sec, 
-					&one, psi0_sec, dimEnv_sec, psi0_sec, dimEnv_sec, &zero, rho_sec, dimSys_sec);
+		const MKL_Complex16 one = {.real=1.0, .imag=0.0};
+		const MKL_Complex16 zalpha = {.real=alpha, .imag=0.0};
 		#else
-		cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys_sec, dimSys_sec, dimEnv_sec, 
-					1.0, psi0_sec, dimEnv_sec, psi0_sec, dimEnv_sec, 0.0, rho_sec, dimSys_sec);
 		#endif
 
-		mkl_free(psi0_sec);
+		for (int i=0; i<num_targets; i++) {
+
+			#if COMPLEX
+			mkl_zimatcopy('C', 'R', dimEnv_sec, dimSys_sec, one, targets[i], dimEnv_sec, dimEnv_sec);
+			// Trace out Environment to make rho (Note transpose structure as described above)
+			cblas_zgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys_sec, dimSys_sec, dimEnv_sec, 
+						&zalpha, targets[i], dimEnv_sec, targets[i], dimEnv_sec, &one, rho_sec, dimSys_sec);
+			#else
+			// Trace out Environment to make rho (No conjugation needed here)
+			cblas_dgemm(CblasColMajor, CblasConjTrans, CblasNoTrans, dimSys_sec, dimSys_sec, dimEnv_sec, 
+						alpha, targets[i], dimEnv_sec, targets[i], dimEnv_sec, 1.0, rho_sec, dimSys_sec);
+			#endif
+
+			mkl_free(targets[i]);
+		}
+
+		mkl_free(targets);
 
 		// diagonalize rho_sec and add to list of eigenvalues
 		// LAPACK faster since we need many eigenvalues
 		int mm_sec = (dimSys_sec < mm) ? dimSys_sec : mm;
-		MAT_TYPE *trans_sec = (MAT_TYPE *)mkl_malloc(dimSys_sec*mm_sec * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		__assume_aligned(trans_sec, MEM_DATA_ALIGN);
-		int *isuppz_sec = (int *)mkl_malloc(2*dimSys_sec * sizeof(int), MEM_DATA_ALIGN);
+		MAT_TYPE *trans_sec = mkl_malloc(dimSys_sec*mm_sec * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		int *isuppz_sec = mkl_malloc(2*dimSys_sec * sizeof(int), MEM_DATA_ALIGN);
 		int num_es_found;
 		assert(lamb_i + mm_sec - 1 < dimSys);
 
@@ -242,12 +158,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		mkl_free(rho_sec);
 		mkl_free(isuppz_sec);
 
-		{
-		int nbuffers;
-		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
-		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
-	}
-
 		// copy trans_sec into trans using the proper basis
 		for (int i = 0; i < mm_sec; i++) {
 			for (int j = 0; j < dimSys_sec; j++) {
@@ -265,18 +175,11 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	freeSectors(sup_sectors);
 
-	{
-		int nbuffers;
-		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
-		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
-	}
-
 	// Some dimensions may already be dropped
 	int newDimSys = lamb_i;
 	assert(newDimSys <= dimSys);
 
 	MAT_TYPE *trans = (MAT_TYPE *)mkl_malloc(dimSys*mm * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	__assume_aligned(trans, MEM_DATA_ALIGN);
 
 	assert(mm <= newDimSys);
 	int *sorted_inds = dsort2(newDimSys, lambs);
@@ -304,12 +207,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	sys_enl->d_trans = dimSys;
 	sys_enl->trans = trans;
 
-	{
-		int nbuffers;
-		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
-		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
-	}
-
 	// realloc and return psi0_guessp for later guess
 	if (psi0_guessp != NULL) {
 		// full psi0 for later eigenstate prediction
@@ -320,7 +217,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		} else {
 			// Check overlap of guess and calculated eigenstate
 			// #define PRINT_OVERLAP
-			#if PRINT_OVERLAP
+			#ifdef PRINT_OVERLAP
 
 				#if COMPLEX
 				complex double zoverlap;
@@ -335,12 +232,12 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 			#endif
 
 			// if (overlap < .9) {
-			// 	printf("Guess is bad!!\n");
-			// 	print_matrix("psi0_guess", dimEnv, dimSys, *psi0_guessp, dimEnv);
-			// 	print_matrix("psi0"      , dimEnv, dimSys, psi0        , dimEnv);
+				// printf("Guess is bad!!\n");
+				// print_matrix("psi0_guess", dimEnv, dimSys, *psi0_guessp, dimEnv);
+				// print_matrix("psi0"      , dimEnv, dimSys, psi0        , dimEnv);
 
-			// 	printf("\ndimSys = %3d  dimEnv = %3d  dimSup = %3d\n", dimSys, dimEnv, dimSup);
-			// 	exit(1);
+				// printf("\ndimSys = %3d  dimEnv = %3d  dimSup = %3d\n", dimSys, dimEnv, dimSup);
+				// exit(1);
 			// }
 
 			*psi0_guessp = mkl_realloc(*psi0_guessp, mm*dimEnv * sizeof(MAT_TYPE));
@@ -349,11 +246,9 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		#if COMPLEX
 		const MKL_Complex16 one = {.real=1.0, .imag=0.0};
 		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
-		cblas_zgemm(CblasColMajor, CblasConjTrans, CblasTrans, mm, dimEnv, dimSys, 
-						&one, trans, dimSys, psi0, dimEnv, &zero, *psi0_guessp, mm);
+		cblas_zgemm(CblasColMajor, CblasConjTrans, CblasTrans, mm, dimEnv, dimSys, &one, trans, dimSys, psi0, dimEnv, &zero, *psi0_guessp, mm);
 		#else
-		cblas_dgemm(CblasColMajor, CblasConjTrans, CblasTrans, mm, dimEnv, dimSys, 
-						1.0, trans, dimSys, psi0, dimEnv, 0.0, *psi0_guessp, mm);
+		cblas_dgemm(CblasColMajor, CblasConjTrans, CblasTrans, mm, dimEnv, dimSys, 1.0 , trans, dimSys, psi0, dimEnv, 0.0  , *psi0_guessp, mm);
 		#endif
 		mkl_free(psi0);
 	}
@@ -367,12 +262,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		freeSectors(env_enl_sectors);
 	}
 
-	{
-		int nbuffers;
-		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
-		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
-	}
-
 	return sys_enl;
 }
 /* DMRG step that records measurements.
@@ -382,11 +271,11 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
    returns enlarged system block
 */
-meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz) {
+meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz, MAT_TYPE **const psi0_guessp) {
 
 	DMRGBlock *sys_enl, *env_enl;
 	sector_t *sys_enl_sectors, *env_enl_sectors;
-	model_t *model = sys->model;
+	const model_t *model = sys->model;
 
 	sys_enl = enlargeBlock(sys);
 	sys_enl_sectors = sectorize(sys_enl);
@@ -404,75 +293,26 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	int dimSup = dimSys * dimEnv;
 
 	// indexes used for restricting Hs
-	int num_restr_ind = 0;
-	int *restr_basis_inds = (int *)mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
+	int *restr_basis_inds = mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
+	int num_restr_ind;
 
-	// loop over sys_enl_sectors and find only desired indexes
-	for (sector_t *sys_enl_sec=sys_enl_sectors; sys_enl_sec != NULL; sys_enl_sec=sys_enl_sec->hh.next) {
-
-		int sys_mz = sys_enl_sec->id;
-		int env_mz = target_mz - sys_mz;
-
-		// pick out env_enl_sector with mz = env_mz
-		sector_t *env_enl_sec;
-		HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_sec);
-		if (env_enl_sec != NULL) {
-			int i, j;
-			for (i = 0; i < sys_enl_sec->num_ind; i++) {
-				for (j = 0; j < env_enl_sec->num_ind; j++) {
-					// save restricted index and save into sup_sectors
-					assert(num_restr_ind < dimSup);
-					restr_basis_inds[num_restr_ind] = sys_enl_sec->inds[i]*dimEnv + env_enl_sec->inds[j];
-					num_restr_ind++;
-				}
-			}
-		}
-	}
-
-	// RestrictedSuperblock Hamiltonian
-	MAT_TYPE *Hs_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
-	kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
-	kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
-
+	// Get restricted basis
+	// sup_sectors stores sectors for superblock
+	sector_t *sup_sectors = getRestrictedBasis(sys_enl_sectors, env_enl_sectors, target_mz, dimEnv, &num_restr_ind, restr_basis_inds);
+	freeSectors(sup_sectors);
 	freeSectors(sys_enl_sectors);
+
+	// Find ground state
+	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
+
+	// Find lowest energy states
+	MAT_TYPE *psi0_r = getLowestEStates(sys_enl, env_enl, model, num_restr_ind, restr_basis_inds, 1, psi0_guessp, energies);
+
 	// Free enlarged environment block
 	if (sys != env) {
 		freeDMRGBlock(env_enl);
 		freeSectors(env_enl_sectors);
 	}
-
-	__assume_aligned(Hs_r, MEM_DATA_ALIGN);
-
-	// Find ground state
-	MAT_TYPE *psi0_r = (MAT_TYPE *)mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	double *energies = (double *)mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
-
-	// Use the faster PRIMME library if available. Otherwise, default to LAPACK.
-	#if USE_PRIMME
-		primmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1, 0);
-	#else
-		__assume_aligned(Hs_r, MEM_DATA_ALIGN);
-		__assume_aligned(psi0_r, MEM_DATA_ALIGN);
-		int info = 0;
-		int num_es_found;
-		int *isuppz = (int *)mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
-
-		#if COMPLEX
-		info = LAPACKE_zheevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
-				0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
-		#else
-		info = LAPACKE_dsyevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
-				0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
-		#endif
-
-		if (info > 0) {
-			printf("Failed to find eigenvalues of Superblock Hamiltonian\n");
-			exit(1);
-		}
-		mkl_free(isuppz);
-	#endif
-
-	mkl_free(Hs_r);
 
 	meas_data_t *meas = createMeas(sys_enl->num_ops - model->num_ops);
 	meas->energy = energies[0] / (sys_enl->length + env_enl->length);
@@ -482,7 +322,7 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	// <S_i> spins
 	for (int i = 0; i<meas->num_sites; i++) {
-		MAT_TYPE* supOp_r = (MAT_TYPE *)mkl_calloc(num_restr_ind*num_restr_ind, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		MAT_TYPE* supOp_r = mkl_calloc(num_restr_ind*num_restr_ind, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		kronI_r('R', dimSys, dimEnv, sys_enl->ops[i + model->num_ops], supOp_r, num_restr_ind, restr_basis_inds);
 
 		transformOps(1, num_restr_ind, 1, psi0_r, &supOp_r);
@@ -498,7 +338,7 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	// <S_i S_j> correlations
 	for (int i = 0; i<meas->num_sites; i++) {
-		MAT_TYPE* SSop = (MAT_TYPE *)mkl_malloc(dimSys*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		MAT_TYPE* SSop = mkl_malloc(dimSys*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		#if COMPLEX
 		const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
 		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
@@ -508,7 +348,7 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, 1.0, sys_enl->ops[i + model->num_ops], 
 			dimSys, sys_enl->ops[1], dimSys, 0.0, SSop, dimSys);
 		#endif
-		MAT_TYPE* supOp_r = (MAT_TYPE *)mkl_calloc(num_restr_ind*num_restr_ind, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		MAT_TYPE* supOp_r = mkl_calloc(num_restr_ind*num_restr_ind, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 		kronI_r('R', dimSys, dimEnv, SSop, supOp_r, num_restr_ind, restr_basis_inds);
 		mkl_free(SSop);
@@ -538,7 +378,7 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 */
 void inf_dmrg(const int L, const int m, model_t *model) {
 	// TODO: measurement (copy from fin_dmrgR)
-	DMRGBlock *sys = createDMRGBlock(model, L);
+	DMRGBlock *sys = createDMRGBlock(model);
 
 	while (2*sys->length < L) {
 		int currL = sys->length * 2 + 2;
@@ -560,10 +400,10 @@ void inf_dmrg(const int L, const int m, model_t *model) {
 */
 meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model) {
 
-	DMRGBlock **saved_blocksL = (DMRGBlock **)mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
-	DMRGBlock **saved_blocksR = (DMRGBlock **)mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+	DMRGBlock **saved_blocksL = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+	DMRGBlock **saved_blocksR = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 
-	DMRGBlock *sys = createDMRGBlock(model, L);
+	DMRGBlock *sys = createDMRGBlock(model);
 
 	// Note: saved_blocksL[i] has length i+1
 	saved_blocksL[0] = sys;
@@ -579,6 +419,10 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 		saved_blocksR[sys->length-1]->side = 'R';
 	}
 
+	// Setup psi0_guess
+	MAT_TYPE *psi0_guess = NULL;
+	MAT_TYPE **psi0_guessp = &psi0_guess;
+
 	meas_data_t *meas;
 
 	// Finite Sweeps
@@ -588,14 +432,62 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 
 		while (1) {
 
+			// block for building psi0_guess
+			DMRGBlock *env_enl;
+
 			switch (sys->side) {
 				case 'L':
 					env = saved_blocksR[L - sys->length - 3];
+					env_enl = saved_blocksR[L - sys->length - 2];
 					break;
 
 				case 'R':
 					env = saved_blocksL[L - sys->length - 3];
+					env_enl = saved_blocksL[L - sys->length - 2];
 					break;
+			}
+
+			#if COMPLEX
+			const MKL_Complex16 one = {.real=1.0, .imag=0.0};
+			const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+			#endif
+
+			if (env_enl->trans == NULL) {
+				if (*psi0_guessp != NULL) {
+					mkl_free(*psi0_guessp);
+					*psi0_guessp = NULL;
+				}
+			} else if (*psi0_guessp != NULL) {
+				// Transform psi0_guess into guess for next iteration
+				int d_block_env_enl = env_enl->d_block;
+				int d_trans_env_enl = env_enl->d_trans;
+				int d_block_sys_enl = sys->d_block*model->d_model;
+
+				MAT_TYPE *temp_guess = reorderKron(*psi0_guessp, d_block_env_enl, sys->d_block, model->d_model);
+				
+				*psi0_guessp = mkl_realloc(*psi0_guessp, d_block_sys_enl*d_trans_env_enl * sizeof(MAT_TYPE));
+				MAT_TYPE *trans_env = env_enl->trans;
+				if (env->length > 1) {
+					// normal guess
+					#if COMPLEX
+					cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_trans_env_enl, d_block_sys_enl, d_block_env_enl, 
+								&one, trans_env, d_trans_env_enl, temp_guess, d_block_sys_enl, &zero, *psi0_guessp, d_trans_env_enl);
+					#else
+					cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_trans_env_enl, d_block_sys_enl, d_block_env_enl, 
+								1.0, trans_env, d_trans_env_enl, temp_guess, d_block_sys_enl, 0.0, *psi0_guessp, d_trans_env_enl);
+					#endif
+				} else {
+					// transpose of above to account for switching sys and env when the end of the chain is reached
+					#if COMPLEX
+					cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_block_sys_enl, d_trans_env_enl, d_block_env_enl, 
+								&one, temp_guess, d_block_sys_enl, trans_env, d_trans_env_enl, &zero, *psi0_guessp, d_block_sys_enl);
+					#else
+					cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_block_sys_enl, d_trans_env_enl, d_block_env_enl, 
+								1.0, temp_guess, d_block_sys_enl, trans_env, d_trans_env_enl, 0.0, *psi0_guessp, d_block_sys_enl);
+					#endif
+
+				}
+				mkl_free(temp_guess);
 			}
 
 			// Switch sides if at the end of the chain
@@ -614,12 +506,12 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 			if (i == num_sweeps-1 && 2 * sys->length == L-2 && sys->side == 'L') {
 				printf("Done with sweep %d/%d\n", num_sweeps, num_sweeps);
 				printf("\nTaking measurements...\n");
-				meas = meas_step(sys, env, m, 0);
+				meas = meas_step(sys, env, m, 0, psi0_guessp);
 				break;
 			}
 
 			// printGraphic(sys, env);
-			sys = single_step(sys, env, m, 0, NULL);
+			sys = single_step(sys, env, m, 0, psi0_guessp);
 			logBlock(sys);
 
 			// Save new block
@@ -644,6 +536,7 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 		}
 	}
 
+	if (*psi0_guessp != NULL) { mkl_free(*psi0_guessp); }
 	for (int i = 0; i < L-3; i++) {
 		if (saved_blocksL[i]) { freeDMRGBlock(saved_blocksL[i]); }
 		if (saved_blocksR[i]) { freeDMRGBlock(saved_blocksR[i]); }
@@ -666,10 +559,10 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 */
 meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model) {
 
-	DMRGBlock **saved_blocks  = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+	DMRGBlock **saved_blocks = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 	char (*disk_filenames)[16] = mkl_calloc((L-3), sizeof(char[16]), MEM_DATA_ALIGN);
 
-	DMRGBlock *sys = createDMRGBlock(model, L);
+	DMRGBlock *sys = createDMRGBlock(model);
 
 	// Note: saved_blocks[i] has length i+1
 	saved_blocks[0] = sys;
@@ -714,14 +607,20 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 			}
 			env = saved_blocks[env_index];
 
-			if (saved_blocks[L - sys->length - 2]->trans == NULL) {
+			int env_enl_index = L - sys->length - 2;
+			if (disk_filenames[env_enl_index][0] != '\0') {
+				readBlock(disk_filenames[env_enl_index], saved_blocks[env_enl_index]);
+				disk_filenames[env_enl_index][0] = '\0';
+			}
+			DMRGBlock *env_enl = saved_blocks[env_enl_index]; // block for creating psi0_guess
+
+			if (env_enl->trans == NULL) {
 				if (*psi0_guessp != NULL) {
 					mkl_free(*psi0_guessp);
 					*psi0_guessp = NULL;
 				}
 			} else if (*psi0_guessp != NULL) {
 				// Transform psi0_guess into guess for next iteration
-				DMRGBlock *env_enl = saved_blocks[L - sys->length - 2];
 				int d_block_env_enl = env_enl->d_block;
 				int d_trans_env_enl = env_enl->d_trans;
 				int d_block_sys_enl = sys->d_block*model->d_model;
@@ -735,6 +634,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 				const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
 				#endif
 				if (env->length > 1) {
+					// normal guess
 					#if COMPLEX
 					cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_trans_env_enl, d_block_sys_enl, d_block_env_enl, 
 								&one, trans_env, d_trans_env_enl, temp_guess, d_block_sys_enl, &zero, *psi0_guessp, d_trans_env_enl);
@@ -743,7 +643,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 								1.0, trans_env, d_trans_env_enl, temp_guess, d_block_sys_enl, 0.0, *psi0_guessp, d_trans_env_enl);
 					#endif
 				} else {
-					// transpose of above to account for switching sys and env
+					// transpose of above to account for switching sys and env when the end of the chain is reached
 					#if COMPLEX
 					cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_block_sys_enl, d_trans_env_enl, d_block_env_enl, 
 								&one, temp_guess, d_block_sys_enl, trans_env, d_trans_env_enl, &zero, *psi0_guessp, d_block_sys_enl);
@@ -771,7 +671,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 			if (i == num_sweeps-1 && 2 * sys->length == L-2) {
 				printf("Done with sweep %d/%d\n", num_sweeps, num_sweeps);
 				printf("\nTaking measurements...\n");
-				meas = meas_step(sys, env, m, 0);
+				meas = meas_step(sys, env, m, 0, psi0_guessp);
 				break;
 			}
 

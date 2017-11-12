@@ -25,9 +25,8 @@ int main(int argc, char *argv[]) {
 	int ms[n_ms] = {10, 10, 20};
 
 	model_t *model = newNullModel();
+	model->fullLength = L;
 	model->d_model = N;
-	model->J  = 1;
-	model->Jz = 1;
 
 	#if COMPLEX
 	#include <complex.h>
@@ -54,16 +53,25 @@ int main(int argc, char *argv[]) {
 	model->Sp = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	memcpy(model->Sp, Sp, N*N * sizeof(MAT_TYPE));
 
+	model->H_int   = &HeisenH_int;
+	#if USE_PRIMME
+	model->H_int_mats = &HeisenH_int_mats;
+	#else
+	model->H_int_r = &HeisenH_int_r;
+	#endif
+
 	compileParams(model);
 
 	printf("Running quick test on version "VERSION".\n\n");
 
-	clock_t t_start = clock();
+	struct timespec t_start, t_end;
+	clock_gettime(CLOCK_MONOTONIC, &t_start);
 
 	meas_data_t *meas = fin_dmrgR(L, minf, n_ms, ms, model);
 
-	clock_t t_end = clock();
-	double runtime = (double)(t_end - t_start) / CLOCKS_PER_SEC;
+	clock_gettime(CLOCK_MONOTONIC, &t_end);
+	double runtime = (t_end.tv_sec - t_start.tv_sec);
+	runtime += (t_end.tv_nsec - t_start.tv_nsec) / 1000000000.0;
 
 	printf("Quick Test finished in %.3f seconds.\n\n", runtime);
 
@@ -86,7 +94,7 @@ int main(int argc, char *argv[]) {
 	// Expected test result
 	#define ETE  -.441271
 
-	#define TOLERANCE 1e-5
+	#define TOLERANCE 1e-4
 	#define SZ_TOLERANCE 1e-3
 
 	if (fabs(meas->energy - ETE) < TOLERANCE) {

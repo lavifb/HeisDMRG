@@ -79,6 +79,18 @@ tests: $(patsubst $(TEST)/%.c, $(BIN)/%, $(wildcard $(TEST)/*.c))
 .PHONY: ztests
 ztests: $(patsubst $(TEST)/%.c, $(BIN)/z%, $(wildcard $(TEST)/*.c))
 
+.PHONY: quick
+quick: bin/quick_test
+
+.PHONY: zquick
+zquick: bin/zquick_test
+
+.PHONY: time
+time: bin/time_test
+
+.PHONY: ztime
+ztime: bin/ztime_test
+
 ${OBJ}/%.o: ${SRC}/%.c ${INC}/%.h
 	${CC} -c ${INCDIRS} ${CCOPTSR} ${MKL} $< -o $@
 
