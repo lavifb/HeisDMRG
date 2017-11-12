@@ -11,7 +11,7 @@ DBUG:= debug
 
 # Set directory containing PRIMME library
 # Comment out this line if do not have the PRIMME library (The code will be WAY slower)
-PRIMMEDIR = ../../Repos/primme
+PRIMMEDIR = ../primme
 
 
 # compiler options
