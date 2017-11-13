@@ -318,6 +318,12 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	meas->energy = energies[0] / (sys_enl->length + env_enl->length);
 	mkl_free(energies);
 
+	{
+		int nbuffers;
+		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
+		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
+	}
+
 	// Make Measurements
 
 	// <S_i> spins
@@ -334,6 +340,19 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		#endif
 
 		mkl_free(supOp_r);
+
+		{
+			int nbuffers;
+			MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
+			printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
+		}
+	}
+
+	printf("Done measuring <S_i>.\n");
+	{
+		int nbuffers;
+		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
+		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
 	}
 
 	// <S_i S_j> correlations
@@ -362,6 +381,12 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		#endif
 
 		mkl_free(supOp_r);
+
+		{
+			int nbuffers;
+			MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
+			printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
+		}
 	}
 
 	freeDMRGBlock(sys_enl);
