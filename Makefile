@@ -10,8 +10,12 @@ TEST:= test
 DBUG:= debug
 
 # Set directory containing PRIMME library
+<<<<<<< HEAD
 # Comment out this line if do not have the PRIMME library
 # PRIMMEDIR = ../../Repos/primme
+=======
+# Comment out this line if do not have the PRIMME library (The code will be WAY slower)
+>>>>>>> saveBlock
 PRIMMEDIR = ../primme
 
 

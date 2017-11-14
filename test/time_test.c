@@ -6,6 +6,7 @@
 #include "dmrg.h"
 #include "input_parser.h"
 #include "logio.h"
+#include "matio.h"
 #include <mkl.h>
 #include <time.h>
 #include <stdio.h>
@@ -81,6 +82,12 @@ int main(int argc, char *argv[]) {
 	minf = mm;
 	for (i = 0; i < n_ms; i++) { ms[i] = mm; }
 
+	time_t start_time = time(NULL);
+
+	// file path for output dir
+	sprintf(temp_dir, "temp-L%d_M%d_sim_%ld", L, ms[n_ms-1], start_time);
+	mkdir(temp_dir, 0755);
+
 	printf("Running time test on version "VERSION".\n\n");
 
 	struct timespec t_start, t_end;
@@ -99,6 +106,8 @@ int main(int argc, char *argv[]) {
 
 	freeMeas(meas);
 	freeModel(model);
+
+	remove(temp_dir);
 
 	mkl_free_buffers();
 	int nbuffers;

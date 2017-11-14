@@ -585,7 +585,7 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model) {
 
 	DMRGBlock **saved_blocks = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
-	char (*disk_filenames)[16] = mkl_calloc((L-3), sizeof(char[16]), MEM_DATA_ALIGN);
+	char (*disk_filenames)[1024] = mkl_calloc((L-3), sizeof(char[1024]), MEM_DATA_ALIGN);
 
 	DMRGBlock *sys = createDMRGBlock(model);
 
@@ -607,7 +607,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 		// write old block to disk
 		// if (sys->length > 1) {
 			int save_index = sys->length-2;
-			sprintf(disk_filenames[save_index], "temp/%05d.temp\0", save_index);
+			sprintf(disk_filenames[save_index], "%s/%05d.temp", temp_dir, save_index);
 			saveBlock(disk_filenames[save_index], saved_blocks[save_index]);
 		// }
 	}
@@ -626,6 +626,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 		while (1) {
 
 			int env_index = L - sys->length - 3;
+			int env_enl_index = L - sys->length - 3;
 			if (disk_filenames[env_index][0] != '\0') {
 				readBlock(disk_filenames[env_index], saved_blocks[env_index]);
 				disk_filenames[env_index][0] = '\0';
@@ -694,7 +695,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 
 			// measure and finish run
 			if (i == num_sweeps-1 && 2 * sys->length == L-2) {
-				printf("Done with sweep %d/%d\n", num_sweeps, num_sweeps);
+				printf("Done with sweep %d/%d with m=%d.\n", num_sweeps, num_sweeps, m);
 				printf("\nTaking measurements...\n");
 				meas = meas_step(sys, env, m, 0, psi0_guessp);
 				break;
@@ -718,7 +719,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 			// write old block to disk
 			if (sys->length > 1) {
 				int save_index = sys->length-2;
-				sprintf(disk_filenames[save_index], "temp/%05d.temp\0", save_index);
+				sprintf(disk_filenames[save_index], "%s/%05d.temp", temp_dir, save_index);
 				saveBlock(disk_filenames[save_index], saved_blocks[save_index]);
 				// mkl_free_buffers();
 			}
@@ -727,7 +728,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 
 			// Check if sweep is done
 			if (2 * sys->length == L) {
-				printf("Done with sweep %d/%d\n", i+1, num_sweeps);
+				printf("Done with sweep %d/%d with m=%d.\n", i+1, num_sweeps, m);
 				logSweepEnd();
 				break;
 			}
@@ -740,6 +741,14 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 		else if (saved_blocks[i]) { freeDMRGBlock(saved_blocks[i]); }
 	}
 	mkl_free(saved_blocks);
+
+	// Delete temporary files
+	for (int i=0; i<(L-3); i++) {
+		char rm_save[1024];
+		sprintf(rm_save, "%s/%05d.temp", temp_dir, i);
+		remove(rm_save);
+	}
+
 	mkl_free(disk_filenames);
 
 	return meas;
