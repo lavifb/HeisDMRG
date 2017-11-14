@@ -305,15 +305,15 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	// Find lowest energy states
 	MAT_TYPE *psi0_r = getLowestEStates(sys_enl, env_enl, model, num_restr_ind, restr_basis_inds, 1, psi0_guessp, energies);
 
+	meas_data_t *meas = createMeas(sys_enl->num_ops - model->num_ops);
+	meas->energy = energies[0] / (sys_enl->length + env_enl->length);
+	mkl_free(energies);
+
 	// Free enlarged environment block
 	if (sys != env) {
 		freeDMRGBlock(env_enl);
 		freeSectors(env_enl_sectors);
 	}
-
-	meas_data_t *meas = createMeas(sys_enl->num_ops - model->num_ops);
-	meas->energy = energies[0] / (sys_enl->length + env_enl->length);
-	mkl_free(energies);
 
 	// Make Measurements
 
