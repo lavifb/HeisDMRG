@@ -3,6 +3,8 @@
 #include <mkl.h>
 #include <stdio.h>
 
+char temp_dir[1024];
+
 /*  Saves matrix binary data to file.
 	Note: file at specified path is overwritten.
 
