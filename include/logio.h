@@ -6,7 +6,7 @@
 
 extern FILE *f_log;
 
-void logBlock(DMRGBlock *block);
+void logBlock(const DMRGBlock *block);
 
 void logSweepEnd();
 

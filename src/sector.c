@@ -8,11 +8,11 @@
 */
 sector_t *createSector(const int id) {
 
-	sector_t *sec = (sector_t *)mkl_malloc(sizeof(sector_t), MEM_DATA_ALIGN);
+	sector_t *sec = mkl_malloc(sizeof(sector_t), MEM_DATA_ALIGN);
 	sec->id = id;
 	sec->num_ind = 0;
 	sec->inds_size = HASH_IND_MIN_SIZE;
-	sec->inds = (int *)mkl_malloc(HASH_IND_MIN_SIZE * sizeof(int), MEM_DATA_ALIGN);
+	sec->inds = mkl_malloc(HASH_IND_MIN_SIZE * sizeof(int), MEM_DATA_ALIGN);
 
 	return sec;
 }

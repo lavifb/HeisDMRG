@@ -39,9 +39,8 @@ int main(int argc, char *argv[]) {
 	int ms[n_ms];
 
 	model_t *model = newNullModel();
+	model->fullLength = L;
 	model->d_model = N;
-	model->J  = 1;
-	model->Jz = 1;
 
 	#if COMPLEX
 	#include <complex.h>
@@ -67,6 +66,13 @@ int main(int argc, char *argv[]) {
 	memcpy(model->Sz, Sz, N*N * sizeof(MAT_TYPE));
 	model->Sp = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	memcpy(model->Sp, Sp, N*N * sizeof(MAT_TYPE));
+
+	model->H_int   = &HeisenH_int;
+	#if USE_PRIMME
+	model->H_int_mats = &HeisenH_int_mats;
+	#else
+	model->H_int_r = &HeisenH_int_r;
+	#endif
 
 	compileParams(model);
 

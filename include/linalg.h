@@ -13,23 +13,20 @@
 
 void kron(const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B, MAT_TYPE *restrict C);
 
-void kron_r(const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B,
-	        MAT_TYPE *restrict C, const int num_ind, const int *restrict inds);
+void kron_r(const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B, MAT_TYPE *restrict C, const int num_ind, const int *restrict inds);
 
 void kronT(const char side, const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B, MAT_TYPE *restrict C);
 
-void kronT_r(const char side, const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B,
-			MAT_TYPE *restrict C, const int num_ind, const int *restrict inds);
+void kronT_r(const char side, const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B, MAT_TYPE *restrict C, const int num_ind, const int *restrict inds);
 
 void kronI(const char side, const int m, const int n, const MAT_TYPE *restrict A, MAT_TYPE *restrict C);
 
-void kronI_r(const char side, const int m, const int n, const MAT_TYPE *restrict A, 
-	         MAT_TYPE *restrict C, const int num_ind, const int *restrict inds);
+void kronI_r(const char side, const int m, const int n, const MAT_TYPE *restrict A, MAT_TYPE *restrict C, const int num_ind, const int *restrict inds);
 
 #if USE_PRIMME
 void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, const int numEvals, const int initSize);
 
-typedef struct Hamil_mats {
+typedef struct hamil_mats_t {
 
 	int dimSys;             // dimension of Sys block
 	int dimEnv;             // dimension of Env block
@@ -41,9 +38,9 @@ typedef struct Hamil_mats {
 	MAT_TYPE **Hsys_ints;   // pointer to sys interaction terms
 	MAT_TYPE **Henv_ints;   // pointer to sys interaction terms
 	
-} Hamil_mats;
+} hamil_mats_t;
 
-void primmeBlockWrapper(Hamil_mats *hamil_mats, int N, double *evals, MAT_TYPE *evecs, const int numEvals, const int initSize);
+void primmeBlockWrapper(hamil_mats_t *hamil_mats, int N, double *evals, MAT_TYPE *evecs, const int numEvals, const int initSize);
 
 MAT_TYPE *reorderKron(MAT_TYPE *v, const int dimSys, const int dimEnv, const int dimSite);
 #endif

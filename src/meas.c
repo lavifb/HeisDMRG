@@ -6,11 +6,11 @@
 
 meas_data_t *createMeas(int num_sites) {
 
-	meas_data_t *meas = (meas_data_t *)mkl_malloc(sizeof(meas_data_t), MEM_DATA_ALIGN);
+	meas_data_t *meas = mkl_malloc(sizeof(meas_data_t), MEM_DATA_ALIGN);
 
 	meas->num_sites = num_sites;
-	meas->Szs = (double *)mkl_malloc(num_sites * sizeof(double), MEM_DATA_ALIGN);
-	meas->SSs = (double *)mkl_malloc(num_sites * sizeof(double), MEM_DATA_ALIGN);
+	meas->Szs = mkl_malloc(num_sites * sizeof(double), MEM_DATA_ALIGN);
+	meas->SSs = mkl_malloc(num_sites * sizeof(double), MEM_DATA_ALIGN);
 
 	return meas;
 }

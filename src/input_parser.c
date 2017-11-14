@@ -1,5 +1,6 @@
 #include "input_parser.h"
 #include "model.h"
+#include "hamil.h"
 #include "linalg.h"
 #include <mkl.h>
 #include <math.h>
@@ -89,6 +90,7 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 				return -2;
 			}
 			params->L = L;
+			params->model->fullLength = L;
 		} else if (strcmp(paramName, "ms") == 0) {
 			int *ms = mkl_malloc(num_vals * sizeof(int), MEM_DATA_ALIGN);
 
@@ -203,13 +205,29 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 				#endif
 			}
 			params->model->Sp = Sp;
-		} else if (strcmp(paramName, "J") == 0) {
+		} 
+		// TODO: generic interaction Hamiltonian
+		else if (strcmp(paramName, "J") == 0) {
 			int J = atof(vals[0]);
-			params->model->J = J;
+			double *H_params = params->model->H_params;
+			H_params[0] = J;
 		} else if (strcmp(paramName, "Jz") == 0) {
 			int Jz = atof(vals[0]);
-			params->model->Jz = Jz;
-		}
+			double *H_params = params->model->H_params;
+			H_params[1] = Jz;
+		} 
+		// TODO: select model
+		// else if (strcmp(paramName, "Model") == 0) {
+		// 	if (strcmp(vals[0], "Heisenberg") == 0) {
+		// 		// Set Hamiltonian interaction functions
+		// 		params->model->H_int = &HeisenH_int;
+		// 		#if USE_PRIMME
+		// 		params->model->H_int_mats = &HeisenH_int_mats;
+		// 		#else
+		// 		params->model->H_int_r = &HeisenH_int_r;
+		// 		#endif
+		// 	}
+		// }
 	}
 
 	fclose(fd);
@@ -239,13 +257,15 @@ void printSimParams(FILE *stream, const sim_params_t *params) {
 		fprintf(stream, "%d, ", params->ms[i]);
 	} fprintf(stream, "%d\n", params->ms[params->num_ms-1]);
 
+	double *H_params = params->model->H_params;
+
 	fprintf(stream, 
 			"\n"
 			"J  = % .4f\n"
 			"Jz = % .4f\n"
 			"\n"
 			"Start Time : %s"
-			, params->model->J, params->model->Jz,
+			, H_params[0], H_params[1],
 			ctime(params->start_time) );
 
 	if (params->end_time != NULL) {

@@ -27,12 +27,12 @@ void compileParams(model_t *model) {
 	model->Id = identity(dim);
 
 	model->num_ops  = 3;
-	model->init_ops = (MAT_TYPE **)mkl_malloc(3 * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
+	model->init_ops = mkl_malloc(3 * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
 	model->init_ops[0] = model->H1;
 	model->init_ops[1] = model->Sz;
 	model->init_ops[2] = model->Sp;
 
-	model->init_mzs = (int *)mkl_malloc(dim * sizeof(int), MEM_DATA_ALIGN);
+	model->init_mzs = mkl_malloc(dim * sizeof(int), MEM_DATA_ALIGN);
 	for (int i=0; i<dim; i++) {
 		// init_mzs stores 2*mz to make it an integer
 		#if COMPLEX
@@ -43,36 +43,38 @@ void compileParams(model_t *model) {
 	}
 
 	// Set Hamiltonian parameters
-	model->H_params = (double *)mkl_malloc(2 * sizeof(double), MEM_DATA_ALIGN);
-	model->H_params[0] = model->J/2;
-	model->H_params[1] = model->Jz;
+	double *H_params = mkl_malloc(2 * sizeof(double), MEM_DATA_ALIGN);
+	H_params[0] = 1.0;
+	H_params[1] = 1.0;
+	model->H_params = H_params;
 
 	// TODO: don't copy init_ops into block (doesn't really matter though...)
-	model->single_block = createDMRGBlock(model, 100);
+	model->single_block = createDMRGBlock(model);
 
 	// Set Hamiltonian interaction function
 	model->H_int   = &HeisenH_int;
+	#if USE_PRIMME
+	model->H_int_mats = &HeisenH_int_mats;
+	#else
 	model->H_int_r = &HeisenH_int_r;
+	#endif
 }
 
 /* Nulls out model parameters
 */
 model_t *newNullModel() {
 
-	model_t *model = (model_t *)mkl_calloc(sizeof(model_t), 1, MEM_DATA_ALIGN);
+	model_t *model = mkl_calloc(sizeof(model_t), 1, MEM_DATA_ALIGN);
 
 	model->d_model = 0;
 	model->H1 = NULL;
 	model->Sz = NULL;
 	model->Sp = NULL;
 	model->Id = NULL;
-	model->J  = 0;
-	model->Jz = 0;
 	model->init_mzs = NULL;
 	model->num_ops = 0;
 	model->init_ops = NULL;
 	model->H_params = NULL;
-	model->H_int = NULL;
 
 	return model;
 }
