@@ -81,6 +81,12 @@ int main(int argc, char *argv[]) {
 	minf = mm;
 	for (i = 0; i < n_ms; i++) { ms[i] = mm; }
 
+	// time_t start_time = time(NULL);
+
+	// // file path for output dir
+	// char out_dir[1024];
+	// sprintf(out_dir, "L%d_M%d_sim_%ld/", L, ms[n_ms], start_time);
+
 	printf("Running time test on version "VERSION".\n\n");
 
 	struct timespec t_start, t_end;

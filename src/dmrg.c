@@ -660,7 +660,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 
 			// measure and finish run
 			if (i == num_sweeps-1 && 2 * sys->length == L-2) {
-				printf("Done with sweep %d/%d\n", num_sweeps, num_sweeps);
+				printf("Done with sweep %d/%d with m=%d.\n", num_sweeps, num_sweeps, m[i]);
 				printf("\nTaking measurements...\n");
 				meas = meas_step(sys, env, m, 0, psi0_guessp);
 				break;
@@ -692,7 +692,7 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 
 			// Check if sweep is done
 			if (2 * sys->length == L) {
-				printf("Done with sweep %d/%d\n", i+1, num_sweeps);
+				printf("Done with sweep %d/%d with m=%d.\n", i+1, num_sweeps, m[i]);
 				logSweepEnd();
 				break;
 			}
