@@ -626,7 +626,6 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 		while (1) {
 
 			int env_index = L - sys->length - 3;
-			int env_enl_index = L - sys->length - 3;
 			if (disk_filenames[env_index][0] != '\0') {
 				readBlock(disk_filenames[env_index], saved_blocks[env_index]);
 				disk_filenames[env_index][0] = '\0';
