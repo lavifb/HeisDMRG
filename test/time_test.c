@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
 
 	#define L    32
 	int minf;
-	int ms[n_ms];
+	int *ms = mkl_malloc(n_ms * sizeof(int), MEM_DATA_ALIGN);
 
 	model_t *model = newHeis2Model();
 	model->fullLength = L;
@@ -63,6 +63,7 @@ int main(int argc, char *argv[]) {
 
 	freeMeas(meas);
 	freeModel(model);
+	mkl_free(ms);
 
 	MKL_Free_Buffers();
 	int nbuffers;
