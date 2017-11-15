@@ -34,52 +34,16 @@ int main(int argc, char *argv[]) {
 	}
 
 	#define L    32
-	#define N    2
 	int minf;
 	int ms[n_ms];
 
-	model_t *model = newNullModel();
+	model_t *model = newHeis2Model();
 	model->fullLength = L;
-	model->d_model = N;
-
-	#if COMPLEX
-	#include <complex.h>
-
-	complex double H1[N*N] = { 0 , 0,
-					    	   0 , 0 };
-	complex double Sz[N*N] = { .5, 0,
-					     	   0 ,-.5};
-	complex double Sp[N*N] = { 0 , 1,
-							   0 , 0 };
-	#else
-	MAT_TYPE H1[N*N] = { 0 , 0,
-					     0 , 0 };
-	MAT_TYPE Sz[N*N] = { .5, 0,
-					     0 ,-.5};
-	MAT_TYPE Sp[N*N] = { 0 , 1,
-					     0 , 0 };
-	#endif
-
-	model->H1 = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	memcpy(model->H1, H1, N*N * sizeof(MAT_TYPE));
-	model->Sz = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	memcpy(model->Sz, Sz, N*N * sizeof(MAT_TYPE));
-	model->Sp = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	memcpy(model->Sp, Sp, N*N * sizeof(MAT_TYPE));
-
-	model->H_int   = &HeisenH_int;
-	#if USE_PRIMME
-	model->H_int_mats = &HeisenH_int_mats;
-	#else
-	model->H_int_r = &HeisenH_int_r;
-	#endif
 
 	compileParams(model);
 
-	int i;
-
 	minf = mm;
-	for (i = 0; i < n_ms; i++) { ms[i] = mm; }
+	for (int i = 0; i < n_ms; i++) { ms[i] = mm; }
 
 	printf("Running time test on version "VERSION".\n\n");
 

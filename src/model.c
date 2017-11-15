@@ -2,6 +2,7 @@
 #include "hamil.h"
 #include "linalg.h"
 #include <mkl.h>
+#include <string.h>
 
 /*  Take model parameters given by input and compile them to be usable
 
@@ -40,14 +41,6 @@ void compileParams(model_t *model) {
 		#else
 		model->init_mzs[i] = model->Sz[i*dim+i] * 2;
 		#endif
-	}
-
-	// Set Hamiltonian parameters
-	if (model->H_params == NULL) {
-		double *H_params = mkl_malloc(2 * sizeof(double), MEM_DATA_ALIGN);
-		H_params[0] = 1.0;
-		H_params[1] = 1.0;
-		model->H_params = H_params;
 	}
 
 	// TODO: don't copy init_ops into block (doesn't really matter though...)
@@ -93,4 +86,58 @@ void freeModel(model_t *model) {
 	if(model->single_block) { freeDMRGBlock(model->single_block); }
 
 	mkl_free(model);
+}
+
+/*  Function to create a model for use in tests.
+*/
+model_t *newHeis2Model() {
+
+	model_t *model = mkl_calloc(sizeof(model_t), 1, MEM_DATA_ALIGN);
+
+	#define N 2
+	model->d_model = N;
+
+	#if COMPLEX
+	#include <complex.h>
+
+	complex double H1[N*N] = { 0 , 0,
+					    	   0 , 0 };
+	complex double Sz[N*N] = { .5, 0,
+					     	   0 ,-.5};
+	complex double Sp[N*N] = { 0 , 1,
+							   0 , 0 };
+	#else
+	MAT_TYPE H1[N*N] = { 0 , 0,
+					     0 , 0 };
+	MAT_TYPE Sz[N*N] = { .5, 0,
+					     0 ,-.5};
+	MAT_TYPE Sp[N*N] = { 0 , 1,
+					     0 , 0 };
+	#endif
+
+	model->H1 = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	memcpy(model->H1, H1, N*N * sizeof(MAT_TYPE));
+	model->Sz = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	memcpy(model->Sz, Sz, N*N * sizeof(MAT_TYPE));
+	model->Sp = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	memcpy(model->Sp, Sp, N*N * sizeof(MAT_TYPE));
+
+	model->H_int = &HeisenH_int;
+	#if USE_PRIMME
+	model->H_int_mats = &HeisenH_int_mats;
+	#else
+	model->H_int_r = &HeisenH_int_r;
+	#endif
+
+	model->Id = NULL;
+	model->init_mzs = NULL;
+	model->num_ops = 0;
+	model->init_ops = NULL;
+
+	double *H_params = mkl_malloc(2 * sizeof(double), MEM_DATA_ALIGN);
+	H_params[0] = 1.0;
+	H_params[1] = 1.0;
+	model->H_params = H_params;
+
+	return model;
 }
