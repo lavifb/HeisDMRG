@@ -302,11 +302,6 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	if (sys != env) {
 		freeDMRGBlock(env_enl);
 	}
-	{
-		int nbuffers;
-		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
-		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
-	}
 
 	// Make Measurements
 	#if COMPLEX
@@ -332,15 +327,6 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		mkl_free(temp);
 	}
 
-	printf("Done measuring <S_i>.\n");
-	{
-		int nbuffers;
-		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
-		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
-		MKL_INT64 nbytes_alloc_peak = mkl_peak_mem_usage(MKL_PEAK_MEM);
-		printf("Peak memory used is %lld bytes.\n", nbytes_alloc_peak);
-	}
-
 	// <S_i S_j> correlations
 	for (int i = 0; i<meas->num_sites; i++) {
 		MAT_TYPE* SSop = mkl_malloc(dimSys*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
@@ -362,14 +348,6 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 		mkl_free(temp);
 		mkl_free(SSop);
-	}
-
-	{
-		int nbuffers;
-		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
-		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
-		MKL_INT64 nbytes_alloc_peak = mkl_peak_mem_usage(MKL_PEAK_MEM);
-		printf("Peak memory used is %lld bytes.\n", nbytes_alloc_peak);
 	}
 
 	freeDMRGBlock(sys_enl);
@@ -576,14 +554,17 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 
 	// Run infinite algorithm to build up system
 	while (2*sys->length < L) {
+		// {
+		// 	mkl_free_buffers();
+		// 	printf("new block should be size %lld.\n", estimateBlockMemFootprint(2*sys->d_block, sys->num_ops));
+		// 	MKL_INT64 nbytes_alloc_peak = mkl_peak_mem_usage(MKL_PEAK_MEM);
+		// 	int nbuffers;
+		// 	MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
+		// 	printf("Peak memory used is %lld bytes.\n", nbytes_alloc_peak);
+		// 	printf("Current memory used is %lld bytes in %d buffers.\n\n", nbytes_alloc, nbuffers);
+		// }
+
 		// printGraphic(sys, sys);
-		// mkl_free_buffers();
-		printf("new block should be size %lld.\n", estimateBlockMemFootprint(2*sys->d_block, sys->num_ops));
-		MKL_INT64 nbytes_alloc_peak = mkl_peak_mem_usage(MKL_PEAK_MEM);
-		int nbuffers;
-		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
-		printf("Peak memory used is %lld bytes.\n", nbytes_alloc_peak);
-		printf("Current memory used is %lld bytes in %d buffers.\n\n", nbytes_alloc, nbuffers);
 		sys = single_step(sys, sys, m_inf, 0, NULL);
 		saved_blocks[sys->length-1] = sys;
 		// write old block to disk
