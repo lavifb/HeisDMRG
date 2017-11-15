@@ -43,10 +43,12 @@ void compileParams(model_t *model) {
 	}
 
 	// Set Hamiltonian parameters
-	double *H_params = mkl_malloc(2 * sizeof(double), MEM_DATA_ALIGN);
-	H_params[0] = 1.0;
-	H_params[1] = 1.0;
-	model->H_params = H_params;
+	if (model->H_params == NULL) {
+		double *H_params = mkl_malloc(2 * sizeof(double), MEM_DATA_ALIGN);
+		H_params[0] = 1.0;
+		H_params[1] = 1.0;
+		model->H_params = H_params;
+	}
 
 	// TODO: don't copy init_ops into block (doesn't really matter though...)
 	model->single_block = createDMRGBlock(model);
