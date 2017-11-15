@@ -352,6 +352,8 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		int nbuffers;
 		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
 		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
+		MKL_INT64 nbytes_alloc_peak = mkl_peak_mem_usage(MKL_PEAK_MEM);
+		printf("Peak memory used is %lld bytes.\n", nbytes_alloc_peak);
 	}
 
 	// <S_i S_j> correlations
@@ -386,6 +388,14 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 			MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
 			printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
 		}
+	}
+
+	{
+		int nbuffers;
+		MKL_INT64 nbytes_alloc = mkl_mem_stat(&nbuffers);
+		printf("Current memory used is %lld bytes in %d buffers on line %d.\n", nbytes_alloc, nbuffers, __LINE__);
+		MKL_INT64 nbytes_alloc_peak = mkl_peak_mem_usage(MKL_PEAK_MEM);
+		printf("Peak memory used is %lld bytes.\n", nbytes_alloc_peak);
 	}
 
 	freeDMRGBlock(sys_enl);
