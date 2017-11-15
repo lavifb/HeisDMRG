@@ -10,7 +10,7 @@
 	sys_enl : enlarged sys block
 	env_enl : enlarged env block
 	model   : model containing sim parameters
-	num_restr_ind    : number of restricted basis inds for restricting basis
+	num_restr_ind    : number of restricted basis inds for restricting basis. Set to -1 to not restrict basis
 	restr_basis_inds : restricted basis inds for restricting basis
 	num_states  : number of states being searched for
 	psi0_guessp : pointer to potential ground state guesses
@@ -37,10 +37,19 @@ MAT_TYPE *getLowestEStates(const DMRGBlock *sys_enl, const DMRGBlock *env_enl, c
 		primmeBlockWrapper(hamils_mats, dimSup, energies, psi0, num_states, numGuesses);
 		freehamil_mats_t(hamils_mats);
 
-		MAT_TYPE *psi0_r = restrictVec(psi0, num_restr_ind, restr_basis_inds);
-		mkl_free(psi0);
+		MAT_TYPE *psi0_r = psi0;
+		if (num_restr_ind >= 0) {
+			psi0_r = restrictVec(psi0, num_restr_ind, restr_basis_inds);
+			mkl_free(psi0);
+		}
 	#else
-		// RestrictedSuperblock Hamiltonian
+		if (num_restr_ind < 0) {
+			num_restr_ind = sys_enl->d_block * env_enl->d_block;
+			restr_basis_inds = mkl_malloc(num_restr_ind * sizeof(int), MEM_DATA_ALIGN);
+			for (int i=0; i<num_restr_ind; i++) { restr_basis_inds[i] = i; }
+		}
+
+		// Restricted Superblock Hamiltonian
 		MAT_TYPE *Hs_r = model->H_int_r(model, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
 		kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
 		kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
@@ -73,6 +82,7 @@ MAT_TYPE *getLowestEStates(const DMRGBlock *sys_enl, const DMRGBlock *env_enl, c
 		}
 		mkl_free(isuppz);
 		mkl_free(Hs_r);
+		if (num_restr_ind < 0) { mkl_free(restr_basis_inds); }
 	#endif
 
 	return psi0_r;
