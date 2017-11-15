@@ -23,6 +23,7 @@ int main(int argc, char *argv[]) {
 	sim_params_t params = {};
 	params.model = newNullModel();
 	params.runtime = 0;
+	params.model->H_params = mkl_malloc(2 * sizeof(double), MEM_DATA_ALIGN);
 
 	int status;
 	status = parseInputFile(argv[1], &params);
