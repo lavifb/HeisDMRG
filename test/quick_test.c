@@ -94,7 +94,6 @@ int main(int argc, char *argv[]) {
 	for (int i=0; i<n_sites; i++) {
 		if (fabs(meas->Szs[i] - test_Szs[i]) > SZ_TOLERANCE) {
 			mat_errs++;
-			printf("%.8f | %.8f\n", meas->Szs[i], test_Szs[i]);
 		}
 	}
 	if (mat_errs == 0) {
