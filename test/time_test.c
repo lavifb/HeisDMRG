@@ -71,7 +71,6 @@ int main(int argc, char *argv[]) {
 	freeMeas(meas);
 	freeModel(model);
 	mkl_free(ms);
-
 	remove(temp_dir);
 
 	mkl_free_buffers();

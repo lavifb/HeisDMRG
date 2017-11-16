@@ -567,12 +567,11 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 		// printGraphic(sys, sys);
 		sys = single_step(sys, sys, m_inf, 0, NULL);
 		saved_blocks[sys->length-1] = sys;
+
 		// write old block to disk
-		// if (sys->length > 1) {
-			int save_index = sys->length-2;
-			sprintf(disk_filenames[save_index], "%s/%05d.temp", temp_dir, save_index);
-			saveBlock(disk_filenames[save_index], saved_blocks[save_index]);
-		// }
+		int sys_old_index = sys->length-2;
+		sprintf(disk_filenames[sys_old_index], "%s/%05d.temp", temp_dir, sys_old_index);
+		saveBlock(disk_filenames[sys_old_index], saved_blocks[sys_old_index]);
 	}
 
 	// Setup psi0_guess
@@ -589,18 +588,14 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 		while (1) {
 
 			int env_index = L - sys->length - 3;
+			env = saved_blocks[env_index];
 			if (disk_filenames[env_index][0] != '\0') {
 				readBlock(disk_filenames[env_index], saved_blocks[env_index]);
 				disk_filenames[env_index][0] = '\0';
 			}
-			env = saved_blocks[env_index];
 
 			int env_enl_index = L - sys->length - 2;
-			if (disk_filenames[env_enl_index][0] != '\0') {
-				readBlock(disk_filenames[env_enl_index], saved_blocks[env_enl_index]);
-				disk_filenames[env_enl_index][0] = '\0';
-			}
-			DMRGBlock *env_enl = saved_blocks[env_enl_index]; // block for creating psi0_guess
+			DMRGBlock *env_enl = saved_blocks[env_enl_index];
 
 			if (env_enl->trans == NULL) {
 				if (*psi0_guessp != NULL) {
@@ -608,6 +603,12 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 					*psi0_guessp = NULL;
 				}
 			} else if (*psi0_guessp != NULL) {
+				// Load env_enl block for converting psi0_guess to the right basis
+				if (disk_filenames[env_enl_index][0] != '\0') {
+					readBlock(disk_filenames[env_enl_index], saved_blocks[env_enl_index]);
+					disk_filenames[env_enl_index][0] = '\0';
+				}
+
 				// Transform psi0_guess into guess for next iteration
 				int d_block_env_enl = env_enl->d_block;
 				int d_trans_env_enl = env_enl->d_trans;
@@ -641,6 +642,10 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 					#endif
 				}
 				mkl_free(temp_guess);
+
+				// Save enl_block back to disk
+				sprintf(disk_filenames[env_enl_index], "%s/%05d.temp", temp_dir, env_enl_index);
+				saveBlock(disk_filenames[env_enl_index], saved_blocks[env_enl_index]);
 			}
 
 			// Switch sys and env if at the end of the chain
@@ -679,14 +684,9 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 			saved_blocks[sys_index] = sys;
 
 			// write old block to disk
-			if (sys->length > 1) {
-				int save_index = sys->length-2;
-				sprintf(disk_filenames[save_index], "%s/%05d.temp", temp_dir, save_index);
-				saveBlock(disk_filenames[save_index], saved_blocks[save_index]);
-				// mkl_free_buffers();
-			}
-
-			saved_blocks[sys->length-1] = sys;
+			int sys_old_index = sys->length-2;
+			sprintf(disk_filenames[sys_old_index], "%s/%05d.temp", temp_dir, sys_old_index);
+			saveBlock(disk_filenames[sys_old_index], saved_blocks[sys_old_index]);
 
 			// Check if sweep is done
 			if (2 * sys->length == L) {
