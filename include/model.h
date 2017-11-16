@@ -37,4 +37,6 @@ model_t *newNullModel();
 
 void freeModel(model_t *model);
 
+model_t *newHeis2Model();
+
 #endif

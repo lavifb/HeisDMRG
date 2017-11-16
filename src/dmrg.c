@@ -271,39 +271,25 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz, MAT_TYPE **const psi0_guessp) {
 
 	DMRGBlock *sys_enl, *env_enl;
-	sector_t *sys_enl_sectors, *env_enl_sectors;
 	const model_t *model = sys->model;
 
 	sys_enl = enlargeBlock(sys);
-	sys_enl_sectors = sectorize(sys_enl);
 	if (sys == env) { // Don't recalculate
 		env_enl = sys_enl;
-		env_enl_sectors = sys_enl_sectors;
 	}
 	else {
 		env_enl = enlargeBlock(env);
-		env_enl_sectors = sectorize(env_enl);
 	}
 
 	int dimSys = sys_enl->d_block;
 	int dimEnv = env_enl->d_block;
 	int dimSup = dimSys * dimEnv;
 
-	// indexes used for restricting Hs
-	int *restr_basis_inds = mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
-	int num_restr_ind;
-
-	// Get restricted basis
-	// sup_sectors stores sectors for superblock
-	sector_t *sup_sectors = getRestrictedBasis(sys_enl_sectors, env_enl_sectors, target_mz, dimEnv, &num_restr_ind, restr_basis_inds);
-	freeSectors(sup_sectors);
-	freeSectors(sys_enl_sectors);
-
 	// Find ground state
 	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
 
 	// Find lowest energy states
-	MAT_TYPE *psi0_r = getLowestEStates(sys_enl, env_enl, model, num_restr_ind, restr_basis_inds, 1, psi0_guessp, energies);
+	MAT_TYPE *psi0 = getLowestEStates(sys_enl, env_enl, model, -1, NULL, 1, psi0_guessp, energies);
 
 	meas_data_t *meas = createMeas(sys_enl->num_ops - model->num_ops);
 	meas->energy = energies[0] / (sys_enl->length + env_enl->length);
@@ -312,58 +298,57 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	// Free enlarged environment block
 	if (sys != env) {
 		freeDMRGBlock(env_enl);
-		freeSectors(env_enl_sectors);
 	}
 
 	// Make Measurements
+	#if COMPLEX
+	const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
+	const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+	#endif
 
 	// <S_i> spins
 	for (int i = 0; i<meas->num_sites; i++) {
-		MAT_TYPE* supOp_r = mkl_calloc(num_restr_ind*num_restr_ind, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		kronI_r('R', dimSys, dimEnv, sys_enl->ops[i + model->num_ops], supOp_r, num_restr_ind, restr_basis_inds);
-
-		transformOps(1, num_restr_ind, 1, psi0_r, &supOp_r);
+		MAT_TYPE* temp = mkl_malloc(dimEnv*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 		#if COMPLEX
-		meas->Szs[i] = (*supOp_r).real;
+		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, &one, psi0, dimEnv, sys_enl->ops[i + model->num_ops], dimSys, &zero, temp, dimEnv);
+		MKL_Complex16 Szi;
+		cblas_zdotc_sub(dimSup, psi0, 1, temp, 1, &Szi);
+		meas->Szs[i] = Szi.real;
 		#else
-		meas->Szs[i] = *supOp_r;
+		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, 1.0, psi0, dimEnv, sys_enl->ops[i + model->num_ops], dimSys, 0.0, temp, dimEnv);
+		double Szi = cblas_ddot(dimSup, psi0, 1, temp, 1);
+		meas->Szs[i] = Szi;
 		#endif
 
-		mkl_free(supOp_r);
+		mkl_free(temp);
 	}
 
 	// <S_i S_j> correlations
 	for (int i = 0; i<meas->num_sites; i++) {
 		MAT_TYPE* SSop = mkl_malloc(dimSys*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		#if COMPLEX
-		const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
-		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
-		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, &one, sys_enl->ops[i + model->num_ops], 
-			dimSys, sys_enl->ops[1], dimSys, &zero, SSop, dimSys);
-		#else
-		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, 1.0, sys_enl->ops[i + model->num_ops], 
-			dimSys, sys_enl->ops[1], dimSys, 0.0, SSop, dimSys);
-		#endif
-		MAT_TYPE* supOp_r = mkl_calloc(num_restr_ind*num_restr_ind, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		MAT_TYPE* temp = mkl_malloc(dimEnv*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
-		kronI_r('R', dimSys, dimEnv, SSop, supOp_r, num_restr_ind, restr_basis_inds);
+
+		#if COMPLEX
+		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, &one, sys_enl->ops[i + model->num_ops], dimSys, sys_enl->ops[1], dimSys, &zero, SSop, dimSys);
+		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, &one, psi0, dimEnv, SSop, dimSys, &zero, temp, dimEnv);
+		MKL_Complex16 SSi;
+		cblas_zdotc_sub(dimSup, psi0, 1, temp, 1, &SSi);
+		meas->SSs[i] = SSi.real;
+		#else
+		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, 1.0, sys_enl->ops[i + model->num_ops], dimSys, sys_enl->ops[1], dimSys, 0.0, SSop, dimSys);
+		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, 1.0, psi0, dimEnv, SSop, dimSys, 0.0, temp, dimEnv);
+		double SSi = cblas_ddot(dimSup, psi0, 1, temp, 1);
+		meas->SSs[i] = SSi;
+		#endif
+
+		mkl_free(temp);
 		mkl_free(SSop);
-
-		transformOps(1, num_restr_ind, 1, psi0_r, &supOp_r);
-
-		#if COMPLEX
-		meas->SSs[i] = (*supOp_r).real;
-		#else
-		meas->SSs[i] = *supOp_r;
-		#endif
-
-		mkl_free(supOp_r);
 	}
 
 	freeDMRGBlock(sys_enl);
-	mkl_free(restr_basis_inds);
-	mkl_free(psi0_r);
+	mkl_free(psi0);
 
 	return meas;
 }
