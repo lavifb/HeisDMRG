@@ -28,6 +28,11 @@ int main(int argc, char *argv[]) {
 
 	compileParams(model);
 
+	time_t start_time = time(NULL);
+	// file path for output dir
+	sprintf(temp_dir, "temp-L%d_M%d_sim_%ld", L, ms[n_ms-1], start_time);
+	mkdir(temp_dir, 0755);
+
 	printf("Running quick test on version "VERSION".\n\n");
 
 	struct timespec t_start, t_end;
@@ -122,6 +127,7 @@ int main(int argc, char *argv[]) {
 	mkl_free(test_SSs);
 	freeMeas(meas);
 	freeModel(model);
+	remove(temp_dir);
 
 	MKL_Free_Buffers();
 	int nbuffers;
