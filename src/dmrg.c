@@ -83,7 +83,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		HASH_FIND_INT(sys_enl_sectors, &mz    , sys_enl_mz);
 		HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_mz);
 		assert(sys_enl_mz != NULL);
-		// SOMETHING WRONG HERE!!! (MAYBE??)
+		// Skip if environment does not have corrresponding state
 		if (env_enl_mz == NULL) {
 			continue;
 		}
@@ -175,9 +175,9 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	int newDimSys = lamb_i;
 	assert(newDimSys <= dimSys);
 
-	MAT_TYPE *trans = (MAT_TYPE *)mkl_malloc(dimSys*mm * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	mm = (dimSys < mm) ? newDimSys : mm; // minimize again in case states are dropped because of sectors
+	MAT_TYPE *trans = mkl_malloc(dimSys*mm * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
-	assert(mm <= newDimSys);
 	int *sorted_inds = dsort2(newDimSys, lambs);
 
 	// copy to trans in right order
