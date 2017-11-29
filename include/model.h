@@ -40,4 +40,6 @@ void freeModel(model_t *model);
 
 model_t *newHeis2Model();
 
+model_t *newLadderHeis2Model(int ladder_width);
+
 #endif

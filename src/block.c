@@ -199,7 +199,7 @@ MAT_TYPE **enlargeOps(const DMRGBlock *block) {
 	
 	int conn_i  = (block->length - 1)%lw;
 	// check if snaking is going up or down
-	if ((block1->length-1)/lw % 2 == 1) {
+	if ((block->length-1)/lw % 2 == 1) {
 		conn_i = lw - 1 - conn_i;
 	}
 
