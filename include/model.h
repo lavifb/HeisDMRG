@@ -17,6 +17,7 @@ typedef struct model_t {
 	DMRGBlock *single_block; // block for single site
 
 	int fullLength; // Full length of system
+	int ladder_width;
 	
 	void *H_params;
 	// Pointer to interaction Hamiltonian

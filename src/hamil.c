@@ -187,6 +187,193 @@ hamil_mats_t *HeisenH_int_mats(const model_t *model, const DMRGBlock *block1, co
 	return hamil_mats;
 }
 
+/*  Interaction part of Ladder Heisenberg Hamiltonian
+	H_int = J/2 (kron(Sp1, Sm2) + kron(Sm1, Sp2)) + Jz kron(Sz1, Sz2) for each connection
+*/
+MAT_TYPE *LadderH_int(const model_t* model, const DMRGBlock *block1, const DMRGBlock *block2) {
+
+	int dim1 = block1->d_block;
+	int dim2 = block2->d_block;
+
+	int N = dim1*dim2; // size of new basis
+
+	MAT_TYPE *H_int = mkl_calloc(N*N, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+
+	double *H_params = model->H_params;
+	double J2 = H_params[0]/2; // J/2
+	double Jz = H_params[1];
+
+	int lw = model->ladder_width;
+
+	// Connections up the ladder
+	for (int i=0; i<lw; i++) {
+		MAT_TYPE *Sz1 = block1->ops[2*i+1];
+		MAT_TYPE *Sz2 = block2->ops[2*i+1];
+		MAT_TYPE *Sp1 = block1->ops[2*i+2];
+		MAT_TYPE *Sp2 = block2->ops[2*i+2];
+
+		kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
+		kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
+		kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
+	}
+
+	// Check for full width ladder
+	if (block1->length%lw != 0) {
+
+		int conn_i = (block1->length-1)%lw;
+		// check if snaking is going up or down
+		if ((block1->length-1)/lw % 2 == 1) {
+			conn_i = lw - 1 - conn_i;
+
+			// Periodic boundary if snaking down
+			MAT_TYPE *Sz1 = block1->ops[2*(lw-1)+1];
+			MAT_TYPE *Sz2 = block2->ops[1];
+			MAT_TYPE *Sp1 = block1->ops[2*(lw-1)+2];
+			MAT_TYPE *Sp2 = block2->ops[2];
+
+			kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
+			kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
+			kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
+
+			// Connecting piece if snaking down
+			MAT_TYPE *Sz1 = block1->ops[2*conn_i+1];
+			MAT_TYPE *Sz2 = block2->ops[2*(conn_i-1)+1];
+			MAT_TYPE *Sp1 = block1->ops[2*conn_i+2];
+			MAT_TYPE *Sp2 = block2->ops[2*(conn_i-1)+2];
+	
+			kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
+			kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
+			kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
+
+		} else {
+			// Periodic boundary if snaking up
+			MAT_TYPE *Sz1 = block1->ops[1];
+			MAT_TYPE *Sz2 = block2->ops[2*(lw-1)+1];
+			MAT_TYPE *Sp1 = block1->ops[2];
+			MAT_TYPE *Sp2 = block2->ops[2*(lw-1)+2];
+
+			kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
+			kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
+			kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
+
+			// Connecting piece if snaking up
+			MAT_TYPE *Sz1 = block1->ops[2*conn_i+1];
+			MAT_TYPE *Sz2 = block2->ops[2*(conn_i+1)+1];
+			MAT_TYPE *Sp1 = block1->ops[2*conn_i+2];
+			MAT_TYPE *Sp2 = block2->ops[2*(conn_i+1)+2];
+	
+			kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
+			kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
+			kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
+		}
+	}
+
+	return H_int;
+}
+
+/*  Heisenberg interaction in ladder system.
+*/
+hamil_mats_t *LadderH_int_mats(const model_t *model, const DMRGBlock *block1, const DMRGBlock *block2) {
+
+	hamil_mats_t *hamil_mats = mkl_malloc(sizeof(hamil_mats_t), MEM_DATA_ALIGN);
+
+	hamil_mats->dimSys = block1->d_block;
+	hamil_mats->dimEnv = block2->d_block;
+	hamil_mats->Hsys = block1->ops[0];
+	hamil_mats->Henv = block2->ops[0];
+
+	int lw = model->ladder_width;
+	int num_int_terms = 3*lw;
+	// Check for full width ladder
+	if (block1->length%lw != 0) {
+		num_int_terms += 3*2;
+	}
+	hamil_mats->num_int_terms = num_int_terms;
+
+	// Coefs from H_params
+	double *H_params = model->H_params;
+	hamil_mats->int_alphas = mkl_malloc(num_int_terms * sizeof(int), MEM_DATA_ALIGN);
+	for (int i=0; i<num_int_terms/3; i++) {
+		hamil_mats->int_alphas[i*3 + 0] = H_params[0]/2;
+		hamil_mats->int_alphas[i*3 + 1] = H_params[0]/2;
+		hamil_mats->int_alphas[i*3 + 2] = H_params[1];
+	}
+	
+	// Set the right trans array
+	// Note: For the right matvec calculation you need an extra transpose on one side of the calculation.
+	//       Here we chose the left side (even indexes) to have an extra transpose.
+	hamil_mats->trans = mkl_malloc(2*num_int_terms * sizeof(CBLAS_TRANSPOSE), MEM_DATA_ALIGN);
+	for (int i=0; i<num_int_terms/6; i++) {
+		hamil_mats->trans[i*3 + 0] = CblasTrans;
+		hamil_mats->trans[i*3 + 1] = CblasTrans;
+		hamil_mats->trans[i*3 + 2] = CblasNoTrans;
+		hamil_mats->trans[i*3 + 3] = CblasNoTrans;
+		hamil_mats->trans[i*3 + 4] = CblasTrans;
+		hamil_mats->trans[i*3 + 5] = CblasNoTrans;
+	}
+
+	// Sys interaction mats for across connections
+	hamil_mats->Hsys_ints = mkl_malloc(num_int_terms * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
+	for (int i=0; i<lw; i++) {
+		hamil_mats->Hsys_ints[3*i]     = block1->ops[2*i + 2];
+		hamil_mats->Hsys_ints[3*i + 1] = block1->ops[2*i + 2];
+		hamil_mats->Hsys_ints[3*i + 2] = block1->ops[2*i + 1];
+	}
+
+	// Env interaction mats for across connections
+	hamil_mats->Henv_ints = mkl_malloc(num_int_terms * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
+	for (int i=0; i<lw; i++) {
+		hamil_mats->Henv_ints[3*i]     = block2->ops[2*i + 2];
+		hamil_mats->Henv_ints[3*i + 1] = block2->ops[2*i + 2];
+		hamil_mats->Henv_ints[3*i + 2] = block2->ops[2*i + 1];
+	}
+
+	if (block1->length%lw != 0) {
+
+		int conn_i = (block1->length-1)%lw;
+		// check if snaking is going up or down
+		if ((block1->length-1)/lw % 2 == 1) {
+			conn_i = lw - 1 - conn_i;
+
+			// Periodic boundary if snaking down
+			hamil_mats->Hsys_ints[3*lw]     = block1->ops[2*(lw-1)+2];
+			hamil_mats->Hsys_ints[3*lw + 1] = block1->ops[2*(lw-1)+2];
+			hamil_mats->Hsys_ints[3*lw + 2] = block1->ops[2*(lw-1)+1];
+			hamil_mats->Henv_ints[3*lw]     = block2->ops[2];
+			hamil_mats->Henv_ints[3*lw + 1] = block2->ops[2];
+			hamil_mats->Henv_ints[3*lw + 2] = block2->ops[1];
+
+			// Connecting piece if snaking down
+			hamil_mats->Hsys_ints[3*(lw+1)]     = block1->ops[2*conn_i+2];
+			hamil_mats->Hsys_ints[3*(lw+1) + 1] = block1->ops[2*conn_i+2];
+			hamil_mats->Hsys_ints[3*(lw+1) + 2] = block1->ops[2*conn_i+1];
+			hamil_mats->Henv_ints[3*(lw+1)]     = block2->ops[2*(conn_i-1)+2];
+			hamil_mats->Henv_ints[3*(lw+1) + 1] = block2->ops[2*(conn_i-1)+2];
+			hamil_mats->Henv_ints[3*(lw+1) + 2] = block2->ops[2*(conn_i-1)+1];
+
+		} else {
+			// Periodic boundary if snaking up
+			hamil_mats->Hsys_ints[3*lw]     = block1->ops[2];
+			hamil_mats->Hsys_ints[3*lw + 1] = block1->ops[2];
+			hamil_mats->Hsys_ints[3*lw + 2] = block1->ops[1];
+			hamil_mats->Henv_ints[3*lw]     = block2->ops[2*(lw-1)+2];
+			hamil_mats->Henv_ints[3*lw + 1] = block2->ops[2*(lw-1)+2];
+			hamil_mats->Henv_ints[3*lw + 2] = block2->ops[2*(lw-1)+1];
+
+			// Connecting piece if snaking up
+			hamil_mats->Hsys_ints[3*(lw+1)]     = block1->ops[2*conn_i+2];
+			hamil_mats->Hsys_ints[3*(lw+1) + 1] = block1->ops[2*conn_i+2];
+			hamil_mats->Hsys_ints[3*(lw+1) + 2] = block1->ops[2*conn_i+1];
+			hamil_mats->Henv_ints[3*(lw+1)]     = block2->ops[2*(conn_i+1)+2];
+			hamil_mats->Henv_ints[3*(lw+1) + 1] = block2->ops[2*(conn_i+1)+2];
+			hamil_mats->Henv_ints[3*(lw+1) + 2] = block2->ops[2*(conn_i+1)+1];
+		}
+
+	}
+
+	return hamil_mats;
+}
+
 void freehamil_mats_t(hamil_mats_t *hamil_mats) {
 
 	if (hamil_mats->int_alphas) { mkl_free(hamil_mats->int_alphas); }

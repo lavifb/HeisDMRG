@@ -195,6 +195,13 @@ MAT_TYPE **enlargeOps(const DMRGBlock *block) {
 	int d_model	= model->d_model;
 	int d_block	= block->d_block;
 	int d_enl  	= d_model * d_block;
+	int lw      = model->ladder_width;
+	
+	int conn_i  = (block->length - 1)%lw;
+	// check if snaking is going up or down
+	if ((block1->length-1)/lw % 2 == 1) {
+		conn_i = lw - 1 - conn_i;
+	}
 
 	// H_enl
 	enl_ops[0] = model->H_int(model, block, model->single_block);
@@ -202,14 +209,26 @@ MAT_TYPE **enlargeOps(const DMRGBlock *block) {
 	kronI('L', d_block, d_model, model->H1, enl_ops[0]);
 
 	// conn_Sz
-	enl_ops[1] = mkl_calloc(d_enl*d_enl, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	kronI('L', d_block, d_model, model->Sz, enl_ops[1]);
+	enl_ops[2*conn_i+1] = mkl_calloc(d_enl*d_enl, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	kronI('L', d_block, d_model, model->Sz, enl_ops[2*conn_i+1]);
 
 	// conn_Sp
-	enl_ops[2] = mkl_calloc(d_enl*d_enl, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	kronI('L', d_block, d_model, model->Sp, enl_ops[2]);
+	enl_ops[2*conn_i+2] = mkl_calloc(d_enl*d_enl, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	kronI('L', d_block, d_model, model->Sp, enl_ops[2*conn_i+2]);
 
-	for (int i = 3; i < block->num_ops; i++) { // loop over measurement ops
+	for (int i=0; i<lw; i++) {
+		if (i != conn_i) {
+			// conn_Szi
+			enl_ops[2*i+1] = mkl_calloc(d_enl*d_enl, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+			kronI('R', d_block, d_model, block->ops[2*i+1], enl_ops[2*i+1]);
+
+			// conn_Spi
+			enl_ops[2*i+2] = mkl_calloc(d_enl*d_enl, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+			kronI('R', d_block, d_model, block->ops[2*i+2], enl_ops[2*i+2]);
+		}
+	}
+
+	for (int i = 2*lw+1; i < block->num_ops; i++) { // loop over measurement ops
 		// S_i ops
 		enl_ops[i] = mkl_calloc(d_enl*d_enl, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		kronI('R', d_block, d_model, block->ops[i], enl_ops[i]);
@@ -220,7 +239,7 @@ MAT_TYPE **enlargeOps(const DMRGBlock *block) {
 	if (block->meas == 'M') {
 		enl_ops[block->num_ops] = mkl_malloc(d_enl*d_enl * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		// New S_i is same as conn_Sz
-		memcpy(enl_ops[block->num_ops], enl_ops[1], d_enl*d_enl * sizeof(MAT_TYPE));
+		memcpy(enl_ops[block->num_ops], enl_ops[2*conn_i+1], d_enl*d_enl * sizeof(MAT_TYPE));
 	}
 
 	return enl_ops;
