@@ -37,8 +37,8 @@ int main(int argc, char *argv[]) {
 	int minf;
 	int *ms = mkl_malloc(n_ms * sizeof(int), MEM_DATA_ALIGN);
 
-	model_t *model = newHeis2Model();
-	// model_t *model = newLadderHeis2Model(4);
+	// model_t *model = newHeis2Model();
+	model_t *model = newLadderHeis2Model(4);
 	model->fullLength = L;
 
 	compileParams(model);
@@ -61,6 +61,8 @@ int main(int argc, char *argv[]) {
 	printf("M=%d finished in %.3f seconds.\n\n", mm, runtime);
 
 	int success = 0;
+
+	printf("Energy: %f\n", meas->energy);
 
 	freeMeas(meas);
 	freeModel(model);
