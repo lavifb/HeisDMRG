@@ -58,7 +58,7 @@ complex: ${BIN}/zdmrg ztests
 proj_main: ${BIN}/dmrg ${BIN}/zdmrg
 
 .PHONY: debug
-debug: ${BIN}/dmrg_debug ${BIN}/quick_test_debug
+debug: ${BIN}/dmrg_debug ${BIN}/quick_test_debug ${BIN}/time_test_debug
 
 .PHONY: clean
 clean: 
@@ -113,6 +113,9 @@ ${BIN}/dmrg_debug: ${SRC}/main.c ${objsD}
 
 ${BIN}/quick_test_debug: ${TEST}/quick_test.c ${objsD}
 	${CC} ${INCDIRS} ${CCOPTSD} ${objsD} ${TEST}/quick_test.c ${LIB}  -o ${BIN}/quick_test_debug
+
+${BIN}/time_test_debug: ${TEST}/time_test.c ${objsD}
+	${CC} ${INCDIRS} ${CCOPTSD} ${objsD} ${TEST}/time_test.c ${LIB}  -o ${BIN}/time_test_debug
 
 ${BIN}/zquick_test_debug: ${TEST}/quick_test.c ${zobjsD}
 	${CC} ${INCDIRS} ${CCOPTSD} -DCOMPLEX ${zobjsD} ${TEST}/quick_test.c ${LIB} -o ${BIN}/zquick_test_debug
