@@ -122,9 +122,11 @@ model_t *newHeis2Model() {
 	model->Sp = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	memcpy(model->Sp, Sp, N*N * sizeof(MAT_TYPE));
 
-	model->H_int = &HeisenH_int;
+	// model->H_int = &HeisenH_int;
+	model->H_int = &LadderH_int;
 	#if USE_PRIMME
-	model->H_int_mats = &HeisenH_int_mats;
+	// model->H_int_mats = &HeisenH_int_mats;
+	model->H_int_mats = &LadderH_int_mats;
 	#else
 	model->H_int_r = &HeisenH_int_r;
 	#endif
@@ -177,9 +179,9 @@ model_t *newLadderHeis2Model(int ladder_width) {
 	model->Sp = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	memcpy(model->Sp, Sp, N*N * sizeof(MAT_TYPE));
 
-	model->H_int = &HeisenH_int;
+	model->H_int = &LadderH_int;
 	#if USE_PRIMME
-	model->H_int_mats = &HeisenH_int_mats;
+	model->H_int_mats = &LadderH_int_mats;
 	#else
 	model->H_int_r = &HeisenH_int_r;
 	#endif
