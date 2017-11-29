@@ -58,7 +58,7 @@ complex: ${BIN}/zdmrg ztests
 proj_main: ${BIN}/dmrg ${BIN}/zdmrg
 
 .PHONY: debug
-debug: ${BIN}/dmrg_debug ${BIN}/quick_test_debug
+debug: ${BIN}/dmrg_debug ${BIN}/quick_test_debug ${BIN}/time_test_debug
 
 .PHONY: clean
 clean: 
