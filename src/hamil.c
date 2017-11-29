@@ -205,6 +205,26 @@ MAT_TYPE *LadderH_int(const model_t* model, const DMRGBlock *block1, const DMRGB
 
 	int lw = model->ladder_width;
 
+	// Special case for single block
+	if (block2 == model->single_block) {
+
+		int conn_i = (block1->length-1)%lw;
+		if ((block1->length-1)/lw % 2 == 1) {
+			conn_i = lw - 1 - conn_i;
+		}
+
+		MAT_TYPE *Sz1 = block1->ops[2*conn_i+1];
+		MAT_TYPE *Sz2 = block2->ops[1];
+		MAT_TYPE *Sp1 = block1->ops[2*conn_i+2];
+		MAT_TYPE *Sp2 = block2->ops[2];
+
+		kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
+		kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
+		kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
+
+		return H_int;
+	}
+
 	// Connections up the ladder
 	for (int i=0; i<lw; i++) {
 		MAT_TYPE *Sz1 = block1->ops[2*i+1];

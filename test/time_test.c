@@ -38,6 +38,7 @@ int main(int argc, char *argv[]) {
 	int *ms = mkl_malloc(n_ms * sizeof(int), MEM_DATA_ALIGN);
 
 	model_t *model = newHeis2Model();
+	// model_t *model = newLadderHeis2Model(4);
 	model->fullLength = L;
 
 	compileParams(model);

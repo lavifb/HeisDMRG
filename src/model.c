@@ -27,11 +27,16 @@ void compileParams(model_t *model) {
 
 	model->Id = identity(dim);
 
-	model->num_ops  = 3;
-	model->init_ops = mkl_malloc(3 * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
+	model->num_ops  = 2*model->ladder_width + 1;
+	model->init_ops = mkl_malloc(model->num_ops * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
 	model->init_ops[0] = model->H1;
 	model->init_ops[1] = model->Sz;
 	model->init_ops[2] = model->Sp;
+
+	for (int i=1; i<model->ladder_width; i++) {
+		model->init_ops[i*2 + 1] = model->H1;
+		model->init_ops[i*2 + 2] = model->H1;
+	}
 
 	model->init_mzs = mkl_malloc(dim * sizeof(int), MEM_DATA_ALIGN);
 	for (int i=0; i<dim; i++) {
@@ -122,11 +127,9 @@ model_t *newHeis2Model() {
 	model->Sp = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	memcpy(model->Sp, Sp, N*N * sizeof(MAT_TYPE));
 
-	// model->H_int = &HeisenH_int;
-	model->H_int = &LadderH_int;
+	model->H_int = &HeisenH_int;
 	#if USE_PRIMME
-	// model->H_int_mats = &HeisenH_int_mats;
-	model->H_int_mats = &LadderH_int_mats;
+	model->H_int_mats = &HeisenH_int_mats;
 	#else
 	model->H_int_r = &HeisenH_int_r;
 	#endif
@@ -164,12 +167,12 @@ model_t *newLadderHeis2Model(int ladder_width) {
 	complex double Sp[N*N] = { 0 , 1,
 							   0 , 0 };
 	#else
-	MAT_TYPE H1[N*N] = { 0 , 0,
-					     0 , 0 };
-	MAT_TYPE Sz[N*N] = { .5, 0,
-					     0 ,-.5};
-	MAT_TYPE Sp[N*N] = { 0 , 1,
-					     0 , 0 };
+	double H1[N*N] = { 0 , 0,
+					   0 , 0 };
+	double Sz[N*N] = { .5, 0,
+					   0 ,-.5};
+	double Sp[N*N] = { 0 , 1,
+					   0 , 0 };
 	#endif
 
 	model->H1 = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
