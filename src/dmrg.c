@@ -393,6 +393,9 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 
 	// run infinite algorithm to build up system
 	while (2*sys->length < L) {
+		#ifndef NDEBUG
+		printGraphic(sys, sys);
+		#endif
 		sys = single_step(sys, sys, m_inf, 0, NULL);
 
 		saved_blocksL[sys->length-1] = sys;
@@ -490,8 +493,10 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 				meas = meas_step(sys, env, m, 0, psi0_guessp);
 				break;
 			}
-
-			// printGraphic(sys, env);
+			
+			#ifndef NDEBUG
+			printGraphic(sys, env);
+			#endif
 			sys = single_step(sys, env, m, 0, psi0_guessp);
 			logBlock(sys);
 
