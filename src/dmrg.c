@@ -83,7 +83,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		HASH_FIND_INT(sys_enl_sectors, &mz    , sys_enl_mz);
 		HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_mz);
 		assert(sys_enl_mz != NULL);
-		// SOMETHING WRONG HERE!!! (MAYBE??)
+		// Skip if environment does not have corrresponding state
 		if (env_enl_mz == NULL) {
 			continue;
 		}
@@ -175,9 +175,9 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	int newDimSys = lamb_i;
 	assert(newDimSys <= dimSys);
 
-	MAT_TYPE *trans = (MAT_TYPE *)mkl_malloc(dimSys*mm * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	mm = (newDimSys < mm) ? newDimSys : mm; // minimize again in case states are dropped because of sectors
+	MAT_TYPE *trans = mkl_malloc(dimSys*mm * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
-	assert(mm <= newDimSys);
 	int *sorted_inds = dsort2(newDimSys, lambs);
 
 	// copy to trans in right order
@@ -549,7 +549,9 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 
 	// Run infinite algorithm to build up system
 	while (2*sys->length < L) {
-		// printGraphic(sys, sys);
+		#ifndef NDEBUG
+		printGraphic(sys, sys);
+		#endif
 		sys = single_step(sys, sys, m_inf, 0, NULL);
 		saved_blocks[sys->length-1] = sys;
 	}
@@ -631,7 +633,9 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 				break;
 			}
 
-			// printGraphic(sys, env);
+			#ifndef NDEBUG
+			printGraphic(sys, env);
+			#endif
 			sys = single_step(sys, env, m, 0, psi0_guessp);
 			logBlock(sys);
 
