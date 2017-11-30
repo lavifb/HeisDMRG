@@ -197,11 +197,7 @@ MAT_TYPE **enlargeOps(const DMRGBlock *block) {
 	int d_enl  	= d_model * d_block;
 	int lw      = model->ladder_width;
 	
-	int conn_i  = (block->length - 1)%lw;
-	// check if snaking is going up or down
-	if ((block->length-1)/lw % 2 == 1) {
-		conn_i = lw - 1 - conn_i;
-	}
+	int conn_i  = (block->length-1)%lw;
 
 	// H_enl
 	enl_ops[0] = model->H_int(model, block, model->single_block);

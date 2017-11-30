@@ -51,8 +51,8 @@ int main(int argc, char *argv[]) {
 	struct timespec t_start, t_end;
 	clock_gettime(CLOCK_MONOTONIC, &t_start);
 
-	meas_data_t *meas = fin_dmrgR(L, minf, n_ms, ms, model);
-	// meas_data_t *meas = fin_dmrg(L, minf, n_ms, ms, model);
+	// meas_data_t *meas = fin_dmrgR(L, minf, n_ms, ms, model);
+	meas_data_t *meas = fin_dmrg(L, minf, n_ms, ms, model);
 
 	clock_gettime(CLOCK_MONOTONIC, &t_end);
 	double runtime = (t_end.tv_sec - t_start.tv_sec);

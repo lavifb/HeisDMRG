@@ -209,9 +209,6 @@ MAT_TYPE *LadderH_int(const model_t* model, const DMRGBlock *block1, const DMRGB
 	if (block2 == model->single_block) {
 
 		int conn_i = (block1->length-1)%lw;
-		if ((block1->length-1)/lw % 2 == 1) {
-			conn_i = lw - 1 - conn_i;
-		}
 
 		MAT_TYPE *Sz1 = block1->ops[2*conn_i+1];
 		MAT_TYPE *Sz2 = block2->ops[1];
@@ -228,9 +225,9 @@ MAT_TYPE *LadderH_int(const model_t* model, const DMRGBlock *block1, const DMRGB
 	// Connections up the ladder
 	for (int i=0; i<lw; i++) {
 		MAT_TYPE *Sz1 = block1->ops[2*i+1];
-		MAT_TYPE *Sz2 = block2->ops[2*i+1];
+		MAT_TYPE *Sz2 = block2->ops[2*(lw-1-i)+1];
 		MAT_TYPE *Sp1 = block1->ops[2*i+2];
-		MAT_TYPE *Sp2 = block2->ops[2*i+2];
+		MAT_TYPE *Sp2 = block2->ops[2*(lw-1-i)+2];
 
 		kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
 		kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
@@ -241,58 +238,28 @@ MAT_TYPE *LadderH_int(const model_t* model, const DMRGBlock *block1, const DMRGB
 	if (block1->length%lw != 0) {
 
 		int conn_i = (block1->length-1)%lw;
-		// check if snaking is going up or down
-		if ((block1->length-1)/lw % 2 == 1) {
-			conn_i = lw - 1 - conn_i;
+		// Periodic boundary if snaking up
+		{
+			MAT_TYPE *Sz1 = block1->ops[1];
+			MAT_TYPE *Sz2 = block2->ops[1];
+			MAT_TYPE *Sp1 = block1->ops[2];
+			MAT_TYPE *Sp2 = block2->ops[2];
 
-			// Periodic boundary if snaking down
-			{
-				MAT_TYPE *Sz1 = block1->ops[2*(lw-1)+1];
-				MAT_TYPE *Sz2 = block2->ops[1];
-				MAT_TYPE *Sp1 = block1->ops[2*(lw-1)+2];
-				MAT_TYPE *Sp2 = block2->ops[2];
+			kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
+			kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
+			kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
+		}
+
+		// Connecting piece
+		{
+			MAT_TYPE *Sz1 = block1->ops[2*conn_i+1];
+			MAT_TYPE *Sz2 = block2->ops[2*(lw-2-conn_i)+1];
+			MAT_TYPE *Sp1 = block1->ops[2*conn_i+2];
+			MAT_TYPE *Sp2 = block2->ops[2*(lw-2-conn_i)+2];
 	
-				kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
-				kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
-				kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
-			}
-
-			// Connecting piece if snaking down
-			{
-				MAT_TYPE *Sz1 = block1->ops[2*conn_i+1];
-				MAT_TYPE *Sz2 = block2->ops[2*(conn_i-1)+1];
-				MAT_TYPE *Sp1 = block1->ops[2*conn_i+2];
-				MAT_TYPE *Sp2 = block2->ops[2*(conn_i-1)+2];
-		
-				kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
-				kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
-				kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
-			}
-
-		} else {
-			// Periodic boundary if snaking up
-			{
-				MAT_TYPE *Sz1 = block1->ops[1];
-				MAT_TYPE *Sz2 = block2->ops[2*(lw-1)+1];
-				MAT_TYPE *Sp1 = block1->ops[2];
-				MAT_TYPE *Sp2 = block2->ops[2*(lw-1)+2];
-
-				kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
-				kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
-				kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
-			}
-
-			// Connecting piece if snaking up
-			{
-				MAT_TYPE *Sz1 = block1->ops[2*conn_i+1];
-				MAT_TYPE *Sz2 = block2->ops[2*(conn_i+1)+1];
-				MAT_TYPE *Sp1 = block1->ops[2*conn_i+2];
-				MAT_TYPE *Sp2 = block2->ops[2*(conn_i+1)+2];
-		
-				kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
-				kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
-				kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
-			}
+			kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
+			kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
+			kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
 		}
 	}
 
@@ -351,52 +318,30 @@ hamil_mats_t *LadderH_int_mats(const model_t *model, const DMRGBlock *block1, co
 	// Env interaction mats for across connections
 	hamil_mats->Henv_ints = mkl_malloc(num_int_terms * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
 	for (int i=0; i<lw; i++) {
-		hamil_mats->Henv_ints[3*i]     = block2->ops[2*i + 2];
-		hamil_mats->Henv_ints[3*i + 1] = block2->ops[2*i + 2];
-		hamil_mats->Henv_ints[3*i + 2] = block2->ops[2*i + 1];
+		hamil_mats->Henv_ints[3*i]     = block2->ops[2*(lw-1-i) + 2];
+		hamil_mats->Henv_ints[3*i + 1] = block2->ops[2*(lw-1-i) + 2];
+		hamil_mats->Henv_ints[3*i + 2] = block2->ops[2*(lw-1-i) + 1];
 	}
 
 	if (block1->length%lw != 0) {
 
 		int conn_i = (block1->length-1)%lw;
-		// check if snaking is going up or down
-		if ((block1->length-1)/lw % 2 == 1) {
-			conn_i = lw - 1 - conn_i;
 
-			// Periodic boundary if snaking down
-			hamil_mats->Hsys_ints[3*lw]     = block1->ops[2*(lw-1)+2];
-			hamil_mats->Hsys_ints[3*lw + 1] = block1->ops[2*(lw-1)+2];
-			hamil_mats->Hsys_ints[3*lw + 2] = block1->ops[2*(lw-1)+1];
-			hamil_mats->Henv_ints[3*lw]     = block2->ops[2];
-			hamil_mats->Henv_ints[3*lw + 1] = block2->ops[2];
-			hamil_mats->Henv_ints[3*lw + 2] = block2->ops[1];
+		// Periodic boundary
+		hamil_mats->Hsys_ints[3*lw]     = block1->ops[2];
+		hamil_mats->Hsys_ints[3*lw + 1] = block1->ops[2];
+		hamil_mats->Hsys_ints[3*lw + 2] = block1->ops[1];
+		hamil_mats->Henv_ints[3*lw]     = block2->ops[2];
+		hamil_mats->Henv_ints[3*lw + 1] = block2->ops[2];
+		hamil_mats->Henv_ints[3*lw + 2] = block2->ops[1];
 
-			// Connecting piece if snaking down
-			hamil_mats->Hsys_ints[3*(lw+1)]     = block1->ops[2*conn_i+2];
-			hamil_mats->Hsys_ints[3*(lw+1) + 1] = block1->ops[2*conn_i+2];
-			hamil_mats->Hsys_ints[3*(lw+1) + 2] = block1->ops[2*conn_i+1];
-			hamil_mats->Henv_ints[3*(lw+1)]     = block2->ops[2*(conn_i-1)+2];
-			hamil_mats->Henv_ints[3*(lw+1) + 1] = block2->ops[2*(conn_i-1)+2];
-			hamil_mats->Henv_ints[3*(lw+1) + 2] = block2->ops[2*(conn_i-1)+1];
-
-		} else {
-			// Periodic boundary if snaking up
-			hamil_mats->Hsys_ints[3*lw]     = block1->ops[2];
-			hamil_mats->Hsys_ints[3*lw + 1] = block1->ops[2];
-			hamil_mats->Hsys_ints[3*lw + 2] = block1->ops[1];
-			hamil_mats->Henv_ints[3*lw]     = block2->ops[2*(lw-1)+2];
-			hamil_mats->Henv_ints[3*lw + 1] = block2->ops[2*(lw-1)+2];
-			hamil_mats->Henv_ints[3*lw + 2] = block2->ops[2*(lw-1)+1];
-
-			// Connecting piece if snaking up
-			hamil_mats->Hsys_ints[3*(lw+1)]     = block1->ops[2*conn_i+2];
-			hamil_mats->Hsys_ints[3*(lw+1) + 1] = block1->ops[2*conn_i+2];
-			hamil_mats->Hsys_ints[3*(lw+1) + 2] = block1->ops[2*conn_i+1];
-			hamil_mats->Henv_ints[3*(lw+1)]     = block2->ops[2*(conn_i+1)+2];
-			hamil_mats->Henv_ints[3*(lw+1) + 1] = block2->ops[2*(conn_i+1)+2];
-			hamil_mats->Henv_ints[3*(lw+1) + 2] = block2->ops[2*(conn_i+1)+1];
-		}
-
+		// Connecting piece
+		hamil_mats->Hsys_ints[3*(lw+1)]     = block1->ops[2*conn_i+2];
+		hamil_mats->Hsys_ints[3*(lw+1) + 1] = block1->ops[2*conn_i+2];
+		hamil_mats->Hsys_ints[3*(lw+1) + 2] = block1->ops[2*conn_i+1];
+		hamil_mats->Henv_ints[3*(lw+1)]     = block2->ops[2*(lw-2-conn_i)+2];
+		hamil_mats->Henv_ints[3*(lw+1) + 1] = block2->ops[2*(lw-2-conn_i)+2];
+		hamil_mats->Henv_ints[3*(lw+1) + 2] = block2->ops[2*(lw-2-conn_i)+1];
 	}
 
 	return hamil_mats;
