@@ -175,7 +175,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	int newDimSys = lamb_i;
 	assert(newDimSys <= dimSys);
 
-	mm = (dimSys < mm) ? newDimSys : mm; // minimize again in case states are dropped because of sectors
+	mm = (newDimSys < mm) ? newDimSys : mm; // minimize again in case states are dropped because of sectors
 	MAT_TYPE *trans = mkl_malloc(dimSys*mm * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 	int *sorted_inds = dsort2(newDimSys, lambs);
