@@ -35,6 +35,14 @@ int main(int argc, char *argv[]) {
 	model_t *model = params.model;
 	compileParams(model);
 
+	// Set Hamiltonian interaction function
+	model->H_int   = &HeisenH_int;
+	#if USE_PRIMME
+	model->H_int_mats = &HeisenH_int_mats;
+	#else
+	model->H_int_r = &HeisenH_int_r;
+	#endif
+
 	// Record start time
 	time_t start_time = time(NULL);
 	params.start_time = &start_time;

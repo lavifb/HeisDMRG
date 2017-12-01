@@ -51,13 +51,6 @@ void compileParams(model_t *model) {
 	// TODO: don't copy init_ops into block (doesn't really matter though...)
 	model->single_block = createDMRGBlock(model);
 
-	// Set Hamiltonian interaction function
-	model->H_int   = &HeisenH_int;
-	#if USE_PRIMME
-	model->H_int_mats = &HeisenH_int_mats;
-	#else
-	model->H_int_r = &HeisenH_int_r;
-	#endif
 }
 
 /* Nulls out model parameters

@@ -3,6 +3,7 @@
 #include "model.h"
 #include "linalg.h"
 #include <mkl.h>
+#include <stdio.h>
 #include <string.h>
 
 /*  Wrapper function to find lowest energy states. It uses the faster PRIMME library if available
@@ -36,6 +37,12 @@ MAT_TYPE *getLowestEStates(const DMRGBlock *sys_enl, const DMRGBlock *env_enl, c
 		hamil_mats_t *hamils_mats = model->H_int_mats(model, sys_enl, env_enl);
 		primmeBlockWrapper(hamils_mats, dimSup, energies, psi0, num_states, numGuesses);
 		freehamil_mats_t(hamils_mats);
+
+		// MAT_TYPE *H_int = model->H_int(model, sys_enl, env_enl);
+		// kronI('R', sys_enl->d_block, env_enl->d_block, sys_enl->ops[0], H_int);
+		// kronI('L', sys_enl->d_block, env_enl->d_block, env_enl->ops[0], H_int);
+		// primmeWrapper(H_int, dimSup, energies, psi0, num_states, numGuesses);
+		// mkl_free(H_int);
 
 		MAT_TYPE *psi0_r = psi0;
 		if (num_restr_ind >= 0) {
@@ -156,7 +163,7 @@ hamil_mats_t *HeisenH_int_mats(const model_t *model, const DMRGBlock *block1, co
 
 	// Coefs from H_params
 	double *H_params = model->H_params;
-	hamil_mats->int_alphas = mkl_malloc(3 * sizeof(int), MEM_DATA_ALIGN);
+	hamil_mats->int_alphas = mkl_malloc(3 * sizeof(double), MEM_DATA_ALIGN);
 	hamil_mats->int_alphas[0] = H_params[0]/2;
 	hamil_mats->int_alphas[1] = H_params[0]/2;
 	hamil_mats->int_alphas[2] = H_params[1];
@@ -209,7 +216,7 @@ MAT_TYPE *LadderH_int(const model_t* model, const DMRGBlock *block1, const DMRGB
 	if (block2 == model->single_block) {
 
 		int new_i = (block1->length)%lw;
-		
+
 		// Connect to previous row	
 		{
 			MAT_TYPE *Sz1 = block1->ops[2*new_i+1];
@@ -234,17 +241,18 @@ MAT_TYPE *LadderH_int(const model_t* model, const DMRGBlock *block1, const DMRGB
 			kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
 		}
 
+		// TODO: fix periodic boudary
 		// Periodic boundary if finishing row
-		if (new_i == lw-1) {
-			MAT_TYPE *Sz1 = block1->ops[1];
-			MAT_TYPE *Sz2 = block2->ops[1];
-			MAT_TYPE *Sp1 = block1->ops[2];
-			MAT_TYPE *Sp2 = block2->ops[2];
+		// if (new_i == lw-1) {
+		// 	MAT_TYPE *Sz1 = block1->ops[1];
+		// 	MAT_TYPE *Sz2 = block2->ops[1];
+		// 	MAT_TYPE *Sp1 = block1->ops[2];
+		// 	MAT_TYPE *Sp2 = block2->ops[2];
 
-			kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
-			kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
-			kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
-		}
+		// 	kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
+		// 	kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
+		// 	kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
+		// }
 
 		return H_int;
 	}
@@ -266,17 +274,19 @@ MAT_TYPE *LadderH_int(const model_t* model, const DMRGBlock *block1, const DMRGB
 
 		// where in the ladder width the block 1 connection site is
 		int conn_i = (block1->length-1)%lw;
-		// Periodic boundary
-		{
-			MAT_TYPE *Sz1 = block1->ops[1];
-			MAT_TYPE *Sz2 = block2->ops[1];
-			MAT_TYPE *Sp1 = block1->ops[2];
-			MAT_TYPE *Sp2 = block2->ops[2];
 
-			kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
-			kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
-			kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
-		}
+		// TODO: fix periodic boudary
+		// Periodic boundary
+		// {
+		// 	MAT_TYPE *Sz1 = block1->ops[1];
+		// 	MAT_TYPE *Sz2 = block2->ops[1];
+		// 	MAT_TYPE *Sp1 = block1->ops[2];
+		// 	MAT_TYPE *Sp2 = block2->ops[2];
+
+		// 	kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
+		// 	kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
+		// 	kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
+		// }
 
 		// Connecting piece
 		{
@@ -309,13 +319,13 @@ hamil_mats_t *LadderH_int_mats(const model_t *model, const DMRGBlock *block1, co
 	int num_int_terms = 3*lw;
 	// Check for full width ladder
 	if (block1->length%lw != 0) {
-		num_int_terms += 3*2;
+		num_int_terms += 3;
 	}
 	hamil_mats->num_int_terms = num_int_terms;
 
 	// Coefs from H_params
 	double *H_params = model->H_params;
-	hamil_mats->int_alphas = mkl_malloc(num_int_terms * sizeof(int), MEM_DATA_ALIGN);
+	hamil_mats->int_alphas = mkl_malloc(num_int_terms * sizeof(double), MEM_DATA_ALIGN);
 	for (int i=0; i<num_int_terms/3; i++) {
 		hamil_mats->int_alphas[i*3]     = H_params[0]/2;
 		hamil_mats->int_alphas[i*3 + 1] = H_params[0]/2;
@@ -355,21 +365,23 @@ hamil_mats_t *LadderH_int_mats(const model_t *model, const DMRGBlock *block1, co
 
 		int conn_i = (block1->length-1)%lw;
 
-		// Periodic boundary
-		hamil_mats->Hsys_ints[3*lw]     = block1->ops[2];
-		hamil_mats->Hsys_ints[3*lw + 1] = block1->ops[2];
-		hamil_mats->Hsys_ints[3*lw + 2] = block1->ops[1];
-		hamil_mats->Henv_ints[3*lw]     = block2->ops[2];
-		hamil_mats->Henv_ints[3*lw + 1] = block2->ops[2];
-		hamil_mats->Henv_ints[3*lw + 2] = block2->ops[1];
-
 		// Connecting piece
-		hamil_mats->Hsys_ints[3*(lw+1)]     = block1->ops[2*conn_i+2];
-		hamil_mats->Hsys_ints[3*(lw+1) + 1] = block1->ops[2*conn_i+2];
-		hamil_mats->Hsys_ints[3*(lw+1) + 2] = block1->ops[2*conn_i+1];
-		hamil_mats->Henv_ints[3*(lw+1)]     = block2->ops[2*(lw-2-conn_i)+2];
-		hamil_mats->Henv_ints[3*(lw+1) + 1] = block2->ops[2*(lw-2-conn_i)+2];
-		hamil_mats->Henv_ints[3*(lw+1) + 2] = block2->ops[2*(lw-2-conn_i)+1];
+		hamil_mats->Hsys_ints[3*lw]     = block1->ops[2*conn_i+2];
+		hamil_mats->Hsys_ints[3*lw + 1] = block1->ops[2*conn_i+2];
+		hamil_mats->Hsys_ints[3*lw + 2] = block1->ops[2*conn_i+1];
+		hamil_mats->Henv_ints[3*lw]     = block2->ops[2*(lw-2-conn_i)+2];
+		hamil_mats->Henv_ints[3*lw + 1] = block2->ops[2*(lw-2-conn_i)+2];
+		hamil_mats->Henv_ints[3*lw + 2] = block2->ops[2*(lw-2-conn_i)+1];
+
+		// TODO: fix periodic boudary
+		// Periodic boundary
+		// hamil_mats->Hsys_ints[3*(lw+1)]     = block1->ops[2];
+		// hamil_mats->Hsys_ints[3*(lw+1) + 1] = block1->ops[2];
+		// hamil_mats->Hsys_ints[3*(lw+1) + 2] = block1->ops[1];
+		// hamil_mats->Henv_ints[3*(lw+1)]     = block2->ops[2];
+		// hamil_mats->Henv_ints[3*(lw+1) + 1] = block2->ops[2];
+		// hamil_mats->Henv_ints[3*(lw+1) + 2] = block2->ops[1];
+
 	}
 
 	return hamil_mats;

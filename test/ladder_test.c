@@ -18,7 +18,8 @@ int main(int argc, char *argv[]) {
 
 	int mm   = 20;
 	int n_ms = 8;
-	int lw   = 1;
+	int lw   = 2;
+	int ll   = 16;
 
 	if (argc > 1) {
 		mm = atoi(argv[1]);
@@ -41,7 +42,14 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	#define L    32
+	if (argc > 4) {
+		ll = atoi(argv[4]);
+		if (n_ms <= 0) {
+			errprintf("Length of ladder '%d' must be positive.", ll);
+		}
+	}
+
+	int L = ll * lw;
 	int minf;
 	int *ms = mkl_malloc(n_ms * sizeof(int), MEM_DATA_ALIGN);
 
