@@ -208,16 +208,43 @@ MAT_TYPE *LadderH_int(const model_t* model, const DMRGBlock *block1, const DMRGB
 	// Special case for single block
 	if (block2 == model->single_block) {
 
-		int conn_i = (block1->length-1)%lw;
+		int new_i = (block1->length)%lw;
+		
+		// Connect to previous row	
+		{
+			MAT_TYPE *Sz1 = block1->ops[2*new_i+1];
+			MAT_TYPE *Sz2 = block2->ops[1];
+			MAT_TYPE *Sp1 = block1->ops[2*new_i+2];
+			MAT_TYPE *Sp2 = block2->ops[2];
 
-		MAT_TYPE *Sz1 = block1->ops[2*conn_i+1];
-		MAT_TYPE *Sz2 = block2->ops[1];
-		MAT_TYPE *Sp1 = block1->ops[2*conn_i+2];
-		MAT_TYPE *Sp2 = block2->ops[2];
+			kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
+			kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
+			kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
+		}
 
-		kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
-		kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
-		kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
+		// Connect to previous site in the row
+		if (new_i > 0) {
+			MAT_TYPE *Sz1 = block1->ops[2*(new_i-1)+1];
+			MAT_TYPE *Sz2 = block2->ops[1];
+			MAT_TYPE *Sp1 = block1->ops[2*(new_i-1)+2];
+			MAT_TYPE *Sp2 = block2->ops[2];
+
+			kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
+			kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
+			kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
+		}
+
+		// Periodic boundary if finishing row
+		if (new_i == lw-1) {
+			MAT_TYPE *Sz1 = block1->ops[1];
+			MAT_TYPE *Sz2 = block2->ops[1];
+			MAT_TYPE *Sp1 = block1->ops[2];
+			MAT_TYPE *Sp2 = block2->ops[2];
+
+			kron(Jz, dim1, dim2, Sz1, Sz2, H_int); // H_int += Jz * kron(Sz1, Sz2)
+			kronT('r', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sp1, Sm2)
+			kronT('l', J2, dim1, dim2, Sp1, Sp2, H_int); // H_int += J/2 * kron(Sm1, Sp2)
+		}
 
 		return H_int;
 	}
@@ -237,8 +264,9 @@ MAT_TYPE *LadderH_int(const model_t* model, const DMRGBlock *block1, const DMRGB
 	// Check for full width ladder
 	if (block1->length%lw != 0) {
 
+		// where in the ladder width the block 1 connection site is
 		int conn_i = (block1->length-1)%lw;
-		// Periodic boundary if snaking up
+		// Periodic boundary
 		{
 			MAT_TYPE *Sz1 = block1->ops[1];
 			MAT_TYPE *Sz2 = block2->ops[1];
@@ -289,7 +317,7 @@ hamil_mats_t *LadderH_int_mats(const model_t *model, const DMRGBlock *block1, co
 	double *H_params = model->H_params;
 	hamil_mats->int_alphas = mkl_malloc(num_int_terms * sizeof(int), MEM_DATA_ALIGN);
 	for (int i=0; i<num_int_terms/3; i++) {
-		hamil_mats->int_alphas[i*3 + 0] = H_params[0]/2;
+		hamil_mats->int_alphas[i*3]     = H_params[0]/2;
 		hamil_mats->int_alphas[i*3 + 1] = H_params[0]/2;
 		hamil_mats->int_alphas[i*3 + 2] = H_params[1];
 	}
@@ -298,13 +326,13 @@ hamil_mats_t *LadderH_int_mats(const model_t *model, const DMRGBlock *block1, co
 	// Note: For the right matvec calculation you need an extra transpose on one side of the calculation.
 	//       Here we chose the left side (even indexes) to have an extra transpose.
 	hamil_mats->trans = mkl_malloc(2*num_int_terms * sizeof(CBLAS_TRANSPOSE), MEM_DATA_ALIGN);
-	for (int i=0; i<num_int_terms/6; i++) {
-		hamil_mats->trans[i*3 + 0] = CblasTrans;
-		hamil_mats->trans[i*3 + 1] = CblasTrans;
-		hamil_mats->trans[i*3 + 2] = CblasNoTrans;
-		hamil_mats->trans[i*3 + 3] = CblasNoTrans;
-		hamil_mats->trans[i*3 + 4] = CblasTrans;
-		hamil_mats->trans[i*3 + 5] = CblasNoTrans;
+	for (int i=0; i<num_int_terms/3; i++) {
+		hamil_mats->trans[6*i]     = CblasTrans;
+		hamil_mats->trans[6*i + 1] = CblasTrans;
+		hamil_mats->trans[6*i + 2] = CblasNoTrans;
+		hamil_mats->trans[6*i + 3] = CblasNoTrans;
+		hamil_mats->trans[6*i + 4] = CblasTrans;
+		hamil_mats->trans[6*i + 5] = CblasNoTrans;
 	}
 
 	// Sys interaction mats for across connections
