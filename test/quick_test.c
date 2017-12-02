@@ -23,8 +23,7 @@ int main(int argc, char *argv[]) {
 	#define n_ms 3
 	int ms[n_ms] = {10, 10, 20};
 
-	// model_t *model = newHeis2Model();
-	model_t *model = newLadderHeis2Model(4);
+	model_t *model = newHeis2Model();
 	model->fullLength = L;
 
 	compileParams(model);

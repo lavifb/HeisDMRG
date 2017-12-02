@@ -1,6 +1,7 @@
 #include "model.h"
 #include "hamil.h"
 #include "linalg.h"
+#include "input_parser.h"
 #include <mkl.h>
 #include <string.h>
 
@@ -51,6 +52,28 @@ void compileParams(model_t *model) {
 	// TODO: don't copy init_ops into block (doesn't really matter though...)
 	model->single_block = createDMRGBlock(model);
 
+	// Set interaction Hamiltonian functions
+	if (strcmp(model->geometry, "1D") == 0 || strcmp(model->geometry, "1d") == 0 || strcmp(model->geometry, "chain") == 0) {
+		model->H_int = &HeisenH_int;
+		#if USE_PRIMME
+		model->H_int_mats = &HeisenH_int_mats;
+		#else
+		model->H_int_r = &HeisenH_int_r;
+		#endif
+	} else if (strcmp(model->geometry, "Ladder") == 0 || strcmp(model->geometry, "ladder") == 0) {
+		model->H_int = &LadderH_int;
+		#if USE_PRIMME
+		model->H_int_mats = &LadderH_int_mats;
+		#else
+		model->H_int_r = &HeisenH_int_r;
+		#endif
+	} else if (strcmp(model->geometry, "") == 0) {
+		errprintf("No valid model geometry provided. Please provide a valid model geometry.\n");
+		exit(1);
+	} else {
+		errprintf("'%s' is not a valid model geometry. Please provide a valid model geometry.\n", model->geometry);
+		exit(1);
+	}
 }
 
 /* Nulls out model parameters
@@ -120,18 +143,12 @@ model_t *newHeis2Model() {
 	model->Sp = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	memcpy(model->Sp, Sp, N*N * sizeof(MAT_TYPE));
 
-	model->H_int = &HeisenH_int;
-	#if USE_PRIMME
-	model->H_int_mats = &HeisenH_int_mats;
-	#else
-	model->H_int_r = &HeisenH_int_r;
-	#endif
-
 	model->Id = NULL;
 	model->init_mzs = NULL;
 	model->num_ops = 0;
 	model->init_ops = NULL;
 	model->ladder_width = 1;
+	strncpy(model->geometry, "1D", 15);
 
 	double *H_params = mkl_malloc(2 * sizeof(double), MEM_DATA_ALIGN);
 	H_params[0] = 1.0;
@@ -175,18 +192,12 @@ model_t *newLadderHeis2Model(int ladder_width) {
 	model->Sp = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 	memcpy(model->Sp, Sp, N*N * sizeof(MAT_TYPE));
 
-	model->H_int = &LadderH_int;
-	#if USE_PRIMME
-	model->H_int_mats = &LadderH_int_mats;
-	#else
-	model->H_int_r = &HeisenH_int_r;
-	#endif
-
 	model->Id = NULL;
 	model->init_mzs = NULL;
 	model->num_ops = 0;
 	model->init_ops = NULL;
 	model->ladder_width = ladder_width;
+	strncpy(model->geometry, "Ladder", 15);
 
 	double *H_params = mkl_malloc(2 * sizeof(double), MEM_DATA_ALIGN);
 	H_params[0] = 1.0;

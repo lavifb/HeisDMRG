@@ -18,6 +18,8 @@ typedef struct model_t {
 
 	int fullLength; // Full length of system
 	int ladder_width;
+
+	char geometry[16]; // string describing the geometry of the system
 	
 	void *H_params;
 	// Pointer to interaction Hamiltonian

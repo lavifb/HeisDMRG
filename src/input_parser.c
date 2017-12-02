@@ -216,6 +216,20 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 			double *H_params = params->model->H_params;
 			H_params[1] = Jz;
 		} 
+
+
+		// TODO: fix input parser for ladders
+		else if (strcmp(paramName, "Geometry") == 0) {
+			if (strcmp(vals[0], "1D") == 0 || strcmp(vals[0], "1d") == 0 || strcmp(vals[0], "chain") == 0) {
+				strncpy(params->model->geometry, "1D", 15);
+				params->model->ladder_width = 1;
+			} else if (strcmp(vals[0], "Ladder") == 0 || strcmp(vals[0], "ladder") == 0) {
+				strncpy(params->model->geometry, "Ladder", 15);
+			} else {
+				errprintf("'%s' is not a valid model geometry. Please provide a valid model geometry.\n", vals[0]);
+				exit(1);
+			}
+		}
 		// TODO: select model
 		// else if (strcmp(paramName, "Model") == 0) {
 		// 	if (strcmp(vals[0], "Heisenberg") == 0) {
