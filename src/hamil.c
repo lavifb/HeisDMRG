@@ -169,8 +169,7 @@ hamil_mats_t *HeisenH_int_mats(const model_t *model, const DMRGBlock *block1, co
 	hamil_mats->int_alphas[2] = H_params[1];
 	
 	// Set the right trans array
-	// Note: For the right matvec calculation you need an extra transpose on one side of the calculation.
-	//       Here we chose the left side (even indexes) to have an extra transpose.
+	// Note: For the right matvec calculation you need an extra transpose on the left side of the calculation.
 	hamil_mats->trans = mkl_malloc(6 * sizeof(CBLAS_TRANSPOSE), MEM_DATA_ALIGN);
 	hamil_mats->trans[0] = CblasTrans;
 	hamil_mats->trans[1] = CblasTrans;
@@ -333,8 +332,7 @@ hamil_mats_t *LadderH_int_mats(const model_t *model, const DMRGBlock *block1, co
 	}
 	
 	// Set the right trans array
-	// Note: For the right matvec calculation you need an extra transpose on one side of the calculation.
-	//       Here we chose the left side (even indexes) to have an extra transpose.
+	// Note: For the right matvec calculation you need an extra transpose on the left side of the calculation.
 	hamil_mats->trans = mkl_malloc(2*num_int_terms * sizeof(CBLAS_TRANSPOSE), MEM_DATA_ALIGN);
 	for (int i=0; i<num_int_terms/3; i++) {
 		hamil_mats->trans[6*i]     = CblasTrans;
