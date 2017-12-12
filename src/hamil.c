@@ -303,6 +303,113 @@ MAT_TYPE *LadderH_int(const model_t* model, const DMRGBlock *block1, const DMRGB
 	return H_int;
 }
 
+MAT_TYPE *LadderH_int_r(const model_t* model, const DMRGBlock *block1, const DMRGBlock *block2, const int num_ind, const int *restrict inds) {
+
+	int dim1 = block1->d_block;
+	int dim2 = block2->d_block;
+
+	int N = dim1*dim2; // size of new basis
+
+	MAT_TYPE *H_int = mkl_calloc(N*N, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+
+	double *H_params = model->H_params;
+	double J2 = H_params[0]/2; // J/2
+	double Jz = H_params[1];
+
+	int lw = model->ladder_width;
+
+	// Special case for single block
+	if (block2 == model->single_block) {
+
+		int new_i = (block1->length)%lw;
+
+		// Connect to previous row	
+		{
+			MAT_TYPE *Sz1 = block1->ops[2*new_i+1];
+			MAT_TYPE *Sz2 = block2->ops[1];
+			MAT_TYPE *Sp1 = block1->ops[2*new_i+2];
+			MAT_TYPE *Sp2 = block2->ops[2];
+
+			kron_r(Jz, dim1, dim2, Sz1, Sz2, H_int, num_ind, inds); // H_int += Jz * kron(Sz1, Sz2)
+			kronT_r('r', J2, dim1, dim2, Sp1, Sp2, H_int, num_ind, inds); // H_int += J/2 * kron(Sp1, Sm2)
+			kronT_r('l', J2, dim1, dim2, Sp1, Sp2, H_int, num_ind, inds); // H_int += J/2 * kron(Sm1, Sp2)
+		}
+
+		// Connect to previous site in the row
+		if (new_i > 0) {
+			MAT_TYPE *Sz1 = block1->ops[2*(new_i-1)+1];
+			MAT_TYPE *Sz2 = block2->ops[1];
+			MAT_TYPE *Sp1 = block1->ops[2*(new_i-1)+2];
+			MAT_TYPE *Sp2 = block2->ops[2];
+
+			kron_r(Jz, dim1, dim2, Sz1, Sz2, H_int, num_ind, inds); // H_int += Jz * kron(Sz1, Sz2)
+			kronT_r('r', J2, dim1, dim2, Sp1, Sp2, H_int, num_ind, inds); // H_int += J/2 * kron(Sp1, Sm2)
+			kronT_r('l', J2, dim1, dim2, Sp1, Sp2, H_int, num_ind, inds); // H_int += J/2 * kron(Sm1, Sp2)
+		}
+
+		// TODO: fix periodic boudary
+		// Periodic boundary if finishing row
+		// if (new_i == lw-1) {
+		// 	MAT_TYPE *Sz1 = block1->ops[1];
+		// 	MAT_TYPE *Sz2 = block2->ops[1];
+		// 	MAT_TYPE *Sp1 = block1->ops[2];
+		// 	MAT_TYPE *Sp2 = block2->ops[2];
+
+		// 	kron_r(Jz, dim1, dim2, Sz1, Sz2, H_int, num_ind, inds); // H_int += Jz * kron(Sz1, Sz2)
+		// 	kronT_r('r', J2, dim1, dim2, Sp1, Sp2, H_int, num_ind, inds); // H_int += J/2 * kron(Sp1, Sm2)
+		// 	kronT_r('l', J2, dim1, dim2, Sp1, Sp2, H_int, num_ind, inds); // H_int += J/2 * kron(Sm1, Sp2)
+		// }
+
+		return H_int;
+	}
+
+	// Connections up the ladder
+	for (int i=0; i<lw; i++) {
+		MAT_TYPE *Sz1 = block1->ops[2*i+1];
+		MAT_TYPE *Sz2 = block2->ops[2*(lw-1-i)+1];
+		MAT_TYPE *Sp1 = block1->ops[2*i+2];
+		MAT_TYPE *Sp2 = block2->ops[2*(lw-1-i)+2];
+
+		kron_r(Jz, dim1, dim2, Sz1, Sz2, H_int, num_ind, inds); // H_int += Jz * kron(Sz1, Sz2)
+		kronT_r('r', J2, dim1, dim2, Sp1, Sp2, H_int, num_ind, inds); // H_int += J/2 * kron(Sp1, Sm2)
+		kronT_r('l', J2, dim1, dim2, Sp1, Sp2, H_int, num_ind, inds); // H_int += J/2 * kron(Sm1, Sp2)
+	}
+
+	// Check for full width ladder
+	if (block1->length%lw != 0) {
+
+		// where in the ladder width the block 1 connection site is
+		int conn_i = (block1->length-1)%lw;
+
+		// TODO: fix periodic boudary
+		// Periodic boundary
+		// {
+		// 	MAT_TYPE *Sz1 = block1->ops[1];
+		// 	MAT_TYPE *Sz2 = block2->ops[1];
+		// 	MAT_TYPE *Sp1 = block1->ops[2];
+		// 	MAT_TYPE *Sp2 = block2->ops[2];
+
+		// 	kron_r(Jz, dim1, dim2, Sz1, Sz2, H_int, num_ind, inds); // H_int += Jz * kron(Sz1, Sz2)
+		// 	kronT_r('r', J2, dim1, dim2, Sp1, Sp2, H_int, num_ind, inds); // H_int += J/2 * kron(Sp1, Sm2)
+		// 	kronT_r('l', J2, dim1, dim2, Sp1, Sp2, H_int, num_ind, inds); // H_int += J/2 * kron(Sm1, Sp2)
+		// }
+
+		// Connecting piece
+		{
+			MAT_TYPE *Sz1 = block1->ops[2*conn_i+1];
+			MAT_TYPE *Sz2 = block2->ops[2*(lw-2-conn_i)+1];
+			MAT_TYPE *Sp1 = block1->ops[2*conn_i+2];
+			MAT_TYPE *Sp2 = block2->ops[2*(lw-2-conn_i)+2];
+	
+			kron_r(Jz, dim1, dim2, Sz1, Sz2, H_int, num_ind, inds); // H_int += Jz * kron(Sz1, Sz2)
+			kronT_r('r', J2, dim1, dim2, Sp1, Sp2, H_int, num_ind, inds); // H_int += J/2 * kron(Sp1, Sm2)
+			kronT_r('l', J2, dim1, dim2, Sp1, Sp2, H_int, num_ind, inds); // H_int += J/2 * kron(Sm1, Sp2)
+		}
+	}
+
+	return H_int;
+}
+
 /*  Heisenberg interaction in ladder system.
 */
 hamil_mats_t *LadderH_int_mats(const model_t *model, const DMRGBlock *block1, const DMRGBlock *block2) {

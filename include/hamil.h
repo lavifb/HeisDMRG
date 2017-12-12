@@ -19,6 +19,9 @@ MAT_TYPE *LadderH_int(const model_t* model, const DMRGBlock *block1, const DMRGB
 
 hamil_mats_t *LadderH_int_mats(const model_t *model, const DMRGBlock *block1, const DMRGBlock *block2);
 
+MAT_TYPE *LadderH_int_r(const model_t* model, const DMRGBlock *block1, const DMRGBlock *block2,
+	const int num_ind, const int *restrict inds);
+
 void freehamil_mats_t(hamil_mats_t *hamil_mats);
 
 #endif
