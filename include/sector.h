@@ -24,4 +24,6 @@ sector_t *sectorize(const DMRGBlock *block);
 
 void freeSectors(sector_t *sectors);
 
+sector_t *getRestrictedBasis(sector_t *const sys_enl_sectors, sector_t *const env_enl_sectors, const int target_mz, const int dimEnv, int *num_restr_indp, int *restr_basis_inds);
+
 #endif

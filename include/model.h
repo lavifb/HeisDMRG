@@ -15,14 +15,19 @@ typedef struct model_t {
 	MAT_TYPE **init_ops; // single site block tracked operators
 
 	DMRGBlock *single_block; // block for single site
+
+	int fullLength; // Full length of system
 	
-	double J;
-	double Jz;
-	double *H_params;
+	void *H_params;
 	// Pointer to interaction Hamiltonian
-	MAT_TYPE *(*H_int)(const double* H_params, const DMRGBlock *block1, const DMRGBlock *block2);
-	MAT_TYPE *(*H_int_r)(const double* H_params, const DMRGBlock *block1, const DMRGBlock *block2, 
-					const int num_ind, const int *restrict inds);
+	MAT_TYPE *(*H_int)(const model_t *model, const DMRGBlock *block1, const DMRGBlock *block2);
+	// Pointer to interaction Hamiltonian used in DMRG step
+	#if USE_PRIMME
+	hamil_mats_t *(*H_int_mats)(const model_t *model, const DMRGBlock *block1, const DMRGBlock *block2);
+	#else
+	MAT_TYPE *(*H_int_r)(const model_t *model, const DMRGBlock *block1, const DMRGBlock *block2,
+		const int num_ind, const int *restrict inds);
+	#endif
 } model_t;
 
 
@@ -31,5 +36,7 @@ void compileParams(model_t *model);
 model_t *newNullModel();
 
 void freeModel(model_t *model);
+
+model_t *newHeis2Model();
 
 #endif

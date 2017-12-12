@@ -29,7 +29,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	DMRGBlock *sys_enl, *env_enl;
 	sector_t *sys_enl_sectors, *env_enl_sectors;
-	model_t *model = sys->model;
+	const model_t *model = sys->model;
 
 	sys_enl = enlargeBlock(sys);
 	sys_enl_sectors = sectorize(sys_enl);
@@ -46,108 +46,43 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	int dimEnv = env_enl->d_block;
 	int dimSup = dimSys * dimEnv;
 
-	// Create sectors to treat separately
-	sector_t *sup_sectors = NULL;
-
 	// indexes used for restricting Hs
-	int num_restr_ind = 0;
-	int *restr_basis_inds = (int *)mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
+	int *restr_basis_inds = mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
+	int num_restr_ind;
 
-	// loop over sys_enl_sectors and find only desired indexes
-	for (sector_t *sys_enl_sec=sys_enl_sectors; sys_enl_sec != NULL; sys_enl_sec=sys_enl_sec->hh.next) {
-
-		int sys_mz = sys_enl_sec->id;
-
-		sector_t *sup_sec;
-		sup_sec = createSector(sys_mz);
-		HASH_ADD_INT(sup_sectors, id, sup_sec);
-
-		int env_mz = target_mz - sys_mz;
-
-		// pick out env_enl_sector with mz = env_mz
-		sector_t *env_enl_sec;
-		HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_sec);
-		if (env_enl_sec != NULL) {
-			int i, j;
-			for (i = 0; i < sys_enl_sec->num_ind; i++) {
-				for (j = 0; j < env_enl_sec->num_ind; j++) {
-					// save restricted index and save into sup_sectors
-					sectorPush(sup_sec, num_restr_ind);
-					assert(num_restr_ind < dimSup);
-					restr_basis_inds[num_restr_ind] = sys_enl_sec->inds[i]*dimEnv + env_enl_sec->inds[j];
-					num_restr_ind++;
-				}
-			}
-		}
-	}
-
-	// Restricted Superblock Hamiltonian
-	MAT_TYPE *Hs_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
-	kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
-	kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
-
-	// Setup ground state guess
-	MAT_TYPE *psi0_r;
-	int numGuesses = 0;
-	if (psi0_guessp != NULL && *psi0_guessp != NULL) {
-		psi0_r  = restrictVec(*psi0_guessp, num_restr_ind, restr_basis_inds);
-		numGuesses = 1;
-	} else {
-		psi0_r = mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	}
+	// Get restricted basis
+	// sup_sectors stores sectors for superblock
+	sector_t *sup_sectors = getRestrictedBasis(sys_enl_sectors, env_enl_sectors, target_mz, dimEnv, &num_restr_ind, restr_basis_inds);
 
 	// Find ground state
 	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
 
-	// Use the faster PRIMME library if available. Otherwise, default to LAPACK.
-	#if USE_PRIMME
-		primmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1, numGuesses);
-	#else
-		int info = 0;
-		int num_es_found;
-		int *isuppz = mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
-
-		#if COMPLEX
-		info = LAPACKE_zheevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
-				0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
-		#else
-		info = LAPACKE_dsyevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
-				0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
-		#endif
-
-		if (info > 0) {
-			printf("Failed to find eigenvalues of Superblock Hamiltonian\n");
-			exit(1);
-		}
-		mkl_free(isuppz);
-	#endif
+	MAT_TYPE *psi0_r = getLowestEStates(sys_enl, env_enl, model, num_restr_ind, restr_basis_inds, 1, psi0_guessp, energies);
 
 	// time tracked state psi
 	MAT_TYPE *psiT_r;
 	if (tau != 0) {
-		MAT_TYPE *psiTprev_r = restrictVec(sys_enl->psi, num_restr_ind, restr_basis_inds);
+		// MAT_TYPE *psiTprev_r = restrictVec(sys_enl->psi, num_restr_ind, restr_basis_inds);
 
-		MAT_TYPE *H_int = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
+		// MAT_TYPE *H_int = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
 
-		MAT_TYPE *expH = matExp(num_restr_ind, H_int, -1*tau*I);
-		mkl_free(H_int);
+		// MAT_TYPE *expH = matExp(num_restr_ind, H_int, -1*tau*I);
+		// mkl_free(H_int);
 
-		const MKL_Complex16 one = {.real=1.0, .imag=0.0};
-		const MKL_Complex16 zalpha = {.real=alpha, .imag=0.0};
+		// const MKL_Complex16 one = {.real=1.0, .imag=0.0};
+		// const MKL_Complex16 zalpha = {.real=alpha, .imag=0.0};
 
-		// time evolve psi(t)
-		psiT_r = mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		cblas_zgemv(CblasColMajor, CblasNoTrans, num_restr_ind, num_restr_ind, &one, expH, num_restr_ind, 
-			psiTprev_r, num_restr_ind, &zero, psiT_r, num_restr_ind);
+		// // time evolve psi(t)
+		// psiT_r = mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		// cblas_zgemv(CblasColMajor, CblasNoTrans, num_restr_ind, num_restr_ind, &one, expH, num_restr_ind, 
+		// 	psiTprev_r, num_restr_ind, &zero, psiT_r, num_restr_ind);
 
-		// time evolve psi_0(t)
-		complex double *cpsi0_r = psi0_r;
-		for (int j=0; j<num_restr_ind; j++) {
-			cpsi0_r[j] = cexp(-1*tau*energies[0]*I) * cpsi0_r[j];
-		}
+		// // time evolve psi_0(t)
+		// complex double *cpsi0_r = psi0_r;
+		// for (int j=0; j<num_restr_ind; j++) {
+		// 	cpsi0_r[j] = cexp(-1*tau*energies[0]*I) * cpsi0_r[j];
+		// }
 	}
-
-	mkl_free(Hs_r);
 
 	sys_enl->energy = energies[0]; // record ground state energy
 	mkl_free(energies);
@@ -174,7 +109,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		HASH_FIND_INT(sys_enl_sectors, &mz    , sys_enl_mz);
 		HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_mz);
 		assert(sys_enl_mz != NULL);
-		// SOMETHING WRONG HERE!!! (MAYBE??)
+		// Skip if environment does not have corrresponding state
 		if (env_enl_mz == NULL) {
 			continue;
 		}
@@ -229,8 +164,8 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		// diagonalize rho_sec and add to list of eigenvalues
 		// LAPACK faster since we need many eigenvalues
 		int mm_sec = (dimSys_sec < mm) ? dimSys_sec : mm;
-		MAT_TYPE *trans_sec = (MAT_TYPE *)mkl_malloc(dimSys_sec*mm_sec * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		int *isuppz_sec = (int *)mkl_malloc(2*dimSys_sec * sizeof(int), MEM_DATA_ALIGN);
+		MAT_TYPE *trans_sec = mkl_malloc(dimSys_sec*mm_sec * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		int *isuppz_sec = mkl_malloc(2*dimSys_sec * sizeof(int), MEM_DATA_ALIGN);
 		int num_es_found;
 		assert(lamb_i + mm_sec - 1 < dimSys);
 
@@ -269,9 +204,9 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	int newDimSys = lamb_i;
 	assert(newDimSys <= dimSys);
 
-	MAT_TYPE *trans = (MAT_TYPE *)mkl_malloc(dimSys*mm * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	mm = (newDimSys < mm) ? newDimSys : mm; // minimize again in case states are dropped because of sectors
+	MAT_TYPE *trans = mkl_malloc(dimSys*mm * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
-	assert(mm <= newDimSys);
 	int *sorted_inds = dsort2(newDimSys, lambs);
 
 	// copy to trans in right order
@@ -336,11 +271,9 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		#if COMPLEX
 		const MKL_Complex16 one = {.real=1.0, .imag=0.0};
 		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
-		cblas_zgemm(CblasColMajor, CblasConjTrans, CblasTrans, mm, dimEnv, dimSys, 
-						&one, trans, dimSys, psi0, dimEnv, &zero, *psi0_guessp, mm);
+		cblas_zgemm(CblasColMajor, CblasConjTrans, CblasTrans, mm, dimEnv, dimSys, &one, trans, dimSys, psi0, dimEnv, &zero, *psi0_guessp, mm);
 		#else
-		cblas_dgemm(CblasColMajor, CblasConjTrans, CblasTrans, mm, dimEnv, dimSys, 
-						1.0, trans, dimSys, psi0, dimEnv, 0.0, *psi0_guessp, mm);
+		cblas_dgemm(CblasColMajor, CblasConjTrans, CblasTrans, mm, dimEnv, dimSys, 1.0 , trans, dimSys, psi0, dimEnv, 0.0  , *psi0_guessp, mm);
 		#endif
 		mkl_free(psi0);
 	}
@@ -369,153 +302,84 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz, MAT_TYPE **const psi0_guessp) {
 
 	DMRGBlock *sys_enl, *env_enl;
-	sector_t *sys_enl_sectors, *env_enl_sectors;
-	model_t *model = sys->model;
+	const model_t *model = sys->model;
 
 	sys_enl = enlargeBlock(sys);
-	sys_enl_sectors = sectorize(sys_enl);
 	if (sys == env) { // Don't recalculate
 		env_enl = sys_enl;
-		env_enl_sectors = sys_enl_sectors;
 	}
 	else {
 		env_enl = enlargeBlock(env);
-		env_enl_sectors = sectorize(env_enl);
 	}
 
 	int dimSys = sys_enl->d_block;
 	int dimEnv = env_enl->d_block;
 	int dimSup = dimSys * dimEnv;
 
-	// indexes used for restricting Hs
-	int num_restr_ind = 0;
-	int *restr_basis_inds = (int *)mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
-
-	// loop over sys_enl_sectors and find only desired indexes
-	for (sector_t *sys_enl_sec=sys_enl_sectors; sys_enl_sec != NULL; sys_enl_sec=sys_enl_sec->hh.next) {
-
-		int sys_mz = sys_enl_sec->id;
-		int env_mz = target_mz - sys_mz;
-
-		// pick out env_enl_sector with mz = env_mz
-		sector_t *env_enl_sec;
-		HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_sec);
-		if (env_enl_sec != NULL) {
-			int i, j;
-			for (i = 0; i < sys_enl_sec->num_ind; i++) {
-				for (j = 0; j < env_enl_sec->num_ind; j++) {
-					// save restricted index and save into sup_sectors
-					assert(num_restr_ind < dimSup);
-					restr_basis_inds[num_restr_ind] = sys_enl_sec->inds[i]*dimEnv + env_enl_sec->inds[j];
-					num_restr_ind++;
-				}
-			}
-		}
-	}
-	freeSectors(sys_enl_sectors);
-
-	// RestrictedSuperblock Hamiltonian
-	MAT_TYPE *Hs_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
-	kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
-	kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
-
-	// Free enlarged environment block
-	if (sys != env) {
-		freeDMRGBlock(env_enl);
-		freeSectors(env_enl_sectors);
-	}
-
-	// Setup ground state guess
-	MAT_TYPE *psi0_r;
-	int numGuesses = 0;
-	if (psi0_guessp != NULL && *psi0_guessp != NULL) {
-		psi0_r  = restrictVec(*psi0_guessp, num_restr_ind, restr_basis_inds);
-		numGuesses = 1;
-	} else {
-		psi0_r = (MAT_TYPE *)mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	}
-
 	// Find ground state
-	double *energies = (double *)mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
+	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
 
-	// Use the faster PRIMME library if available. Otherwise, default to LAPACK.
-	#if USE_PRIMME
-		primmeWrapper(Hs_r, num_restr_ind, energies, psi0_r, 1, numGuesses);
-	#else
-		int info = 0;
-		int num_es_found;
-		int *isuppz = (int *)mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
-
-		#if COMPLEX
-		info = LAPACKE_zheevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
-				0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
-		#else
-		info = LAPACKE_dsyevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
-				0.0, 0.0, 1, 1, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
-		#endif
-
-		if (info > 0) {
-			printf("Failed to find eigenvalues of Superblock Hamiltonian\n");
-			exit(1);
-		}
-		mkl_free(isuppz);
-	#endif
-
-	mkl_free(Hs_r);
+	// Find lowest energy states
+	MAT_TYPE *psi0 = getLowestEStates(sys_enl, env_enl, model, -1, NULL, 1, psi0_guessp, energies);
 
 	meas_data_t *meas = createMeas(sys_enl->num_ops - model->num_ops);
 	meas->energy = energies[0] / (sys_enl->length + env_enl->length);
 	mkl_free(energies);
 
+	// Free enlarged environment block
+	if (sys != env) {
+		freeDMRGBlock(env_enl);
+	}
+
 	// Make Measurements
+	#if COMPLEX
+	const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
+	const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+	#endif
 
 	// <S_i> spins
 	for (int i = 0; i<meas->num_sites; i++) {
-		MAT_TYPE* supOp_r = (MAT_TYPE *)mkl_calloc(num_restr_ind*num_restr_ind, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		kronI_r('R', dimSys, dimEnv, sys_enl->ops[i + model->num_ops], supOp_r, num_restr_ind, restr_basis_inds);
-
-		transformOps(1, num_restr_ind, 1, psi0_r, &supOp_r);
+		MAT_TYPE* temp = mkl_malloc(dimEnv*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 		#if COMPLEX
-		meas->Szs[i] = (*supOp_r).real;
+		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, &one, psi0, dimEnv, sys_enl->ops[i + model->num_ops], dimSys, &zero, temp, dimEnv);
+		MKL_Complex16 Szi;
+		cblas_zdotc_sub(dimSup, psi0, 1, temp, 1, &Szi);
+		meas->Szs[i] = Szi.real;
 		#else
-		meas->Szs[i] = *supOp_r;
+		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, 1.0, psi0, dimEnv, sys_enl->ops[i + model->num_ops], dimSys, 0.0, temp, dimEnv);
+		double Szi = cblas_ddot(dimSup, psi0, 1, temp, 1);
+		meas->Szs[i] = Szi;
 		#endif
 
-		mkl_free(supOp_r);
+		mkl_free(temp);
 	}
 
 	// <S_i S_j> correlations
 	for (int i = 0; i<meas->num_sites; i++) {
-		MAT_TYPE* SSop = (MAT_TYPE *)mkl_malloc(dimSys*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		#if COMPLEX
-		const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
-		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
-		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, &one, sys_enl->ops[i + model->num_ops], 
-			dimSys, sys_enl->ops[1], dimSys, &zero, SSop, dimSys);
-		#else
-		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, 1.0, sys_enl->ops[i + model->num_ops], 
-			dimSys, sys_enl->ops[1], dimSys, 0.0, SSop, dimSys);
-		#endif
-		MAT_TYPE* supOp_r = (MAT_TYPE *)mkl_calloc(num_restr_ind*num_restr_ind, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		MAT_TYPE* SSop = mkl_malloc(dimSys*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		MAT_TYPE* temp = mkl_malloc(dimEnv*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
-		kronI_r('R', dimSys, dimEnv, SSop, supOp_r, num_restr_ind, restr_basis_inds);
+
+		#if COMPLEX
+		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, &one, sys_enl->ops[i + model->num_ops], dimSys, sys_enl->ops[1], dimSys, &zero, SSop, dimSys);
+		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, &one, psi0, dimEnv, SSop, dimSys, &zero, temp, dimEnv);
+		MKL_Complex16 SSi;
+		cblas_zdotc_sub(dimSup, psi0, 1, temp, 1, &SSi);
+		meas->SSs[i] = SSi.real;
+		#else
+		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, 1.0, sys_enl->ops[i + model->num_ops], dimSys, sys_enl->ops[1], dimSys, 0.0, SSop, dimSys);
+		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, 1.0, psi0, dimEnv, SSop, dimSys, 0.0, temp, dimEnv);
+		double SSi = cblas_ddot(dimSup, psi0, 1, temp, 1);
+		meas->SSs[i] = SSi;
+		#endif
+
+		mkl_free(temp);
 		mkl_free(SSop);
-
-		transformOps(1, num_restr_ind, 1, psi0_r, &supOp_r);
-
-		#if COMPLEX
-		meas->SSs[i] = (*supOp_r).real;
-		#else
-		meas->SSs[i] = *supOp_r;
-		#endif
-
-		mkl_free(supOp_r);
 	}
 
 	freeDMRGBlock(sys_enl);
-	mkl_free(restr_basis_inds);
-	mkl_free(psi0_r);
+	mkl_free(psi0);
 
 	return meas;
 }
@@ -527,7 +391,7 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 */
 void inf_dmrg(const int L, const int m, model_t *model) {
 	// TODO: measurement (copy from fin_dmrgR)
-	DMRGBlock *sys = createDMRGBlock(model, L);
+	DMRGBlock *sys = createDMRGBlock(model);
 
 	while (2*sys->length < L) {
 		int currL = sys->length * 2 + 2;
@@ -549,10 +413,10 @@ void inf_dmrg(const int L, const int m, model_t *model) {
 */
 meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model) {
 
-	DMRGBlock **saved_blocksL = (DMRGBlock **)mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
-	DMRGBlock **saved_blocksR = (DMRGBlock **)mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+	DMRGBlock **saved_blocksL = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+	DMRGBlock **saved_blocksR = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 
-	DMRGBlock *sys = createDMRGBlock(model, L);
+	DMRGBlock *sys = createDMRGBlock(model);
 
 	// Note: saved_blocksL[i] has length i+1
 	saved_blocksL[0] = sys;
@@ -561,6 +425,9 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 
 	// run infinite algorithm to build up system
 	while (2*sys->length < L) {
+		#ifndef NDEBUG
+		printGraphic(sys, sys);
+		#endif
 		sys = single_step(sys, sys, m_inf, 0, NULL, 0);
 
 		saved_blocksL[sys->length-1] = sys;
@@ -658,8 +525,10 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 				meas = meas_step(sys, env, m, 0, psi0_guessp);
 				break;
 			}
-
-			// printGraphic(sys, env);
+			
+			#ifndef NDEBUG
+			printGraphic(sys, env);
+			#endif
 			sys = single_step(sys, env, m, 0, psi0_guessp, 0);
 			logBlock(sys);
 
@@ -708,16 +577,18 @@ meas_data_t *fin_dmrg(const int L, const int m_inf, const int num_sweeps, int *m
 */
 meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *ms, model_t *model) {
 
-	DMRGBlock **saved_blocks = (DMRGBlock **)mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+	DMRGBlock **saved_blocks = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 
-	DMRGBlock *sys = createDMRGBlock(model, L);
+	DMRGBlock *sys = createDMRGBlock(model);
 
 	// Note: saved_blocks[i] has length i+1
 	saved_blocks[0] = sys;
 
 	// Run infinite algorithm to build up system
 	while (2*sys->length < L) {
-		// printGraphic(sys, sys);
+		#ifndef NDEBUG
+		printGraphic(sys, sys);
+		#endif
 		sys = single_step(sys, sys, m_inf, 0, NULL, 0);
 		saved_blocks[sys->length-1] = sys;
 	}
@@ -799,7 +670,9 @@ meas_data_t *fin_dmrgR(const int L, const int m_inf, const int num_sweeps, int *
 				break;
 			}
 
-			// printGraphic(sys, env);
+			#ifndef NDEBUG
+			printGraphic(sys, env);
+			#endif
 			sys = single_step(sys, env, m, 0, psi0_guessp, 0);
 			logBlock(sys);
 

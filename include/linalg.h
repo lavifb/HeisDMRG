@@ -2,6 +2,7 @@
 #define LINALG_H
 
 #include <mkl_types.h>
+#include <mkl.h>
 
 #if COMPLEX
 #define MAT_TYPE MKL_Complex16
@@ -12,21 +13,34 @@
 
 void kron(const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B, MAT_TYPE *restrict C);
 
-void kron_r(const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B,
-	        MAT_TYPE *restrict C, const int num_ind, const int *restrict inds);
+void kron_r(const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B, MAT_TYPE *restrict C, const int num_ind, const int *restrict inds);
 
 void kronT(const char side, const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B, MAT_TYPE *restrict C);
 
-void kronT_r(const char side, const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B,
-			MAT_TYPE *restrict C, const int num_ind, const int *restrict inds);
+void kronT_r(const char side, const double alpha, const int m, const int n, const MAT_TYPE *restrict A, const MAT_TYPE *restrict B, MAT_TYPE *restrict C, const int num_ind, const int *restrict inds);
 
 void kronI(const char side, const int m, const int n, const MAT_TYPE *restrict A, MAT_TYPE *restrict C);
 
-void kronI_r(const char side, const int m, const int n, const MAT_TYPE *restrict A, 
-	         MAT_TYPE *restrict C, const int num_ind, const int *restrict inds);
+void kronI_r(const char side, const int m, const int n, const MAT_TYPE *restrict A, MAT_TYPE *restrict C, const int num_ind, const int *restrict inds);
 
 #if USE_PRIMME
 void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, const int numEvals, const int initSize);
+
+typedef struct hamil_mats_t {
+
+	int dimSys;             // dimension of Sys block
+	int dimEnv;             // dimension of Env block
+	MAT_TYPE *Hsys;         // Sys block hamiltonian
+	MAT_TYPE *Henv;         // Env block hamiltonian
+	int num_int_terms;      // pointer to number of interaction t
+	double *int_alphas;     // cooefficients for interaction term
+	CBLAS_TRANSPOSE *trans; // cooefficients for interaction term (size 2*num_int_terms) arranged LT1, RT1, LT2, RT2, ...
+	MAT_TYPE **Hsys_ints;   // pointer to sys interaction terms
+	MAT_TYPE **Henv_ints;   // pointer to sys interaction terms
+	
+} hamil_mats_t;
+
+void primmeBlockWrapper(hamil_mats_t *hamil_mats, int N, double *evals, MAT_TYPE *evecs, const int numEvals, const int initSize);
 
 MAT_TYPE *reorderKron(MAT_TYPE *v, const int dimSys, const int dimEnv, const int dimSite);
 #endif

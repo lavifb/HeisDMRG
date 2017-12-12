@@ -10,8 +10,8 @@ TEST:= test
 DBUG:= debug
 
 # Set directory containing PRIMME library
-# Comment out this line if do not have the PRIMME library
-PRIMMEDIR = ../../Repos/primme
+# Comment out this line if do not have the PRIMME library (The code will be WAY slower and may be broken)
+PRIMMEDIR = ../primme
 
 
 # compiler options
@@ -58,7 +58,7 @@ complex: ${BIN}/zdmrg ztests
 proj_main: ${BIN}/dmrg ${BIN}/zdmrg
 
 .PHONY: debug
-debug: ${BIN}/dmrg_debug ${BIN}/quick_test_debug
+debug: ${BIN}/dmrg_debug ${BIN}/quick_test_debug ${BIN}/time_test_debug
 
 .PHONY: clean
 clean: 
@@ -81,8 +81,14 @@ ztests: $(patsubst $(TEST)/%.c, $(BIN)/z%, $(wildcard $(TEST)/*.c))
 .PHONY: quick
 quick: bin/quick_test
 
+.PHONY: zquick
+zquick: bin/zquick_test
+
 .PHONY: time
 time: bin/time_test
+
+.PHONY: ztime
+ztime: bin/ztime_test
 
 ${OBJ}/%.o: ${SRC}/%.c ${INC}/%.h
 	${CC} -c ${INCDIRS} ${CCOPTSR} ${MKL} $< -o $@
@@ -107,6 +113,9 @@ ${BIN}/dmrg_debug: ${SRC}/main.c ${objsD}
 
 ${BIN}/quick_test_debug: ${TEST}/quick_test.c ${objsD}
 	${CC} ${INCDIRS} ${CCOPTSD} ${objsD} ${TEST}/quick_test.c ${LIB}  -o ${BIN}/quick_test_debug
+
+${BIN}/time_test_debug: ${TEST}/time_test.c ${objsD}
+	${CC} ${INCDIRS} ${CCOPTSD} ${objsD} ${TEST}/time_test.c ${LIB}  -o ${BIN}/time_test_debug
 
 ${BIN}/zquick_test_debug: ${TEST}/quick_test.c ${zobjsD}
 	${CC} ${INCDIRS} ${CCOPTSD} -DCOMPLEX ${zobjsD} ${TEST}/quick_test.c ${LIB} -o ${BIN}/zquick_test_debug

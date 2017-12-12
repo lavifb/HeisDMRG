@@ -18,41 +18,13 @@
 
 int main(int argc, char *argv[]) {
 
-	#define N    2
 	#define L    100
 	#define minf 10
 	#define n_ms 3
 	int ms[n_ms] = {10, 10, 20};
 
-	model_t *model = newNullModel();
-	model->d_model = N;
-	model->J  = 1;
-	model->Jz = 1;
-
-	#if COMPLEX
-	#include <complex.h>
-
-	complex double H1[N*N] = { 0 , 0,
-					    	   0 , 0 };
-	complex double Sz[N*N] = { .5, 0,
-					     	   0 ,-.5};
-	complex double Sp[N*N] = { 0 , 1,
-							   0 , 0 };
-	#else
-	MAT_TYPE H1[N*N] = { 0 , 0,
-					     0 , 0 };
-	MAT_TYPE Sz[N*N] = { .5, 0,
-					     0 ,-.5};
-	MAT_TYPE Sp[N*N] = { 0 , 1,
-					     0 , 0 };
-	#endif
-
-	model->H1 = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	memcpy(model->H1, H1, N*N * sizeof(MAT_TYPE));
-	model->Sz = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	memcpy(model->Sz, Sz, N*N * sizeof(MAT_TYPE));
-	model->Sp = mkl_malloc(N*N * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	memcpy(model->Sp, Sp, N*N * sizeof(MAT_TYPE));
+	model_t *model = newHeis2Model();
+	model->fullLength = L;
 
 	compileParams(model);
 
@@ -88,7 +60,7 @@ int main(int argc, char *argv[]) {
 	// Expected test result
 	#define ETE  -.441271
 
-	#define TOLERANCE 1e-5
+	#define TOLERANCE 1e-4
 	#define SZ_TOLERANCE 1e-3
 
 	if (fabs(meas->energy - ETE) < TOLERANCE) {
