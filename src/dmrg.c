@@ -60,29 +60,33 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	MAT_TYPE *psi0_r = getLowestEStates(sys_enl, env_enl, model, num_restr_ind, restr_basis_inds, 1, psi0_guessp, energies);
 
 	// time tracked state psi
+	#if COMPLEX
 	MAT_TYPE *psiT_r;
 	if (tau != 0) {
-		// MAT_TYPE *psiTprev_r = restrictVec(sys_enl->psi, num_restr_ind, restr_basis_inds);
+		MAT_TYPE *psiTprev_r = restrictVec(sys_enl->psi, num_restr_ind, restr_basis_inds);
 
-		// MAT_TYPE *H_int = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
+		MAT_TYPE *H_int = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
 
-		// MAT_TYPE *expH = matExp(num_restr_ind, H_int, -1*tau*I);
-		// mkl_free(H_int);
+		MAT_TYPE *expH = matExp(num_restr_ind, H_int, -1*tau);
+		mkl_free(H_int);
 
-		// const MKL_Complex16 one = {.real=1.0, .imag=0.0};
-		// const MKL_Complex16 zalpha = {.real=alpha, .imag=0.0};
+		const MKL_Complex16 one = {.real=1.0, .imag=0.0};
+		const MKL_Complex16 zalpha = {.real=alpha, .imag=0.0};
 
-		// // time evolve psi(t)
-		// psiT_r = mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		// cblas_zgemv(CblasColMajor, CblasNoTrans, num_restr_ind, num_restr_ind, &one, expH, num_restr_ind, 
-		// 	psiTprev_r, num_restr_ind, &zero, psiT_r, num_restr_ind);
+		// time evolve psi(t)
+		psiT_r = mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		cblas_zgemv(CblasColMajor, CblasNoTrans, num_restr_ind, num_restr_ind, &one, expH, num_restr_ind, 
+			psiTprev_r, num_restr_ind, &zero, psiT_r, num_restr_ind);
 
-		// // time evolve psi_0(t)
-		// complex double *cpsi0_r = psi0_r;
-		// for (int j=0; j<num_restr_ind; j++) {
-		// 	cpsi0_r[j] = cexp(-1*tau*energies[0]*I) * cpsi0_r[j];
-		// }
+		mkl_free(expH);
+
+		// time evolve psi_0(t)
+		complex double *cpsi0_r = psi0_r;
+		for (int j=0; j<num_restr_ind; j++) {
+			cpsi0_r[j] = cexp(-1*tau*energies[0]) * cpsi0_r[j];
+		}
 	}
+	#endif
 
 	sys_enl->energy = energies[0]; // record ground state energy
 	mkl_free(energies);
@@ -124,9 +128,12 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		// define target states
 		targets[0] = restrictVec(psi0_r, n_sec, sec->inds); // ground state
 		// tdmrg also track target state
+		#if COMPLEX
 		if (tau != 0) {
+			num_targets++;
 			targets[1] = restrictVec(psiT_r, n_sec, sec->inds); // tracked state
 		}
+		#endif
 
 		// Density matrix rho_sec
 		MAT_TYPE *rho_sec = mkl_calloc(dimSys_sec*dimSys_sec, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
@@ -280,9 +287,11 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	mkl_free(restr_basis_inds);
 	mkl_free(psi0_r);
+	#if COMPLEX
 	if (tau != 0) {
 		mkl_free(psiT_r);
 	}
+	#endif
 	freeSectors(sys_enl_sectors);
 	// Free enlarged environment block
 	if (sys != env) {
