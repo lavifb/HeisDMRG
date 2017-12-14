@@ -65,7 +65,7 @@ void compileParams(model_t *model) {
 		#if USE_PRIMME
 		model->H_int_mats = &LadderH_int_mats;
 		#else
-		model->H_int_r = &HeisenH_int_r;
+		model->H_int_r = &LadderH_int_r;
 		#endif
 	} else if (strcmp(model->geometry, "") == 0) {
 		errprintf("No valid model geometry provided. Please provide a valid model geometry.\n");

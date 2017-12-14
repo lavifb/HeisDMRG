@@ -124,7 +124,7 @@ ${BIN}/zquick_test_debug: ${TEST}/quick_test.c ${zobjsD}
 	${CC} ${INCDIRS} ${CCOPTSD} -DCOMPLEX ${zobjsD} ${TEST}/quick_test.c ${LIB} -o ${BIN}/zquick_test_debug
 
 ${BIN}/zladder_test_debug: ${TEST}/ladder_test.c ${zobjsD}
-	${CC} ${INCDIRS} ${CCOPTSD} -DCOMPLEX ${zobjsD} ${TEST}/ladder_test.c ${LIB}  -o ${BIN}/zladder_test_debug
+	${CC} ${INCDIRS} ${CCOPTSD} -DCOMPLEX ${zobjsD} ${TEST}/ladder_test.c ${LIB} -o ${BIN}/zladder_test_debug
 	 
 ${BIN}/%: ${TEST}/%.c ${objs}
 	${CC} ${INCDIRS} ${CCOPTSR} $< ${objs} ${LIB} -o $@
