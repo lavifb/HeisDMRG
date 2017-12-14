@@ -34,9 +34,9 @@ MAT_TYPE *getLowestEStates(const DMRGBlock *sys_enl, const DMRGBlock *env_enl, c
 			numGuesses = 1;
 		}
 
-		hamil_mats_t *hamils_mats = model->H_int_mats(model, sys_enl, env_enl);
-		primmeBlockWrapper(hamils_mats, dimSup, energies, psi0, num_states, numGuesses);
-		freehamil_mats_t(hamils_mats);
+		hamil_mats_t *hamil_mats = model->H_int_mats(model, sys_enl, env_enl);
+		primmeBlockWrapper(hamil_mats, dimSup, energies, psi0, num_states, numGuesses);
+		freehamil_mats_t(hamil_mats);
 
 		// MAT_TYPE *H_int = model->H_int(model, sys_enl, env_enl);
 		// kronI('R', sys_enl->d_block, env_enl->d_block, sys_enl->ops[0], H_int);
