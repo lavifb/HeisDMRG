@@ -168,15 +168,16 @@ hamil_mats_t *HeisenH_int_mats(const model_t *model, const DMRGBlock *block1, co
 	hamil_mats->int_alphas[1] = H_params[0]/2;
 	hamil_mats->int_alphas[2] = H_params[1];
 	
-	// Set the right trans array
-	// Note: For the right matvec calculation you need an extra transpose on the left side of the calculation.
-	hamil_mats->trans = mkl_malloc(6 * sizeof(CBLAS_TRANSPOSE), MEM_DATA_ALIGN);
-	hamil_mats->trans[0] = CblasTrans;
-	hamil_mats->trans[1] = CblasTrans;
-	hamil_mats->trans[2] = CblasNoTrans;
-	hamil_mats->trans[3] = CblasNoTrans;
-	hamil_mats->trans[4] = CblasTrans;
-	hamil_mats->trans[5] = CblasNoTrans;
+	// Set the right trans arrays
+	hamil_mats->sys_trans = mkl_malloc(3 * sizeof(CBLAS_TRANSPOSE), MEM_DATA_ALIGN);
+	hamil_mats->sys_trans[0] = CblasNoTrans;
+	hamil_mats->sys_trans[1] = CblasTrans;
+	hamil_mats->sys_trans[2] = CblasNoTrans;
+
+	hamil_mats->env_trans = mkl_malloc(3 * sizeof(CBLAS_TRANSPOSE), MEM_DATA_ALIGN);
+	hamil_mats->env_trans[0] = CblasTrans;
+	hamil_mats->env_trans[1] = CblasNoTrans;
+	hamil_mats->env_trans[2] = CblasNoTrans;
 
 	// Sys interaction mats
 	hamil_mats->Hsys_ints = mkl_malloc(3 * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
@@ -189,6 +190,19 @@ hamil_mats_t *HeisenH_int_mats(const model_t *model, const DMRGBlock *block1, co
 	hamil_mats->Henv_ints[0] = block2->ops[2];
 	hamil_mats->Henv_ints[1] = block2->ops[2];
 	hamil_mats->Henv_ints[2] = block2->ops[1];
+
+	
+	// Note: For the right matvec calculation you need an extra transpose on sys due to column-major format.
+	for (int i=0; i<hamil_mats->num_int_terms; i++) {
+		switch (hamil_mats->sys_trans[i]) {
+			case CblasTrans:
+			 	hamil_mats->sys_trans[i] = CblasNoTrans;
+				break;
+			case CblasNoTrans:
+				hamil_mats->sys_trans[i] = CblasTrans;
+				break;
+		}
+	}
 
 	return hamil_mats;
 }
@@ -440,14 +454,17 @@ hamil_mats_t *LadderH_int_mats(const model_t *model, const DMRGBlock *block1, co
 	
 	// Set the right trans array
 	// Note: For the right matvec calculation you need an extra transpose on the left side of the calculation.
-	hamil_mats->trans = mkl_malloc(2*num_int_terms * sizeof(CBLAS_TRANSPOSE), MEM_DATA_ALIGN);
+	hamil_mats->sys_trans = mkl_malloc(num_int_terms * sizeof(CBLAS_TRANSPOSE), MEM_DATA_ALIGN);
+	hamil_mats->env_trans = mkl_malloc(num_int_terms * sizeof(CBLAS_TRANSPOSE), MEM_DATA_ALIGN);
+
 	for (int i=0; i<num_int_terms/3; i++) {
-		hamil_mats->trans[6*i]     = CblasTrans;
-		hamil_mats->trans[6*i + 1] = CblasTrans;
-		hamil_mats->trans[6*i + 2] = CblasNoTrans;
-		hamil_mats->trans[6*i + 3] = CblasNoTrans;
-		hamil_mats->trans[6*i + 4] = CblasTrans;
-		hamil_mats->trans[6*i + 5] = CblasNoTrans;
+		hamil_mats->sys_trans[3*i]     = CblasNoTrans;
+		hamil_mats->sys_trans[3*i + 1] = CblasTrans;
+		hamil_mats->sys_trans[3*i + 2] = CblasNoTrans;
+
+		hamil_mats->env_trans[3*i]     = CblasTrans;
+		hamil_mats->env_trans[3*i + 1] = CblasNoTrans;
+		hamil_mats->env_trans[3*i + 2] = CblasNoTrans;
 	}
 
 	// Sys interaction mats for across connections
@@ -489,13 +506,26 @@ hamil_mats_t *LadderH_int_mats(const model_t *model, const DMRGBlock *block1, co
 
 	}
 
+		// Note: For the right matvec calculation you need an extra transpose on sys due to column-major format.
+	for (int i=0; i<hamil_mats->num_int_terms; i++) {
+		switch (hamil_mats->sys_trans[i]) {
+			case CblasTrans:
+			 	hamil_mats->sys_trans[i] = CblasNoTrans;
+				break;
+			case CblasNoTrans:
+				hamil_mats->sys_trans[i] = CblasTrans;
+				break;
+		}
+	}
+
 	return hamil_mats;
 }
 
 void freehamil_mats_t(hamil_mats_t *hamil_mats) {
 
 	if (hamil_mats->int_alphas) { mkl_free(hamil_mats->int_alphas); }
-	if (hamil_mats->trans) { mkl_free(hamil_mats->trans); }
+	if (hamil_mats->sys_trans) { mkl_free(hamil_mats->sys_trans); }
+	if (hamil_mats->env_trans) { mkl_free(hamil_mats->env_trans); }
 	if (hamil_mats->Hsys_ints) { mkl_free(hamil_mats->Hsys_ints); }
 	if (hamil_mats->Henv_ints) { mkl_free(hamil_mats->Henv_ints); }
 	mkl_free(hamil_mats);

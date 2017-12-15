@@ -28,15 +28,16 @@ void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, con
 
 typedef struct hamil_mats_t {
 
-	int dimSys;             // dimension of Sys block
-	int dimEnv;             // dimension of Env block
-	MAT_TYPE *Hsys;         // Sys block hamiltonian
-	MAT_TYPE *Henv;         // Env block hamiltonian
-	int num_int_terms;      // pointer to number of interaction t
-	double *int_alphas;     // cooefficients for interaction term
-	CBLAS_TRANSPOSE *trans; // cooefficients for interaction term (size 2*num_int_terms) arranged LT1, RT1, LT2, RT2, ...
-	MAT_TYPE **Hsys_ints;   // pointer to sys interaction terms
-	MAT_TYPE **Henv_ints;   // pointer to sys interaction terms
+	int dimSys;                 // dimension of Sys block
+	int dimEnv;                 // dimension of Env block
+	MAT_TYPE *Hsys;             // Sys block hamiltonian
+	MAT_TYPE *Henv;             // Env block hamiltonian
+	int num_int_terms;          // pointer to number of interaction t
+	double *int_alphas;         // cooefficients for interaction term
+	CBLAS_TRANSPOSE *sys_trans; // transpose state for sys interaction terms
+	CBLAS_TRANSPOSE *env_trans; // transpose state for env interaction terms
+	MAT_TYPE **Hsys_ints;       // pointer to sys interaction terms
+	MAT_TYPE **Henv_ints;       // pointer to sys interaction terms
 	
 } hamil_mats_t;
 

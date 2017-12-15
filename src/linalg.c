@@ -570,16 +570,17 @@ void block_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *block
 
 		for (int i=0; i<hamil_mats->num_int_terms; i++) {
 			const MKL_Complex16 alpha = {.real=hamil_mats->int_alphas[i], .imag=0.0};
-			cblas_zgemm(CblasColMajor, hamil_mats->trans[2*i+1], CblasNoTrans, dimEnv, dimSys, dimEnv, &one  , hamil_mats->Henv_ints[i], dimEnv, xvec, dimEnv, &zero, temp, dimEnv);
-			cblas_zgemm(CblasColMajor, CblasNoTrans, hamil_mats->trans[2*i]  , dimEnv, dimSys, dimSys, &alpha, temp, dimEnv, hamil_mats->Hsys_ints[i], dimSys, &one , yvec, dimEnv);
+			cblas_zgemm(CblasColMajor, hamil_mats->env_trans[i], CblasNoTrans, dimEnv, dimSys, dimEnv, &one  , hamil_mats->Henv_ints[i], dimEnv, xvec, dimEnv, &zero, temp, dimEnv);
+			cblas_zgemm(CblasColMajor, CblasNoTrans, hamil_mats->sys_trans[i], dimEnv, dimSys, dimSys, &alpha, temp, dimEnv, hamil_mats->Hsys_ints[i], dimSys, &one , yvec, dimEnv);
 		}
 	#else
 		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimEnv, dimSys, dimEnv, 1.0, hamil_mats->Henv, dimEnv, xvec, dimEnv, 0.0, yvec, dimEnv);
 		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans  , dimEnv, dimSys, dimSys, 1.0, xvec, dimEnv, hamil_mats->Hsys, dimSys, 1.0, yvec, dimEnv);
 
 		for (int i=0; i<hamil_mats->num_int_terms; i++) {
-			cblas_dgemm(CblasColMajor, hamil_mats->trans[2*i+1], CblasNoTrans, dimEnv, dimSys, dimEnv, 1.0                      , hamil_mats->Henv_ints[i], dimEnv, xvec, dimEnv, 0.0, temp, dimEnv);
-			cblas_dgemm(CblasColMajor, CblasNoTrans, hamil_mats->trans[2*i]  , dimEnv, dimSys, dimSys, hamil_mats->int_alphas[i], temp, dimEnv, hamil_mats->Hsys_ints[i], dimSys, 1.0, yvec, dimEnv);
+			const double alpha = hamil_mats->int_alphas[i];
+			cblas_dgemm(CblasColMajor, hamil_mats->env_trans[i], CblasNoTrans, dimEnv, dimSys, dimEnv, 1.0  , hamil_mats->Henv_ints[i], dimEnv, xvec, dimEnv, 0.0, temp, dimEnv);
+			cblas_dgemm(CblasColMajor, CblasNoTrans, hamil_mats->sys_trans[i], dimEnv, dimSys, dimSys, alpha, temp, dimEnv, hamil_mats->Hsys_ints[i], dimSys, 1.0, yvec, dimEnv);
 		}
 	#endif
 	mkl_free(temp);
