@@ -21,12 +21,11 @@ typedef struct model_t {
 	void *H_params;
 	// Pointer to interaction Hamiltonian
 	MAT_TYPE *(*H_int)(const model_t *model, const DMRGBlock *block1, const DMRGBlock *block2);
-	// Pointer to interaction Hamiltonian used in DMRG step
-	#if USE_PRIMME
-	hamil_mats_t *(*H_int_mats)(const model_t *model, const DMRGBlock *block1, const DMRGBlock *block2);
-	#else
 	MAT_TYPE *(*H_int_r)(const model_t *model, const DMRGBlock *block1, const DMRGBlock *block2,
 		const int num_ind, const int *restrict inds);
+	#if USE_PRIMME
+	// Pointer to interaction Hamiltonian used in DMRG step
+	hamil_mats_t *(*H_int_mats)(const model_t *model, const DMRGBlock *block1, const DMRGBlock *block2);
 	#endif
 } model_t;
 

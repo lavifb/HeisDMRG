@@ -65,23 +65,23 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	if (tau != 0) {
 		MAT_TYPE *psiTprev_r = restrictVec(sys_enl->psi, num_restr_ind, restr_basis_inds);
 
-		MAT_TYPE *H_int = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
+		MAT_TYPE *H_int_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
 
-		MAT_TYPE *expH = matExp(num_restr_ind, H_int, -1*tau);
-		mkl_free(H_int);
+		MAT_TYPE *expH_r = matExp(num_restr_ind, H_int_r, -1*tau);
+		mkl_free(H_int_r);
 
-		const MKL_Complex16 one = {.real=1.0, .imag=0.0};
-		const MKL_Complex16 zalpha = {.real=alpha, .imag=0.0};
+		const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
+		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
 
 		// time evolve psi(t)
 		psiT_r = mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		cblas_zgemv(CblasColMajor, CblasNoTrans, num_restr_ind, num_restr_ind, &one, expH, num_restr_ind, 
+		cblas_zgemv(CblasColMajor, CblasNoTrans, num_restr_ind, num_restr_ind, &one, expH_r, num_restr_ind, 
 			psiTprev_r, num_restr_ind, &zero, psiT_r, num_restr_ind);
 
-		mkl_free(expH);
+		mkl_free(expH_r);
 
 		// time evolve psi_0(t)
-		complex double *cpsi0_r = psi0_r;
+		complex double *cpsi0_r = (complex double *)psi0_r;
 		for (int j=0; j<num_restr_ind; j++) {
 			cpsi0_r[j] = cexp(-1*tau*energies[0]) * cpsi0_r[j];
 		}
