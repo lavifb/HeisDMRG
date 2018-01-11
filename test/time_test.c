@@ -1,4 +1,5 @@
 #include "model.h"
+#include "params.h"
 #include "block.h"
 #include "hamil.h"
 #include "meas.h"
@@ -6,6 +7,7 @@
 #include "dmrg.h"
 #include "input_parser.h"
 #include "logio.h"
+#include "util.h"
 #include <mkl.h>
 #include <time.h>
 #include <stdio.h>
@@ -33,25 +35,26 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	#define L    32
-	int minf;
-	int *ms = mkl_malloc(n_ms * sizeof(int), MEM_DATA_ALIGN);
+	sim_params_t *params = mkl_calloc(sizeof(sim_params_t), 1, MEM_DATA_ALIGN);
+	params->L      = 32;
+	params->minf   = mm;
+	params->num_ms = n_ms;
+	params->ms     = mkl_malloc(n_ms * sizeof(int), MEM_DATA_ALIGN);
+	for (int i = 0; i < n_ms; i++) { params->ms[i] = mm; }
 
 	model_t *model = newHeis2Model();
-	model->fullLength = L;
-
+	model->fullLength = params->L;
 	compileParams(model);
 
-	minf = mm;
-	for (int i = 0; i < n_ms; i++) { ms[i] = mm; }
+	params->model = model;
 
 	printf("Running time test on version "VERSION".\n\n");
 
 	struct timespec t_start, t_end;
 	clock_gettime(CLOCK_MONOTONIC, &t_start);
 
-	meas_data_t *meas = fin_dmrgR(L, minf, n_ms, ms, model);
-	// meas_data_t *meas = fin_dmrg(L, minf, n_ms, ms, model);
+	meas_data_t *meas = fin_dmrgR(params);
+	// meas_data_t *meas = fin_dmrg(params);
 
 	clock_gettime(CLOCK_MONOTONIC, &t_end);
 	double runtime = (t_end.tv_sec - t_start.tv_sec);
@@ -63,7 +66,8 @@ int main(int argc, char *argv[]) {
 
 	freeMeas(meas);
 	freeModel(model);
-	mkl_free(ms);
+	freeParams(params);
+	mkl_free(params);
 
 	MKL_Free_Buffers();
 	int nbuffers;

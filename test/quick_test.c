@@ -1,12 +1,13 @@
 #include "model.h"
+#include "params.h"
 #include "block.h"
 #include "hamil.h"
 #include "meas.h"
 #include "linalg.h"
 #include "dmrg.h"
-#include "input_parser.h"
 #include "logio.h"
 #include "matio.h"
+#include "util.h"
 #include <mkl.h>
 #include <math.h>
 #include <complex.h>
@@ -18,22 +19,27 @@
 
 int main(int argc, char *argv[]) {
 
-	#define L    100
-	#define minf 10
+	sim_params_t *params = mkl_calloc(sizeof(sim_params_t), 1, MEM_DATA_ALIGN);
+	params->L      = 100;
+	params->minf   = 10;
 	#define n_ms 3
+
+	params->num_ms = n_ms;
 	int ms[n_ms] = {10, 10, 20};
+	params->ms     = ms;
 
 	model_t *model = newHeis2Model();
-	model->fullLength = L;
-
 	compileParams(model);
+	params->model  = model;
+
+	model->fullLength = params->L;
 
 	printf("Running quick test on version "VERSION".\n\n");
 
 	struct timespec t_start, t_end;
 	clock_gettime(CLOCK_MONOTONIC, &t_start);
 
-	meas_data_t *meas = fin_dmrgR(L, minf, n_ms, ms, model);
+	meas_data_t *meas = fin_dmrgR(params);
 
 	clock_gettime(CLOCK_MONOTONIC, &t_end);
 	double runtime = (t_end.tv_sec - t_start.tv_sec);
@@ -122,6 +128,7 @@ int main(int argc, char *argv[]) {
 	mkl_free(test_SSs);
 	freeMeas(meas);
 	freeModel(model);
+	mkl_free(params);
 
 	MKL_Free_Buffers();
 	int nbuffers;
