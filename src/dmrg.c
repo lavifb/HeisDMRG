@@ -7,6 +7,7 @@
 #include "linalg.h"
 #include "logio.h"
 #include "matio.h"
+#include "util.h"
 #include "uthash.h"
 #include <mkl.h>
 #include <math.h>
@@ -26,6 +27,12 @@
    returns enlarged system block
 */
 DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz, MAT_TYPE **const psi0_guessp, const double tau) {
+
+	#ifndef COMPLEX
+	if (tau != 0.0) {
+		errprintf("Cannot advance time with real matrices. To use tau please compile with -DCOMPLEX flag.\n");
+	}
+	#endif
 
 	DMRGBlock *sys_enl, *env_enl;
 	sector_t *sys_enl_sectors, *env_enl_sectors;
@@ -123,6 +130,12 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 		// target states
 		int num_targets = 1;
+		#if COMPLEX
+		if (tau != 0) {
+			num_targets = 2;
+		}
+		#endif
+
 		MAT_TYPE **targets = mkl_malloc(num_targets * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
 
 		// define target states
@@ -130,7 +143,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		// tdmrg also track target state
 		#if COMPLEX
 		if (tau != 0) {
-			num_targets++;
 			targets[1] = restrictVec(psiT_r, n_sec, sec->inds); // tracked state
 		}
 		#endif

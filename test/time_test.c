@@ -5,7 +5,6 @@
 #include "meas.h"
 #include "linalg.h"
 #include "dmrg.h"
-#include "input_parser.h"
 #include "logio.h"
 #include "util.h"
 #include <mkl.h>
