@@ -36,8 +36,8 @@ int main(int argc, char *argv[]) {
 
 	time_t start_time = time(NULL);
 	// file path for output dir
-	sprintf(temp_dir, "temp-L%d_M%d_sim_%ld", params->L, params->ms[params->num_ms-1], start_time);
-	mkdir(temp_dir, 0755);
+	sprintf(params->block_dir, "temp-L%d_M%d_sim_%ld", params->L, params->ms[params->num_ms-1], start_time);
+	mkdir(params->block_dir, 0755);
 
 	printf("Running quick test on version "VERSION".\n\n");
 
@@ -52,6 +52,14 @@ int main(int argc, char *argv[]) {
 
 	printf("Quick Test finished in %.3f seconds.\n\n", runtime);
 
+
+	// Delete temporary files
+	for (int i=0; i<(params->L-3); i++) {
+		char rm_save[1024];
+		sprintf(rm_save, "%s/%05d.temp", params->block_dir, i);
+		remove(rm_save);
+	}
+	remove(params->block_dir);
 
 	// Getting path of binary
 	char cwd[1024];
@@ -134,7 +142,6 @@ int main(int argc, char *argv[]) {
 	freeMeas(meas);
 	freeModel(model);
 	mkl_free(params);
-	remove(temp_dir);
 
 	MKL_Free_Buffers();
 	int nbuffers;

@@ -585,7 +585,7 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 
 		// write old block to disk
 		int sys_old_index = sys->length-2;
-		sprintf(disk_filenames[sys_old_index], "%s/%05d.temp", temp_dir, sys_old_index);
+		sprintf(disk_filenames[sys_old_index], "%s/%05d.temp", params->block_dir, sys_old_index);
 		saveBlock(disk_filenames[sys_old_index], saved_blocks[sys_old_index]);
 	}
 
@@ -659,7 +659,7 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 				mkl_free(temp_guess);
 
 				// Save enl_block back to disk
-				sprintf(disk_filenames[env_enl_index], "%s/%05d.temp", temp_dir, env_enl_index);
+				sprintf(disk_filenames[env_enl_index], "%s/%05d.temp", params->block_dir, env_enl_index);
 				saveBlock(disk_filenames[env_enl_index], saved_blocks[env_enl_index]);
 			}
 
@@ -702,7 +702,7 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 
 			// write old block to disk
 			int sys_old_index = sys->length-2;
-			sprintf(disk_filenames[sys_old_index], "%s/%05d.temp", temp_dir, sys_old_index);
+			sprintf(disk_filenames[sys_old_index], "%s/%05d.temp", params->block_dir, sys_old_index);
 			saveBlock(disk_filenames[sys_old_index], saved_blocks[sys_old_index]);
 
 			// Check if sweep is done
@@ -720,14 +720,6 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 		else if (saved_blocks[i]) { freeDMRGBlock(saved_blocks[i]); }
 	}
 	mkl_free(saved_blocks);
-
-	// Delete temporary files
-	for (int i=0; i<(L-3); i++) {
-		char rm_save[1024];
-		sprintf(rm_save, "%s/%05d.temp", temp_dir, i);
-		remove(rm_save);
-	}
-
 	mkl_free(disk_filenames);
 
 	return meas;

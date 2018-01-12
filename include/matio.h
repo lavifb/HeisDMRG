@@ -1,8 +1,6 @@
 #ifndef MATIO_H
 #define MATIO_H
 
-extern char temp_dir[1024];
-
 int saveMat(char *filename, MAT_TYPE *A, int matsize);
 
 int readMat(char *filename, MAT_TYPE *A, int matsize);

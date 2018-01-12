@@ -18,6 +18,8 @@ typedef struct {
 	time_t *end_time;
 	double runtime;
 
+	char block_dir[1024]; // file path for saving blocks
+
 } sim_params_t;
 
 void printSimParams(FILE *stream, const sim_params_t *params);
