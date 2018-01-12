@@ -380,6 +380,7 @@ int readBlock(char *filename, DMRGBlock *block) {
 		return -2;
 	}
 
+	int matsize = block->d_block*block->d_block;
 	block->ops = mkl_malloc(block->num_ops * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
 	for (int i=0; i<block->num_ops; i++) {
 		block->ops[i] = mkl_malloc(matsize * sizeof(MAT_TYPE), MEM_DATA_ALIGN);

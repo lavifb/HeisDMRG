@@ -700,10 +700,12 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 			}
 			saved_blocks[sys_index] = sys;
 
-			// write old block to disk
-			int sys_old_index = sys->length-2;
-			sprintf(disk_filenames[sys_old_index], "%s/%05d.temp", params->block_dir, sys_old_index);
-			saveBlock(disk_filenames[sys_old_index], saved_blocks[sys_old_index]);
+			// write old block when not on measuring sweep
+			if (sys->meas != 'M') {
+				int sys_old_index = sys->length-2;
+				sprintf(disk_filenames[sys_old_index], "%s/%05d.temp", params->block_dir, sys_old_index);
+				saveBlock(disk_filenames[sys_old_index], saved_blocks[sys_old_index]);
+			} 
 
 			// Check if sweep is done
 			if (2 * sys->length == L) {
