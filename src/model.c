@@ -1,7 +1,7 @@
 #include "model.h"
 #include "hamil.h"
 #include "linalg.h"
-#include "input_parser.h"
+#include "util.h"
 #include <mkl.h>
 #include <string.h>
 
