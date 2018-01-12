@@ -307,6 +307,13 @@ int saveBlock(char *filename, DMRGBlock *block) {
 
 	int matsize = block->d_block*block->d_block;
 	int count;
+
+	count = fwrite(block, sizeof(DMRGBlock), 1, m_f);
+	if (count != 1) {
+		errprintf("Block not written properly to file '%s'.\n", filename);
+		return -2;
+	}
+
 	for (int i=0; i<block->num_ops; i++) {
 		count = fwrite(block->ops[i], sizeof(MAT_TYPE), matsize, m_f);
 		if (count != matsize) {
@@ -366,9 +373,14 @@ int readBlock(char *filename, DMRGBlock *block) {
 		return -1;
 	}
 
-	block->ops = mkl_malloc(block->num_ops * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
-	int matsize = block->d_block*block->d_block;
 	int count;
+	count = fread(block, sizeof(DMRGBlock), 1, m_f);
+	if (count != 1) {
+		errprintf("Block not written properly to file '%s'.\n", filename);
+		return -2;
+	}
+
+	block->ops = mkl_malloc(block->num_ops * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
 	for (int i=0; i<block->num_ops; i++) {
 		block->ops[i] = mkl_malloc(matsize * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		count = fread(block->ops[i], sizeof(MAT_TYPE), matsize, m_f);
