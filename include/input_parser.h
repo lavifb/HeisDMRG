@@ -1,35 +1,8 @@
 #ifndef INPUT_PARSE_H
 #define INPUT_PARSE_H
 
-#include "model.h"
-#include <stdio.h>
-#include <time.h>
-
-typedef struct {
-	int L;       // length of DMRG chain
-	int minf;    // truncation dimension size when building system
-	int num_ms;  // number of dmrg sweeps
-	int *ms;     // truncation dimension size for each sweep
-
-	model_t *model; // model params for the simulation
-
-	time_t *start_time;
-	time_t *end_time;
-	double runtime;
-
-} sim_params_t;
-
-// ANSI colors for print output
-#define TERM_RED     "\x1b[31m"
-#define TERM_GREEN   "\x1b[32m"
-#define TERM_RESET   "\x1b[0m"
-
-#define errprintf(M, ...) printf( TERM_RED "[ERROR] " M TERM_RESET , ##__VA_ARGS__)
+#include "params.h"
 
 int parseInputFile(const char *filename, sim_params_t *params);
-
-void printSimParams(FILE *stream, const sim_params_t *params);
-
-void freeParams(sim_params_t *params);
 
 #endif

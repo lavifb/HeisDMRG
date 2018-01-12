@@ -1,4 +1,5 @@
 #include "model.h"
+#include "params.h"
 #include "block.h"
 #include "hamil.h"
 #include "meas.h"
@@ -6,6 +7,7 @@
 #include "dmrg.h"
 #include "input_parser.h"
 #include "logio.h"
+#include "util.h"
 #include <mkl.h>
 #include <time.h>
 #include <stdio.h>
@@ -20,29 +22,29 @@ int main(int argc, char *argv[]) {
 
 	printf("Loading input file '%s'.\n\n", argv[1]);
 
-	sim_params_t params = {};
-	params.model = newNullModel();
-	params.runtime = 0;
-	params.model->H_params = mkl_malloc(2 * sizeof(double), MEM_DATA_ALIGN);
+	sim_params_t *params = mkl_calloc(sizeof(sim_params_t), 1, MEM_DATA_ALIGN);
+	params->model = newNullModel();
+	params->runtime = 0;
+	params->model->H_params = mkl_malloc(2 * sizeof(double), MEM_DATA_ALIGN);
 
 	int status;
-	status = parseInputFile(argv[1], &params);
+	status = parseInputFile(argv[1], params);
 	if (status < 0) {
 		printf("Error parsing input file...\n");
 		return status;
 	}
 
-	model_t *model = params.model;
+	model_t *model = params->model;
 	compileParams(model);
 
 	// Record start time
 	time_t start_time = time(NULL);
-	params.start_time = &start_time;
-	params.end_time = NULL;
+	params->start_time = &start_time;
+	params->end_time = NULL;
 
 	// file path for output dir
 	char out_dir[1024];
-	sprintf(out_dir, "L%d_M%d_sim_%ld/", params.L, params.ms[params.num_ms-1], *params.start_time);
+	sprintf(out_dir, "L%d_M%d_sim_%ld/", params->L, params->ms[params->num_ms-1], *params->start_time);
 
 	mkdir(out_dir, 0755);
 
@@ -59,7 +61,7 @@ int main(int argc, char *argv[]) {
 				 , "L", "Energy", "Truncation Error");
 
 
-	printSimParams(stdout, &params);
+	printSimParams(stdout, params);
 
 	meas_data_t *meas;
 
@@ -69,21 +71,21 @@ int main(int argc, char *argv[]) {
 	struct timespec t_start, t_end;
 	clock_gettime(CLOCK_MONOTONIC, &t_start);
 
-	// inf_dmrg(params.L, params.minf, model);
-	// meas = fin_dmrg(params.L, params.minf, params.num_ms, params.ms, model);
-	meas = fin_dmrgR(params.L, params.minf, params.num_ms, params.ms, model);
+	// inf_dmrg(params);
+	// meas = fin_dmrg(params);
+	meas = fin_dmrgR(params);
 
 	// Record end time
 	clock_gettime(CLOCK_MONOTONIC, &t_end);
-	params.runtime = (t_end.tv_sec - t_start.tv_sec);
-	params.runtime += (t_end.tv_nsec - t_start.tv_nsec) / 1000000000.0;
+	params->runtime = (t_end.tv_sec - t_start.tv_sec);
+	params->runtime += (t_end.tv_nsec - t_start.tv_nsec) / 1000000000.0;
 
-	printf("\n\nSimulation finished in %.3f seconds.\n", params.runtime);
+	printf("\n\nSimulation finished in %.3f seconds.\n", params->runtime);
 
 	fclose(f_log);
 
 	time_t end_time = time(NULL);
-	params.end_time = &end_time;
+	params->end_time = &end_time;
 
 	// Save sim params to a log file
 	char plog_filename[1024];
@@ -95,7 +97,7 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 
-	printSimParams(plog_f, &params);
+	printSimParams(plog_f, params);
 	fclose(plog_f);
 
 	// Save Measurements
@@ -103,7 +105,8 @@ int main(int argc, char *argv[]) {
 	freeMeas(meas);
 
 	freeModel(model);
-	freeParams(&params);
+	freeParams(params);
+	mkl_free(params);
 
 	MKL_Free_Buffers();
 	int nbuffers;
