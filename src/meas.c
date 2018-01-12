@@ -1,6 +1,6 @@
 #include "meas.h"
-#include "input_parser.h"
 #include "linalg.h"
+#include "util.h"
 #include <mkl.h>
 #include <stdio.h>
 

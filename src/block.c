@@ -1,6 +1,7 @@
 #include "block.h"
 #include "model.h"
 #include "linalg.h"
+#include "util.h"
 #include <mkl.h>
 #include <stdio.h>
 #include <string.h>

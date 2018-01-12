@@ -1,5 +1,5 @@
 #include "linalg.h"
-#include "input_parser.h"
+#include "util.h"
 #include <mkl.h>
 #include <stdio.h>
 
