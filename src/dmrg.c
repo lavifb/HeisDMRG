@@ -120,7 +120,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		HASH_FIND_INT(sys_enl_sectors, &mz    , sys_enl_mz);
 		HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_mz);
 		assert(sys_enl_mz != NULL);
-		// Skip if environment does not have corrresponding state
+		// Skip if environment does not have corresponding state
 		if (env_enl_mz == NULL) {
 			continue;
 		}
