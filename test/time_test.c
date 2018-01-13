@@ -71,12 +71,7 @@ int main(int argc, char *argv[]) {
 
 
 	// Delete temporary files
-	for (int i=0; i<(params->L-3); i++) {
-		char rm_save[1024];
-		sprintf(rm_save, "%s/%05d.temp", params->block_dir, i);
-		remove(rm_save);
-	}
-	remove(params->block_dir);
+	rmrf(params->block_dir);
 
 	int success = 0;
 
@@ -90,7 +85,7 @@ int main(int argc, char *argv[]) {
 	MKL_INT64 nbytes_alloc, nbytes_alloc_peak;
 	nbytes_alloc = mkl_mem_stat(&nbuffers);
 	if (nbytes_alloc > 0) {
-		errprintf("MKL reports a memory leak of %lld bytes in %d buffer(s).\n", nbytes_alloc, nbuffers);
+		warnprintf("MKL reports a memory leak of %lld bytes in %d buffer(s).\n", nbytes_alloc, nbuffers);
 		success = -1;
 	}
 

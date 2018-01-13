@@ -14,13 +14,13 @@
 #include <complex.h>
 #include <assert.h>
 
-/* Single DMRG step
-   
-   m: truncation dimension size
+/*  Single DMRG step
 
-   psi0_guessp: pointer to guess for psi0. Calculated psi0 is returned in this pointer.
-                Set  psi0_guessp = NULL to not use eigenstate guessing and not return eigenstate.
-                Set *psi0_guessp = NULL to not use eigenstate guessing but return eigenstate for future guessing.
+	m: truncation dimension size
+
+	psi0_guessp: pointer to guess for psi0. Calculated psi0 is returned in this pointer.
+				Set  psi0_guessp = NULL to not use eigenstate guessing and not return eigenstate.
+				Set *psi0_guessp = NULL to not use eigenstate guessing but return eigenstate for future guessing.
 
    returns enlarged system block
 */
@@ -261,12 +261,12 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	return sys_enl;
 }
-/* DMRG step that records measurements.
-   Use on the last half sweep to measure operators as the system builds.
-   
-   m: truncation dimension size
+/*  DMRG step that records measurements.
+	Use on the last half sweep to measure operators as the system builds.
 
-   returns enlarged system block
+	m: truncation dimension size
+
+	returns enlarged system block
 */
 meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz, MAT_TYPE **const psi0_guessp) {
 
@@ -353,17 +353,17 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	return meas;
 }
 
-/* Infinite System DMRG Algorithm
-   
-   parmas : struct containing the parameters for simulation
-       L    : Maximum length of system
-       minf : truncation dimension size
+/*  Infinite System DMRG Algorithm
+
+	parmas : struct containing the parameters for simulation
+		L    : Maximum length of system
+		minf : truncation dimension size
 */
 void inf_dmrg(sim_params_t *params) {
 
-    const int L    = params->L;
-    const int m    = params->minf;
-    model_t *model = params->model;
+	const int L    = params->L;
+	const int m    = params->minf;
+	model_t *model = params->model;
 
 	// TODO: measurement (copy from fin_dmrgR)
 	DMRGBlock *sys = createDMRGBlock(model);
@@ -380,20 +380,20 @@ void inf_dmrg(sim_params_t *params) {
 }
 
 /*  Finite System DMRG Algorithm
-    
-    parmas : struct containing the parameters for simulation
-        L      : Length of universe
-        m_inf  : truncation dimension size for infinite algorithm for building system
-        num_ms : number of finite system sweeps
-        ms     : list of truncation sizes for the finite sweeps (size num_sweeps)
+	
+	parmas : struct containing the parameters for simulation
+		L      : Length of universe
+		m_inf  : truncation dimension size for infinite algorithm for building system
+		num_ms : number of finite system sweeps
+		ms     : list of truncation sizes for the finite sweeps (size num_sweeps)
 */
 meas_data_t *fin_dmrg(sim_params_t *params) {
 
-    const int L          = params->L;
-    const int m_inf      = params->minf;
-    const int num_sweeps = params->num_ms;
-    const int *ms        = params->ms;
-    model_t *model       = params->model;
+	const int L          = params->L;
+	const int m_inf      = params->minf;
+	const int num_sweeps = params->num_ms;
+	const int *ms        = params->ms;
+	model_t *model       = params->model;
 
 	DMRGBlock **saved_blocksL = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 	DMRGBlock **saved_blocksR = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
@@ -628,23 +628,23 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 /*  Finite System DMRG Algorithm with reflection symmetry in ground state.
 
-    Reflection symmetry means assuming both left and right sides of the system
-    are the same so sweeps are only necessary in one direction, halving compute time.
+	Reflection symmetry means assuming both left and right sides of the system
+	are the same so sweeps are only necessary in one direction, halving compute time.
 
-    parmas : struct containing the parameters for simulation
-        L      : Length of universe
-        m_inf  : truncation dimension size for infinite algorithm for building system
-        num_ms : number of finite system sweeps
-        ms     : (size num_ms) list of truncation sizes for the finite sweeps
+	parmas : struct containing the parameters for simulation
+		L      : Length of universe
+		m_inf  : truncation dimension size for infinite algorithm for building system
+		num_ms : number of finite system sweeps
+		ms     : (size num_ms) list of truncation sizes for the finite sweeps
 
 */
 meas_data_t *fin_dmrgR(sim_params_t *params) {
 
-    const int L          = params->L;
-    const int m_inf      = params->minf;
-    const int num_sweeps = params->num_ms;
-    const int *ms        = params->ms;
-    model_t *model       = params->model;
+	const int L          = params->L;
+	const int m_inf      = params->minf;
+	const int num_sweeps = params->num_ms;
+	const int *ms        = params->ms;
+	model_t *model       = params->model;
 
 	DMRGBlock **saved_blocks = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 	char (*disk_filenames)[1024] = mkl_calloc((L-3), sizeof(char[1024]), MEM_DATA_ALIGN);

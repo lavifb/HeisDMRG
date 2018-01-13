@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
 	MKL_INT64 nbytes_alloc;
 	nbytes_alloc = MKL_Mem_Stat(&nbuffers);
 	if (nbytes_alloc > 0) {
-		errprintf("MKL reports a memory leak of %lld bytes in %d buffer(s).\n", nbytes_alloc, nbuffers);
+		warnprintf("MKL reports a memory leak of %lld bytes in %d buffer(s).\n", nbytes_alloc, nbuffers);
 	}
 
 	return 0;
