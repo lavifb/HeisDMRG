@@ -18,7 +18,7 @@
    
    m: truncation dimension size
 
-   psi0_guessp: pointer to guess for psi0. Calculated psi0 is returned in theis pointer.
+   psi0_guessp: pointer to guess for psi0. Calculated psi0 is returned in this pointer.
                 Set  psi0_guessp = NULL to not use eigenstate guessing and not return eigenstate.
                 Set *psi0_guessp = NULL to not use eigenstate guessing but return eigenstate for future guessing.
 
@@ -397,6 +397,8 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 	DMRGBlock **saved_blocksL = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 	DMRGBlock **saved_blocksR = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+	char (*disk_filenamesL)[1024] = mkl_calloc((L-3), sizeof(char[1024]), MEM_DATA_ALIGN);
+	char (*disk_filenamesR)[1024] = mkl_calloc((L-3), sizeof(char[1024]), MEM_DATA_ALIGN);
 
 	DMRGBlock *sys = createDMRGBlock(model);
 
@@ -415,6 +417,13 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 		saved_blocksL[sys->length-1] = sys;
 		saved_blocksR[sys->length-1] = copyDMRGBlock(sys);
 		saved_blocksR[sys->length-1]->side = 'R';
+
+		// write old block to disk
+		int sys_old_index = sys->length-2;
+		sprintf(disk_filenamesL[sys_old_index], "%s/L%05d.temp", params->block_dir, sys_old_index);
+		saveBlock(disk_filenamesL[sys_old_index], saved_blocksL[sys_old_index]);
+		sprintf(disk_filenamesR[sys_old_index], "%s/R%05d.temp", params->block_dir, sys_old_index);
+		saveBlock(disk_filenamesR[sys_old_index], saved_blocksR[sys_old_index]);
 	}
 
 	// Setup psi0_guess
@@ -430,18 +439,26 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 		while (1) {
 
-			// block for building psi0_guess
+			int env_index = L - sys->length - 3;
+			int env_enl_index = L - sys->length - 2;
 			DMRGBlock *env_enl;
-
 			switch (sys->side) {
 				case 'L':
-					env = saved_blocksR[L - sys->length - 3];
-					env_enl = saved_blocksR[L - sys->length - 2];
+					env = saved_blocksR[env_index];
+					if (disk_filenamesR[env_index][0] != '\0') {
+						readBlock(disk_filenamesR[env_index], saved_blocksR[env_index]);
+						disk_filenamesR[env_index][0] = '\0';
+					}
+					env_enl = saved_blocksR[env_enl_index];
 					break;
 
 				case 'R':
-					env = saved_blocksL[L - sys->length - 3];
-					env_enl = saved_blocksL[L - sys->length - 2];
+					env = saved_blocksL[env_index];
+					if (disk_filenamesL[env_index][0] != '\0') {
+						readBlock(disk_filenamesL[env_index], saved_blocksL[env_index]);
+						disk_filenamesL[env_index][0] = '\0';
+					}
+					env_enl = saved_blocksL[env_enl_index];
 					break;
 			}
 
@@ -456,6 +473,23 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 					*psi0_guessp = NULL;
 				}
 			} else if (*psi0_guessp != NULL) {
+				// Load env_enl block for converting psi0_guess to the right basis
+				switch (sys->side) {
+					case 'L':
+						if (disk_filenamesR[env_enl_index][0] != '\0') {
+							readBlock(disk_filenamesR[env_enl_index], saved_blocksR[env_enl_index]);
+							disk_filenamesR[env_enl_index][0] = '\0';
+						}
+						break;
+
+					case 'R':
+						if (disk_filenamesL[env_enl_index][0] != '\0') {
+							readBlock(disk_filenamesL[env_enl_index], saved_blocksL[env_enl_index]);
+							disk_filenamesL[env_enl_index][0] = '\0';
+						}
+						break;
+				}
+
 				// Transform psi0_guess into guess for next iteration
 				int d_block_env_enl = env_enl->d_block;
 				int d_trans_env_enl = env_enl->d_trans;
@@ -486,6 +520,19 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 				}
 				mkl_free(temp_guess);
+
+				// Save enl_block back to disk
+				switch (sys->side) {
+					case 'L':
+						sprintf(disk_filenamesR[env_enl_index], "%s/R%05d.temp", params->block_dir, env_enl_index);
+						saveBlock(disk_filenamesR[env_enl_index], saved_blocksR[env_enl_index]);
+						break;
+
+					case 'R':
+						sprintf(disk_filenamesL[env_enl_index], "%s/L%05d.temp", params->block_dir, env_enl_index);
+						saveBlock(disk_filenamesL[env_enl_index], saved_blocksL[env_enl_index]);
+						break;
+				}
 			}
 
 			// Switch sides if at the end of the chain
@@ -515,15 +562,42 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 			logBlock(sys);
 
 			// Save new block
+			int sys_index = sys->length-1;
 			switch (sys->side) {
 				case 'L':
-					if (saved_blocksL[sys->length-1]) { freeDMRGBlock(saved_blocksL[sys->length-1]); }
-					saved_blocksL[sys->length-1] = sys;
+					if (disk_filenamesL[sys_index][0] != '\0') {
+						// readBlock(disk_filenamesL[sys_index], saved_blocksL[sys_index]);
+						mkl_free(saved_blocksL[sys_index]);
+						disk_filenamesL[sys_index][0] = '\0';
+					} else if (saved_blocksL[sys_index]) {
+						freeDMRGBlock(saved_blocksL[sys_index]);
+					}
+					saved_blocksL[sys_index] = sys;
+
+					// write old block when not on measuring sweep
+					if (sys->meas != 'M') {
+						int sys_old_index = sys->length-2;
+						sprintf(disk_filenamesL[sys_old_index], "%s/L%05d.temp", params->block_dir, sys_old_index);
+						saveBlock(disk_filenamesL[sys_old_index], saved_blocksL[sys_old_index]);
+					} 
 					break;
 
 				case 'R':
-					if (saved_blocksR[sys->length-1]) { freeDMRGBlock(saved_blocksR[sys->length-1]); }
-					saved_blocksR[sys->length-1] = sys;
+					if (disk_filenamesR[sys_index][0] != '\0') {
+						// readBlock(disk_filenamesR[sys_index], saved_blocksR[sys_index]);
+						mkl_free(saved_blocksR[sys_index]);
+						disk_filenamesR[sys_index][0] = '\0';
+					} else if (saved_blocksR[sys_index]) {
+						freeDMRGBlock(saved_blocksR[sys_index]);
+					}
+					saved_blocksR[sys_index] = sys;
+
+					// write old block when not on measuring sweep
+					if (sys->meas != 'M') {
+						int sys_old_index = sys->length-2;
+						sprintf(disk_filenamesR[sys_old_index], "%s/R%05d.temp", params->block_dir, sys_old_index);
+						saveBlock(disk_filenamesR[sys_old_index], saved_blocksR[sys_old_index]);
+					} 
 					break;
 			}
 
@@ -538,11 +612,16 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 	if (*psi0_guessp != NULL) { mkl_free(*psi0_guessp); }
 	for (int i = 0; i < L-3; i++) {
-		if (saved_blocksL[i]) { freeDMRGBlock(saved_blocksL[i]); }
-		if (saved_blocksR[i]) { freeDMRGBlock(saved_blocksR[i]); }
+		if (disk_filenamesL[i][0] != '\0') { mkl_free(saved_blocksL[i]); }
+		else if (saved_blocksL[i]) { freeDMRGBlock(saved_blocksL[i]); }
+
+		if (disk_filenamesR[i][0] != '\0') { mkl_free(saved_blocksR[i]); }
+		else if (saved_blocksR[i]) { freeDMRGBlock(saved_blocksR[i]); }
 	}
 	mkl_free(saved_blocksL);
 	mkl_free(saved_blocksR);
+	mkl_free(disk_filenamesL);
+	mkl_free(disk_filenamesR);
 
 	return meas;
 }
