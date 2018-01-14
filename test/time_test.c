@@ -15,26 +15,62 @@
 #include <string.h>
 #include <sys/stat.h>
 
-int main(int argc, char *argv[]) {
+#define USAGE_STATEMENT fprintf(stderr, "usage: time_test [-sr] [-m num] [-w num]\n"); exit(1);
 
-	mkl_peak_mem_usage(MKL_PEAK_MEM_ENABLE);
+int main(int argc, char *argv[]) {
 
 	int mm   = 20;
 	int n_ms = 8;
+	int argsave = 0;
+	int argrunsave = 0;
 
-	if (argc > 1) {
-		mm = atoi(argv[1]);
-		if (mm <= 0) {
-			errprintf("Basis size '%d' must be positive.", mm);
+	// Precessing command line arguments
+	for (int i=1; i<argc; i++) {
+		if (strcmp(argv[i], "-m") == 0) {
+			if (i+1 < argc) {
+				mm = atoi(argv[i+1]);
+				if (mm <= 0) {
+					errprintf("time_test: number of tracked states '%s' must be a positive number\n", argv[i+1]);
+					USAGE_STATEMENT
+				}
+				i++;
+			} else {
+				errprintf("time_test: option '-m' requires an arguement\n");
+				USAGE_STATEMENT
+			}
+		} else if (strcmp(argv[i], "-w") == 0) {
+			if (i+1 < argc) {
+				n_ms = atoi(argv[i+1]);
+				if (n_ms <= 0) {
+					errprintf("time_test: number of sweeps '%s' must be a positive number\n", argv[i+1]);
+					USAGE_STATEMENT
+				}
+				i++;
+			} else {
+				errprintf("time_test: option '-w' requires an arguement\n");
+				USAGE_STATEMENT
+			}
+		} else if (argv[i][0] == '-') {
+			for (int j=1; argv[i][j]!='\0'; j++) {
+				switch (argv[i][j]) {
+					case 's': // save blocks
+						argsave = 1;
+						argrunsave = 1;
+						break;
+					case 'r': // save blocks during runtime but delete on completion
+						argrunsave = 1;
+						break;
+					default:
+						errprintf("time_test: illegal option '-%c'\n", argv[i][j]);
+						USAGE_STATEMENT
+						break;
+				}
+			}
 		}
 	}
 
-	if (argc > 2) {
-		n_ms = atoi(argv[2]);
-		if (n_ms <= 0) {
-			errprintf("Number of sweeps '%d' must be positive.", n_ms);
-		}
-	}
+	// track memory usage
+	mkl_peak_mem_usage(MKL_PEAK_MEM_ENABLE);
 
 	sim_params_t *params = mkl_calloc(sizeof(sim_params_t), 1, MEM_DATA_ALIGN);
 	params->L      = 32;
