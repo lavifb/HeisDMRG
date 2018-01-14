@@ -107,7 +107,9 @@ int main(int argc, char *argv[]) {
 
 
 	// Delete temporary files
-	rmrf(params->block_dir);
+	if (argsave == 0) {
+		rmrf(params->block_dir);
+	}
 
 	int success = 0;
 
