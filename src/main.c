@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
 
 	int argsave = 0;
 	int argrunsave = 0;
-	char* input_file;
+	char* input_file = "";
 
 	// Processing command line arguments
 	for (int i=1; i<argc; i++) {
@@ -44,6 +44,11 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	if (input_file == "") {
+		errprintf("dmrg: no input_file provided\n");
+		USAGE_STATEMENT
+	}
+
 
 	sim_params_t *params = mkl_calloc(sizeof(sim_params_t), 1, MEM_DATA_ALIGN);
 	params->model = newNullModel();
@@ -56,7 +61,7 @@ int main(int argc, char *argv[]) {
 	int status;
 	status = parseInputFile(input_file, params);
 	if (status < 0) {
-		printf("Error parsing input file...\n");
+		errprintf("dmrg: error parsing input file '%s'\n", input_file);
 		return status;
 	}
 
