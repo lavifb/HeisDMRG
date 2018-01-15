@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
 	int argsave = 0;
 	int argrunsave = 0;
 
-	// Precessing command line arguments
+	// Processing command line arguments
 	for (int i=1; i<argc; i++) {
 		if (strcmp(argv[i], "-m") == 0) {
 			if (i+1 < argc) {
@@ -88,9 +88,11 @@ int main(int argc, char *argv[]) {
 
 	time_t start_time = time(NULL);
 
-	// file path for output dir
-	sprintf(params->block_dir, "temp-L%d_M%d_sim_%ld", params->L, params->ms[params->num_ms-1], start_time);
-	mkdir(params->block_dir, 0755);
+	// file path for saving blocks dir
+	if (argrunsave) {
+		sprintf(params->block_dir, "temp-L%d_M%d_sim_%ld", params->L, params->ms[params->num_ms-1], start_time);
+		mkdir(params->block_dir, 0755);
+	}
 
 	printf("Running time test on version "VERSION".\n\n");
 
@@ -108,7 +110,7 @@ int main(int argc, char *argv[]) {
 
 
 	// Delete temporary files
-	if (!argsave) {
+	if (argrunsave && !argsave) {
 		rmrf(params->block_dir);
 	}
 
