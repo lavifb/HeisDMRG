@@ -31,6 +31,7 @@ int main(int argc, char *argv[]) {
 	model_t *model = newHeis2Model();
 	compileParams(model);
 	params->model  = model;
+	params->save_blocks = 0; // do not save blocks to disk
 
 	model->fullLength = params->L;
 
@@ -44,7 +45,8 @@ int main(int argc, char *argv[]) {
 	struct timespec t_start, t_end;
 	clock_gettime(CLOCK_MONOTONIC, &t_start);
 
-	meas_data_t *meas = fin_dmrgR(params);
+	meas_data_t *meas = fin_dmrg(params);
+	// meas_data_t *meas = fin_dmrgR(params);
 
 	clock_gettime(CLOCK_MONOTONIC, &t_end);
 	double runtime = (t_end.tv_sec - t_start.tv_sec);

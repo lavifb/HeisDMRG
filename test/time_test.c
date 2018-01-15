@@ -15,7 +15,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#define USAGE_STATEMENT fprintf(stderr, "usage: time_test [-sr] [-m num] [-w num]\n"); exit(1);
+#define USAGE_STATEMENT fprintf(stderr, "usage: time_test [-sd] [-m num] [-w num]\n"); exit(1);
 
 int main(int argc, char *argv[]) {
 
@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
 						argsave = 1;
 						argrunsave = 1;
 						break;
-					case 'r': // save blocks during runtime but delete on completion
+					case 'd': // save blocks during runtime but delete on completion
 						argrunsave = 1;
 						break;
 					default:
@@ -84,6 +84,7 @@ int main(int argc, char *argv[]) {
 	compileParams(model);
 
 	params->model = model;
+	params->save_blocks = argrunsave;
 
 	time_t start_time = time(NULL);
 
@@ -107,7 +108,7 @@ int main(int argc, char *argv[]) {
 
 
 	// Delete temporary files
-	if (argsave == 0) {
+	if (!argsave) {
 		rmrf(params->block_dir);
 	}
 

@@ -400,6 +400,20 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 	char (*disk_filenamesL)[1024] = mkl_calloc((L-3), sizeof(char[1024]), MEM_DATA_ALIGN);
 	char (*disk_filenamesR)[1024] = mkl_calloc((L-3), sizeof(char[1024]), MEM_DATA_ALIGN);
 
+
+	// NOTE: These macros are unsafe (do not use something like x++ as the parameter)
+	// Macro to save block at index to disk
+	#define SAVE_SIDE_BLOCK_TO_DISK(ind, side) if (params->save_blocks) { \
+		sprintf(disk_filenames##side[ind], "%s/" #side "%05d.temp", params->block_dir, ind); \
+		saveBlock(disk_filenames##side[ind], saved_blocks##side[ind]); }
+
+	// Macro to read block from disk
+	// Only reads if block not already laoded in RAM
+	#define LOAD_SIDE_BLOCK_FROM_DISK(ind, side) if (params->save_blocks && disk_filenames##side[ind][0] != '\0') { \
+		readBlock(disk_filenames##side[ind], saved_blocks##side[ind]); \
+		disk_filenames##side[ind][0] = '\0'; }
+
+
 	DMRGBlock *sys = createDMRGBlock(model);
 
 	// Note: saved_blocksL[i] has length i+1
@@ -420,10 +434,8 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 		// write old block to disk
 		int sys_old_index = sys->length-2;
-		sprintf(disk_filenamesL[sys_old_index], "%s/L%05d.temp", params->block_dir, sys_old_index);
-		saveBlock(disk_filenamesL[sys_old_index], saved_blocksL[sys_old_index]);
-		sprintf(disk_filenamesR[sys_old_index], "%s/R%05d.temp", params->block_dir, sys_old_index);
-		saveBlock(disk_filenamesR[sys_old_index], saved_blocksR[sys_old_index]);
+		SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, L);
+		SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, R);
 	}
 
 	// Setup psi0_guess
@@ -445,19 +457,13 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 			switch (sys->side) {
 				case 'L':
 					env = saved_blocksR[env_index];
-					if (disk_filenamesR[env_index][0] != '\0') {
-						readBlock(disk_filenamesR[env_index], saved_blocksR[env_index]);
-						disk_filenamesR[env_index][0] = '\0';
-					}
+					LOAD_SIDE_BLOCK_FROM_DISK(env_index, R);
 					env_enl = saved_blocksR[env_enl_index];
 					break;
 
 				case 'R':
 					env = saved_blocksL[env_index];
-					if (disk_filenamesL[env_index][0] != '\0') {
-						readBlock(disk_filenamesL[env_index], saved_blocksL[env_index]);
-						disk_filenamesL[env_index][0] = '\0';
-					}
+					LOAD_SIDE_BLOCK_FROM_DISK(env_index, L);
 					env_enl = saved_blocksL[env_enl_index];
 					break;
 			}
@@ -476,17 +482,10 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 				// Load env_enl block for converting psi0_guess to the right basis
 				switch (sys->side) {
 					case 'L':
-						if (disk_filenamesR[env_enl_index][0] != '\0') {
-							readBlock(disk_filenamesR[env_enl_index], saved_blocksR[env_enl_index]);
-							disk_filenamesR[env_enl_index][0] = '\0';
-						}
+						LOAD_SIDE_BLOCK_FROM_DISK(env_enl_index, R);
 						break;
-
 					case 'R':
-						if (disk_filenamesL[env_enl_index][0] != '\0') {
-							readBlock(disk_filenamesL[env_enl_index], saved_blocksL[env_enl_index]);
-							disk_filenamesL[env_enl_index][0] = '\0';
-						}
+						LOAD_SIDE_BLOCK_FROM_DISK(env_enl_index, L);
 						break;
 				}
 
@@ -524,13 +523,11 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 				// Save enl_block back to disk
 				switch (sys->side) {
 					case 'L':
-						sprintf(disk_filenamesR[env_enl_index], "%s/R%05d.temp", params->block_dir, env_enl_index);
-						saveBlock(disk_filenamesR[env_enl_index], saved_blocksR[env_enl_index]);
+						SAVE_SIDE_BLOCK_TO_DISK(env_enl_index, R);
 						break;
 
 					case 'R':
-						sprintf(disk_filenamesL[env_enl_index], "%s/L%05d.temp", params->block_dir, env_enl_index);
-						saveBlock(disk_filenamesL[env_enl_index], saved_blocksL[env_enl_index]);
+						SAVE_SIDE_BLOCK_TO_DISK(env_enl_index, L);
 						break;
 				}
 			}
@@ -565,8 +562,8 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 			int sys_index = sys->length-1;
 			switch (sys->side) {
 				case 'L':
+					// if block saved to disk only free pointer. Otherwise free matrices too.
 					if (disk_filenamesL[sys_index][0] != '\0') {
-						// readBlock(disk_filenamesL[sys_index], saved_blocksL[sys_index]);
 						mkl_free(saved_blocksL[sys_index]);
 						disk_filenamesL[sys_index][0] = '\0';
 					} else if (saved_blocksL[sys_index]) {
@@ -577,14 +574,13 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 					// write old block when not on measuring sweep
 					if (sys->meas != 'M') {
 						int sys_old_index = sys->length-2;
-						sprintf(disk_filenamesL[sys_old_index], "%s/L%05d.temp", params->block_dir, sys_old_index);
-						saveBlock(disk_filenamesL[sys_old_index], saved_blocksL[sys_old_index]);
+						SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, L);
 					} 
 					break;
 
 				case 'R':
+					// if block saved to disk only free pointer. Otherwise free matrices too.
 					if (disk_filenamesR[sys_index][0] != '\0') {
-						// readBlock(disk_filenamesR[sys_index], saved_blocksR[sys_index]);
 						mkl_free(saved_blocksR[sys_index]);
 						disk_filenamesR[sys_index][0] = '\0';
 					} else if (saved_blocksR[sys_index]) {
@@ -595,15 +591,14 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 					// write old block when not on measuring sweep
 					if (sys->meas != 'M') {
 						int sys_old_index = sys->length-2;
-						sprintf(disk_filenamesR[sys_old_index], "%s/R%05d.temp", params->block_dir, sys_old_index);
-						saveBlock(disk_filenamesR[sys_old_index], saved_blocksR[sys_old_index]);
+						SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, R);
 					} 
 					break;
 			}
 
 			// Check if sweep is done
 			if (sys->side == 'L' && 2 * sys->length == L) {
-				printf("Done with sweep %d/%d\n", i+1, num_sweeps);
+				printf("Done with sweep %d/%d with m=%d.\n", i+1, num_sweeps, m);
 				logSweepEnd();
 				break;
 			}
@@ -647,7 +642,22 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 	model_t *model       = params->model;
 
 	DMRGBlock **saved_blocks = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+	// filenames for blocks saved to disk. When block i is loaded in RAM, disk_filenames[i] is set to '\0'
 	char (*disk_filenames)[1024] = mkl_calloc((L-3), sizeof(char[1024]), MEM_DATA_ALIGN);
+
+
+	// NOTE: These macros are unsafe (do not use something like x++ as the parameter)
+	// Macro to save block at index to disk
+	#define SAVE_BLOCK_TO_DISK(ind) if (params->save_blocks) { \
+		sprintf(disk_filenames[ind], "%s/%05d.temp", params->block_dir, ind); \
+		saveBlock(disk_filenames[ind], saved_blocks[ind]); }
+
+	// Macro to load block at index from disk
+	// Only reads if block not already laoded in RAM
+	#define LOAD_BLOCK_FROM_DISK(ind) if (params->save_blocks && disk_filenames[ind][0] != '\0') { \
+		readBlock(disk_filenames[ind], saved_blocks[ind]); \
+		disk_filenames[ind][0] = '\0'; }
+
 
 	DMRGBlock *sys = createDMRGBlock(model);
 
@@ -664,8 +674,7 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 
 		// write old block to disk
 		int sys_old_index = sys->length-2;
-		sprintf(disk_filenames[sys_old_index], "%s/%05d.temp", params->block_dir, sys_old_index);
-		saveBlock(disk_filenames[sys_old_index], saved_blocks[sys_old_index]);
+		SAVE_BLOCK_TO_DISK(sys_old_index);
 	}
 
 	// Setup psi0_guess
@@ -683,10 +692,7 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 
 			int env_index = L - sys->length - 3;
 			env = saved_blocks[env_index];
-			if (disk_filenames[env_index][0] != '\0') {
-				readBlock(disk_filenames[env_index], saved_blocks[env_index]);
-				disk_filenames[env_index][0] = '\0';
-			}
+			LOAD_BLOCK_FROM_DISK(env_index);
 
 			int env_enl_index = L - sys->length - 2;
 			DMRGBlock *env_enl = saved_blocks[env_enl_index];
@@ -698,10 +704,7 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 				}
 			} else if (*psi0_guessp != NULL) {
 				// Load env_enl block for converting psi0_guess to the right basis
-				if (disk_filenames[env_enl_index][0] != '\0') {
-					readBlock(disk_filenames[env_enl_index], saved_blocks[env_enl_index]);
-					disk_filenames[env_enl_index][0] = '\0';
-				}
+				LOAD_BLOCK_FROM_DISK(env_enl_index);
 
 				// Transform psi0_guess into guess for next iteration
 				int d_block_env_enl = env_enl->d_block;
@@ -738,8 +741,7 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 				mkl_free(temp_guess);
 
 				// Save enl_block back to disk
-				sprintf(disk_filenames[env_enl_index], "%s/%05d.temp", params->block_dir, env_enl_index);
-				saveBlock(disk_filenames[env_enl_index], saved_blocks[env_enl_index]);
+				SAVE_BLOCK_TO_DISK(env_enl_index);
 			}
 
 			// Switch sys and env if at the end of the chain
@@ -770,8 +772,8 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 
 			// Save new block
 			int sys_index = sys->length-1;
+			// if block saved to disk only free pointer. Otherwise free matrices too.
 			if (disk_filenames[sys_index][0] != '\0') {
-				// readBlock(disk_filenames[sys_index], saved_blocks[sys_index]);
 				mkl_free(saved_blocks[sys_index]);
 				disk_filenames[sys_index][0] = '\0';
 			} else if (saved_blocks[sys_index]) {
@@ -782,8 +784,7 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 			// write old block when not on measuring sweep
 			if (sys->meas != 'M') {
 				int sys_old_index = sys->length-2;
-				sprintf(disk_filenames[sys_old_index], "%s/%05d.temp", params->block_dir, sys_old_index);
-				saveBlock(disk_filenames[sys_old_index], saved_blocks[sys_old_index]);
+				SAVE_BLOCK_TO_DISK(sys_old_index);
 			} 
 
 			// Check if sweep is done
