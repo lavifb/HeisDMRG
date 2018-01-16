@@ -15,10 +15,11 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#define USAGE_STATEMENT fprintf(stderr, "usage: time_test [-sd] [-m num] [-w num] [-c dir_path]\n"); exit(1);
+#define USAGE_STATEMENT fprintf(stderr, "usage: time_test [-sd] [-m num] [-w num] [-L num] [-c dir_path]\n"); exit(1);
 
 int main(int argc, char *argv[]) {
 
+	int L    = 32;
 	int mm   = 20;
 	int n_ms = 8;
 	int argsave = 0;
@@ -44,6 +45,18 @@ int main(int argc, char *argv[]) {
 				n_ms = atoi(argv[i+1]);
 				if (n_ms <= 0) {
 					errprintf("time_test: number of sweeps '%s' must be a positive number\n", argv[i+1]);
+					USAGE_STATEMENT
+				}
+				i++;
+			} else {
+				errprintf("time_test: option '-w' requires an arguement\n");
+				USAGE_STATEMENT
+			}
+		} else if (strcmp(argv[i], "-L") == 0) {
+			if (i+1 < argc) {
+				L = atoi(argv[i+1]);
+				if (L <= 4 || L%2 == 1) {
+					errprintf("time_test: size of system '%s' must be an even number greater than 4\n", argv[i+1]);
 					USAGE_STATEMENT
 				}
 				i++;
@@ -91,7 +104,7 @@ int main(int argc, char *argv[]) {
 	mkl_peak_mem_usage(MKL_PEAK_MEM_ENABLE);
 
 	sim_params_t *params = mkl_calloc(sizeof(sim_params_t), 1, MEM_DATA_ALIGN);
-	params->L      = 32;
+	params->L      = L;
 	params->minf   = mm;
 	params->num_ms = n_ms;
 	params->ms     = mkl_malloc(n_ms * sizeof(int), MEM_DATA_ALIGN);
