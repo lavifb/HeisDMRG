@@ -7,6 +7,7 @@
 #include "linalg.h"
 #include "logio.h"
 #include "matio.h"
+#include "util.h"
 #include "uthash.h"
 #include <mkl.h>
 #include <string.h>
@@ -404,7 +405,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 	// NOTE: These macros are unsafe (do not use something like x++ as the parameter)
 	// Macro to save block at index to disk
 	#define SAVE_SIDE_BLOCK_TO_DISK(ind, side) if (params->save_blocks) { \
-		sprintf(disk_filenames##side[ind], "%s/" #side "%05d.temp", params->block_dir, ind); \
+		sprintf(disk_filenames##side[ind], "%s/" #side "%05d.blk", params->block_dir, ind); \
 		saveBlock(disk_filenames##side[ind], saved_blocks##side[ind]); }
 
 	// Macro to read block from disk
@@ -414,29 +415,58 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 		disk_filenames##side[ind][0] = '\0'; }
 
 
-	DMRGBlock *sys = createDMRGBlock(model);
+	DMRGBlock *sys;
+	DMRGBlock *env;
 
-	// Note: saved_blocksL[i] has length i+1
-	saved_blocksL[0] = sys;
-	saved_blocksR[0] = copyDMRGBlock(sys);
-	saved_blocksR[0]->side = 'R';
+	if (params->continue_run) { // use saved blocks
 
-	// run infinite algorithm to build up system
-	while (2*sys->length < L) {
-		#ifndef NDEBUG
-		printGraphic(sys, sys);
-		#endif
-		sys = single_step(sys, sys, m_inf, 0, NULL);
+		printf("Continuing run using saved blocks at '%s' ...\n", params->block_dir);
 
-		saved_blocksL[sys->length-1] = sys;
-		saved_blocksR[sys->length-1] = copyDMRGBlock(sys);
-		saved_blocksR[sys->length-1]->side = 'R';
+		for (int i=0; i<L-3; i++) {
+			sprintf(disk_filenamesL[i], "%s/L%05d.blk", params->block_dir, i);
+			sprintf(disk_filenamesR[i], "%s/R%05d.blk", params->block_dir, i);
+			saved_blocksL[i] = mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
+			saved_blocksR[i] = mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
+			saved_blocksL[i]->model = model;
+			saved_blocksR[i]->model = model;
+		}
 
-		// write old block to disk
-		int sys_old_index = sys->length-2;
-		SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, L);
-		SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, R);
+		int ret = readBlock(disk_filenamesL[L-4], saved_blocksL[L-4]);
+		disk_filenamesL[L-4][0] = '\0';
+		if (ret != 0) {
+			errprintf("Could not load dmrg block.");
+			exit(1);
+		}
+		sys = saved_blocksL[L-4];
+
+	} else { // build system normally
+
+		sys = createDMRGBlock(model);
+
+		// Note: saved_blocksL[i] has length i+1
+		saved_blocksL[0] = sys;
+		saved_blocksR[0] = copyDMRGBlock(sys);
+		saved_blocksR[0]->side = 'R';
+
+		// run infinite algorithm to build up system
+		while (2*sys->length < L) {
+			#ifndef NDEBUG
+			printGraphic(sys, sys);
+			#endif
+			sys = single_step(sys, sys, m_inf, 0, NULL);
+
+			saved_blocksL[sys->length-1] = sys;
+			saved_blocksR[sys->length-1] = copyDMRGBlock(sys);
+			saved_blocksR[sys->length-1]->side = 'R';
+
+			// write old block to disk
+			int sys_old_index = sys->length-2;
+			SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, L);
+			SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, R);
+		}
 	}
+
+
 
 	// Setup psi0_guess
 	MAT_TYPE *psi0_guess = NULL;
@@ -445,7 +475,6 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 	meas_data_t *meas;
 
 	// Finite Sweeps
-	DMRGBlock *env;
 	for (int i = 0; i < num_sweeps; i++) {
 		int m = ms[i];
 
@@ -649,7 +678,7 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 	// NOTE: These macros are unsafe (do not use something like x++ as the parameter)
 	// Macro to save block at index to disk
 	#define SAVE_BLOCK_TO_DISK(ind) if (params->save_blocks) { \
-		sprintf(disk_filenames[ind], "%s/%05d.temp", params->block_dir, ind); \
+		sprintf(disk_filenames[ind], "%s/%05d.blk", params->block_dir, ind); \
 		saveBlock(disk_filenames[ind], saved_blocks[ind]); }
 
 	// Macro to load block at index from disk

@@ -373,12 +373,17 @@ int readBlock(char *filename, DMRGBlock *block) {
 		return -1;
 	}
 
+	// do not overwrite model which could change from run to run
+	const model_t *model = block->model;
+
 	int count;
 	count = fread(block, sizeof(DMRGBlock), 1, m_f);
 	if (count != 1) {
 		errprintf("Block not written properly to file '%s'.\n", filename);
 		return -2;
 	}
+
+	block->model = model;
 
 	int matsize = block->d_block*block->d_block;
 	block->ops = mkl_malloc(block->num_ops * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);

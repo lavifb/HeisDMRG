@@ -15,7 +15,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#define USAGE_STATEMENT fprintf(stderr, "usage: time_test [-sd] [-m num] [-w num]\n"); exit(1);
+#define USAGE_STATEMENT fprintf(stderr, "usage: time_test [-sd] [-m num] [-w num] [-c dir_path]\n"); exit(1);
 
 int main(int argc, char *argv[]) {
 
@@ -23,6 +23,7 @@ int main(int argc, char *argv[]) {
 	int n_ms = 8;
 	int argsave = 0;
 	int argrunsave = 0;
+	char *cont_dir = "";
 
 	// Processing command line arguments
 	for (int i=1; i<argc; i++) {
@@ -48,6 +49,23 @@ int main(int argc, char *argv[]) {
 				i++;
 			} else {
 				errprintf("time_test: option '-w' requires an arguement\n");
+				USAGE_STATEMENT
+			}
+		} else if (strcmp(argv[i], "-c") == 0) {
+			if (i+1 < argc) {
+				cont_dir = argv[i+1];
+				argsave = 1;
+				argrunsave = 1;
+
+				// check if we have a vaild dir
+				struct stat sb;
+			    if (stat(cont_dir, &sb) < 0 || !S_ISDIR(sb.st_mode)) {
+					errprintf("time_test: saved block path '%s' must be a vaild path to a directory\n", cont_dir);
+					USAGE_STATEMENT
+				}
+				i++;
+			} else {
+				errprintf("time_test: option '-c' requires an arguement\n");
 				USAGE_STATEMENT
 			}
 		} else if (argv[i][0] == '-') {
@@ -88,11 +106,17 @@ int main(int argc, char *argv[]) {
 
 	time_t start_time = time(NULL);
 
+	// setup path for continuing run
+	if (cont_dir != "") {
+		params->continue_run = 1;
+		sprintf(params->block_dir, cont_dir);
+	}
 	// file path for saving blocks dir
-	if (argrunsave) {
+	else if (argrunsave) {
 		sprintf(params->block_dir, "temp-L%d_M%d_sim_%ld", params->L, params->ms[params->num_ms-1], start_time);
 		mkdir(params->block_dir, 0755);
 	}
+
 
 	printf("Running time test on version "VERSION".\n\n");
 
