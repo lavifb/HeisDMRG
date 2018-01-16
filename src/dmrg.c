@@ -434,7 +434,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 		int ret = readBlock(disk_filenamesL[L-4], saved_blocksL[L-4]);
 		disk_filenamesL[L-4][0] = '\0';
 		if (ret != 0) {
-			errprintf("Could not load dmrg block.");
+			errprintf("Could not load dmrg block.\n");
 			exit(1);
 		}
 		sys = saved_blocksL[L-4];
@@ -704,7 +704,7 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 		int ret = readBlock(disk_filenames[L-4], saved_blocks[L-4]);
 		disk_filenames[L-4][0] = '\0';
 		if (ret != 0) {
-			errprintf("Could not load dmrg block.");
+			errprintf("Could not load dmrg block.\n");
 			exit(1);
 		}
 		sys = saved_blocks[L-4];
