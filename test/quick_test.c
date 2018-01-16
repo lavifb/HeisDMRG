@@ -31,14 +31,21 @@ int main(int argc, char *argv[]) {
 	model_t *model = newHeis2Model();
 	compileParams(model);
 	params->model  = model;
+	params->save_blocks = 0; // do not save blocks to disk
 
 	model->fullLength = params->L;
+
+	time_t start_time = time(NULL);
+	// file path for output dir
+	sprintf(params->block_dir, "temp-L%d_M%d_sim_%ld", params->L, params->ms[params->num_ms-1], start_time);
+	mkdir(params->block_dir, 0755);
 
 	printf("Running quick test on version "VERSION".\n\n");
 
 	struct timespec t_start, t_end;
 	clock_gettime(CLOCK_MONOTONIC, &t_start);
 
+	// meas_data_t *meas = fin_dmrg(params);
 	meas_data_t *meas = fin_dmrgR(params);
 
 	clock_gettime(CLOCK_MONOTONIC, &t_end);
@@ -48,10 +55,14 @@ int main(int argc, char *argv[]) {
 	printf("Quick Test finished in %.3f seconds.\n\n", runtime);
 
 
+	// Delete temporary files
+	rmrf(params->block_dir);
+
 	// Getting path of binary
 	char cwd[1024];
 	if (getcwd(cwd, sizeof(cwd)) == NULL) {
 		errprintf("getcwd() error. Cannot check solution.\n");
+		exit(1);
 	}
 	char path[1024];
 	sprintf(path, "%s/%s", cwd, argv[0]);
@@ -72,9 +83,9 @@ int main(int argc, char *argv[]) {
 	if (fabs(meas->energy - ETE) < TOLERANCE) {
 		printf( TERM_GREEN "Energy Test Passed!\n" TERM_RESET );
 	} else {
-		errprintf("Energy Test Failed!\nExpected Energy: %.17f\nMeasured Energy: %.17f\n",
+		failprintf("Energy Test Failed!\nExpected Energy: %.17f\nMeasured Energy: %.17f\n",
 			ETE, meas->energy);
-		success = -1;
+		success = 1;
 	}
 
 	const int n_sites = meas->num_sites;
@@ -103,9 +114,10 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	if (mat_errs == 0) {
-		printf( TERM_GREEN "Sz Test Passed!\n" TERM_RESET );
+		passprintf("Sz Test Passed!\n");
 	} else {
-		errprintf("Sz Test Failed! %d/%d values incorrect.\n", mat_errs, n_sites);
+		failprintf("Sz Test Failed! %d/%d values incorrect.\n", mat_errs, n_sites);
+		success = 1;
 	}
 
 	mat_errs = 0;
@@ -116,9 +128,10 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	if (mat_errs == 0) {
-		printf( TERM_GREEN "SS Test Passed!\n" TERM_RESET );
+		passprintf("SS Test Passed!\n");
 	} else {
-		errprintf("SS Test Failed! %d/%d values incorrect.\n", mat_errs, n_sites);
+		failprintf("SS Test Failed! %d/%d values incorrect.\n", mat_errs, n_sites);
+		success = 1;
 	}
 
 	// saveMat("quick_test_Szs.dat", meas->Szs, meas->num_sites);
@@ -135,7 +148,7 @@ int main(int argc, char *argv[]) {
 	MKL_INT64 nbytes_alloc;
 	nbytes_alloc = MKL_Mem_Stat(&nbuffers);
 	if (nbytes_alloc > 0) {
-		errprintf("MKL reports a memory leak of %lld bytes in %d buffer(s).\n", nbytes_alloc, nbuffers);
+		warnprintf("MKL reports a memory leak of %lld bytes in %d buffer(s).\n", nbytes_alloc, nbuffers);
 		success = -1;
 	}
 

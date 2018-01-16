@@ -13,10 +13,14 @@ typedef struct {
 	int *ms;     // truncation dimension size for each sweep
 
 	model_t *model; // model params for the simulation
+	int save_blocks; // option determines if you save blocks to disk during runtime or do the calculation entirely in RAM
+	int continue_run; // option determines if you continue an old saved run loaded from block_dir
 
 	time_t *start_time;
 	time_t *end_time;
 	double runtime;
+
+	char block_dir[1024]; // file path for saving blocks
 
 } sim_params_t;
 

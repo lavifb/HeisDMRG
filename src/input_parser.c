@@ -230,6 +230,7 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 		// 		#endif
 		// 	}
 		// }
+		// TODO: option for saving blocks
 	}
 
 	fclose(fd);

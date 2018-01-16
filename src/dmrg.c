@@ -10,17 +10,18 @@
 #include "util.h"
 #include "uthash.h"
 #include <mkl.h>
+#include <string.h>
 #include <math.h>
 #include <complex.h>
 #include <assert.h>
 
-/* Single DMRG step
-   
-   m: truncation dimension size
+/*  Single DMRG step
 
-   psi0_guessp: pointer to guess for psi0. Calculated psi0 is returned in theis pointer.
-                Set  psi0_guessp = NULL to not use eigenstate guessing and not return eigenstate.
-                Set *psi0_guessp = NULL to not use eigenstate guessing but return eigenstate for future guessing.
+	m: truncation dimension size
+
+	psi0_guessp: pointer to guess for psi0. Calculated psi0 is returned in this pointer.
+				Set  psi0_guessp = NULL to not use eigenstate guessing and not return eigenstate.
+				Set *psi0_guessp = NULL to not use eigenstate guessing but return eigenstate for future guessing.
 
    tau: time advance for TDMRG (set to 0 for normal dmrg)
 
@@ -313,12 +314,12 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	return sys_enl;
 }
-/* DMRG step that records measurements.
-   Use on the last half sweep to measure operators as the system builds.
-   
-   m: truncation dimension size
+/*  DMRG step that records measurements.
+	Use on the last half sweep to measure operators as the system builds.
 
-   returns enlarged system block
+	m: truncation dimension size
+
+	returns enlarged system block
 */
 meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz, MAT_TYPE **const psi0_guessp) {
 
@@ -405,17 +406,17 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	return meas;
 }
 
-/* Infinite System DMRG Algorithm
-   
-   parmas : struct containing the parameters for simulation
-       L    : Maximum length of system
-       minf : truncation dimension size
+/*  Infinite System DMRG Algorithm
+
+	parmas : struct containing the parameters for simulation
+		L    : Maximum length of system
+		minf : truncation dimension size
 */
 void inf_dmrg(sim_params_t *params) {
 
-    const int L    = params->L;
-    const int m    = params->minf;
-    model_t *model = params->model;
+	const int L    = params->L;
+	const int m    = params->minf;
+	model_t *model = params->model;
 
 	// TODO: measurement (copy from fin_dmrgR)
 	DMRGBlock *sys = createDMRGBlock(model);
@@ -432,42 +433,92 @@ void inf_dmrg(sim_params_t *params) {
 }
 
 /*  Finite System DMRG Algorithm
-    
-    parmas : struct containing the parameters for simulation
-        L      : Length of universe
-        m_inf  : truncation dimension size for infinite algorithm for building system
-        num_ms : number of finite system sweeps
-        ms     : list of truncation sizes for the finite sweeps (size num_sweeps)
+	
+	parmas : struct containing the parameters for simulation
+		L      : Length of universe
+		m_inf  : truncation dimension size for infinite algorithm for building system
+		num_ms : number of finite system sweeps
+		ms     : list of truncation sizes for the finite sweeps (size num_sweeps)
 */
 meas_data_t *fin_dmrg(sim_params_t *params) {
 
-    const int L          = params->L;
-    const int m_inf      = params->minf;
-    const int num_sweeps = params->num_ms;
-    const int *ms        = params->ms;
-    model_t *model       = params->model;
+	const int L          = params->L;
+	const int m_inf      = params->minf;
+	const int num_sweeps = params->num_ms;
+	const int *ms        = params->ms;
+	model_t *model       = params->model;
 
 	DMRGBlock **saved_blocksL = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 	DMRGBlock **saved_blocksR = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+	char (*disk_filenamesL)[1024] = mkl_calloc((L-3), sizeof(char[1024]), MEM_DATA_ALIGN);
+	char (*disk_filenamesR)[1024] = mkl_calloc((L-3), sizeof(char[1024]), MEM_DATA_ALIGN);
 
-	DMRGBlock *sys = createDMRGBlock(model);
 
-	// Note: saved_blocksL[i] has length i+1
-	saved_blocksL[0] = sys;
-	saved_blocksR[0] = copyDMRGBlock(sys);
-	saved_blocksR[0]->side = 'R';
+	// NOTE: These macros are unsafe (do not use something like x++ as the parameter)
+	// Macro to save block at index to disk
+	#define SAVE_SIDE_BLOCK_TO_DISK(ind, side) if (params->save_blocks) { \
+		sprintf(disk_filenames##side[ind], "%s/" #side "%05d.blk", params->block_dir, ind); \
+		saveBlock(disk_filenames##side[ind], saved_blocks##side[ind]); }
 
-	// run infinite algorithm to build up system
-	while (2*sys->length < L) {
-		#ifndef NDEBUG
-		printGraphic(sys, sys);
-		#endif
-		sys = single_step(sys, sys, m_inf, 0, NULL, 0);
+	// Macro to read block from disk
+	// Only reads if block not already laoded in RAM
+	#define LOAD_SIDE_BLOCK_FROM_DISK(ind, side) if (params->save_blocks && disk_filenames##side[ind][0] != '\0') { \
+		readBlock(disk_filenames##side[ind], saved_blocks##side[ind]); \
+		disk_filenames##side[ind][0] = '\0'; }
 
-		saved_blocksL[sys->length-1] = sys;
-		saved_blocksR[sys->length-1] = copyDMRGBlock(sys);
-		saved_blocksR[sys->length-1]->side = 'R';
+
+	DMRGBlock *sys;
+	DMRGBlock *env;
+
+	if (params->continue_run) { // use saved blocks
+
+		printf("Continuing run using saved blocks at '%s' ...\n", params->block_dir);
+
+		for (int i=0; i<L-3; i++) {
+			sprintf(disk_filenamesL[i], "%s/L%05d.blk", params->block_dir, i);
+			sprintf(disk_filenamesR[i], "%s/R%05d.blk", params->block_dir, i);
+			saved_blocksL[i] = mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
+			saved_blocksR[i] = mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
+			saved_blocksL[i]->model = model;
+			saved_blocksR[i]->model = model;
+		}
+
+		int ret = readBlock(disk_filenamesL[L-4], saved_blocksL[L-4]);
+		disk_filenamesL[L-4][0] = '\0';
+		if (ret != 0) {
+			errprintf("Could not load dmrg block.\n");
+			exit(1);
+		}
+		sys = saved_blocksL[L-4];
+
+	} else { // build system normally
+
+		sys = createDMRGBlock(model);
+
+		// Note: saved_blocksL[i] has length i+1
+		saved_blocksL[0] = sys;
+		saved_blocksR[0] = copyDMRGBlock(sys);
+		saved_blocksR[0]->side = 'R';
+
+		// run infinite algorithm to build up system
+		while (2*sys->length < L) {
+			#ifndef NDEBUG
+			printGraphic(sys, sys);
+			#endif
+			sys = single_step(sys, sys, m_inf, 0, NULL, 0);
+
+			saved_blocksL[sys->length-1] = sys;
+			saved_blocksR[sys->length-1] = copyDMRGBlock(sys);
+			saved_blocksR[sys->length-1]->side = 'R';
+
+			// write old block to disk
+			int sys_old_index = sys->length-2;
+			SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, L);
+			SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, R);
+		}
 	}
+
+
 
 	// Setup psi0_guess
 	MAT_TYPE *psi0_guess = NULL;
@@ -476,24 +527,25 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 	meas_data_t *meas;
 
 	// Finite Sweeps
-	DMRGBlock *env;
 	for (int i = 0; i < num_sweeps; i++) {
 		int m = ms[i];
 
 		while (1) {
 
-			// block for building psi0_guess
+			int env_index = L - sys->length - 3;
+			int env_enl_index = L - sys->length - 2;
 			DMRGBlock *env_enl;
-
 			switch (sys->side) {
 				case 'L':
-					env = saved_blocksR[L - sys->length - 3];
-					env_enl = saved_blocksR[L - sys->length - 2];
+					env = saved_blocksR[env_index];
+					LOAD_SIDE_BLOCK_FROM_DISK(env_index, R);
+					env_enl = saved_blocksR[env_enl_index];
 					break;
 
 				case 'R':
-					env = saved_blocksL[L - sys->length - 3];
-					env_enl = saved_blocksL[L - sys->length - 2];
+					env = saved_blocksL[env_index];
+					LOAD_SIDE_BLOCK_FROM_DISK(env_index, L);
+					env_enl = saved_blocksL[env_enl_index];
 					break;
 			}
 
@@ -508,6 +560,16 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 					*psi0_guessp = NULL;
 				}
 			} else if (*psi0_guessp != NULL) {
+				// Load env_enl block for converting psi0_guess to the right basis
+				switch (sys->side) {
+					case 'L':
+						LOAD_SIDE_BLOCK_FROM_DISK(env_enl_index, R);
+						break;
+					case 'R':
+						LOAD_SIDE_BLOCK_FROM_DISK(env_enl_index, L);
+						break;
+				}
+
 				// Transform psi0_guess into guess for next iteration
 				int d_block_env_enl = env_enl->d_block;
 				int d_trans_env_enl = env_enl->d_trans;
@@ -538,6 +600,17 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 				}
 				mkl_free(temp_guess);
+
+				// Save enl_block back to disk
+				switch (sys->side) {
+					case 'L':
+						SAVE_SIDE_BLOCK_TO_DISK(env_enl_index, R);
+						break;
+
+					case 'R':
+						SAVE_SIDE_BLOCK_TO_DISK(env_enl_index, L);
+						break;
+				}
 			}
 
 			// Switch sides if at the end of the chain
@@ -567,21 +640,46 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 			logBlock(sys);
 
 			// Save new block
+			int sys_index = sys->length-1;
 			switch (sys->side) {
 				case 'L':
-					if (saved_blocksL[sys->length-1]) { freeDMRGBlock(saved_blocksL[sys->length-1]); }
-					saved_blocksL[sys->length-1] = sys;
+					// if block saved to disk only free pointer. Otherwise free matrices too.
+					if (disk_filenamesL[sys_index][0] != '\0') {
+						mkl_free(saved_blocksL[sys_index]);
+						disk_filenamesL[sys_index][0] = '\0';
+					} else if (saved_blocksL[sys_index]) {
+						freeDMRGBlock(saved_blocksL[sys_index]);
+					}
+					saved_blocksL[sys_index] = sys;
+
+					// write old block when not on measuring sweep
+					if (sys->meas != 'M') {
+						int sys_old_index = sys->length-2;
+						SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, L);
+					} 
 					break;
 
 				case 'R':
-					if (saved_blocksR[sys->length-1]) { freeDMRGBlock(saved_blocksR[sys->length-1]); }
-					saved_blocksR[sys->length-1] = sys;
+					// if block saved to disk only free pointer. Otherwise free matrices too.
+					if (disk_filenamesR[sys_index][0] != '\0') {
+						mkl_free(saved_blocksR[sys_index]);
+						disk_filenamesR[sys_index][0] = '\0';
+					} else if (saved_blocksR[sys_index]) {
+						freeDMRGBlock(saved_blocksR[sys_index]);
+					}
+					saved_blocksR[sys_index] = sys;
+
+					// write old block when not on measuring sweep
+					if (sys->meas != 'M') {
+						int sys_old_index = sys->length-2;
+						SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, R);
+					} 
 					break;
 			}
 
 			// Check if sweep is done
 			if (sys->side == 'L' && 2 * sys->length == L) {
-				printf("Done with sweep %d/%d\n", i+1, num_sweeps);
+				printf("Done with sweep %d/%d with m=%d.\n", i+1, num_sweeps, m);
 				logSweepEnd();
 				break;
 			}
@@ -590,50 +688,100 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 	if (*psi0_guessp != NULL) { mkl_free(*psi0_guessp); }
 	for (int i = 0; i < L-3; i++) {
-		if (saved_blocksL[i]) { freeDMRGBlock(saved_blocksL[i]); }
-		if (saved_blocksR[i]) { freeDMRGBlock(saved_blocksR[i]); }
+		if (disk_filenamesL[i][0] != '\0') { mkl_free(saved_blocksL[i]); }
+		else if (saved_blocksL[i]) { freeDMRGBlock(saved_blocksL[i]); }
+
+		if (disk_filenamesR[i][0] != '\0') { mkl_free(saved_blocksR[i]); }
+		else if (saved_blocksR[i]) { freeDMRGBlock(saved_blocksR[i]); }
 	}
 	mkl_free(saved_blocksL);
 	mkl_free(saved_blocksR);
+	mkl_free(disk_filenamesL);
+	mkl_free(disk_filenamesR);
 
 	return meas;
 }
 
 /*  Finite System DMRG Algorithm with reflection symmetry in ground state.
 
-    Reflection symmetry means assuming both left and right sides of the system
-    are the same so sweeps are only necessary in one direction, halving compute time.
+	Reflection symmetry means assuming both left and right sides of the system
+	are the same so sweeps are only necessary in one direction, halving compute time.
 
-    parmas : struct containing the parameters for simulation
-        L      : Length of universe
-        m_inf  : truncation dimension size for infinite algorithm for building system
-        num_ms : number of finite system sweeps
-        ms     : (size num_ms) list of truncation sizes for the finite sweeps
+	parmas : struct containing the parameters for simulation
+		L      : Length of universe
+		m_inf  : truncation dimension size for infinite algorithm for building system
+		num_ms : number of finite system sweeps
+		ms     : (size num_ms) list of truncation sizes for the finite sweeps
 
 */
 meas_data_t *fin_dmrgR(sim_params_t *params) {
 
-    const int L          = params->L;
-    const int m_inf      = params->minf;
-    const int num_sweeps = params->num_ms;
-    const int *ms        = params->ms;
-    model_t *model       = params->model;
+	const int L          = params->L;
+	const int m_inf      = params->minf;
+	const int num_sweeps = params->num_ms;
+	const int *ms        = params->ms;
+	model_t *model       = params->model;
 
 	DMRGBlock **saved_blocks = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+	// filenames for blocks saved to disk. When block i is loaded in RAM, disk_filenames[i] is set to '\0'
+	char (*disk_filenames)[1024] = mkl_calloc((L-3), sizeof(char[1024]), MEM_DATA_ALIGN);
 
-	DMRGBlock *sys = createDMRGBlock(model);
 
-	// Note: saved_blocks[i] has length i+1
-	saved_blocks[0] = sys;
+	// NOTE: These macros are unsafe (do not use something like x++ as the parameter)
+	// Macro to save block at index to disk
+	#define SAVE_BLOCK_TO_DISK(ind) if (params->save_blocks) { \
+		sprintf(disk_filenames[ind], "%s/%05d.blk", params->block_dir, ind); \
+		saveBlock(disk_filenames[ind], saved_blocks[ind]); }
 
-	// Run infinite algorithm to build up system
-	while (2*sys->length < L) {
-		#ifndef NDEBUG
-		printGraphic(sys, sys);
-		#endif
-		sys = single_step(sys, sys, m_inf, 0, NULL, 0);
-		saved_blocks[sys->length-1] = sys;
+	// Macro to load block at index from disk
+	// Only reads if block not already laoded in RAM
+	#define LOAD_BLOCK_FROM_DISK(ind) if (params->save_blocks && disk_filenames[ind][0] != '\0') { \
+		readBlock(disk_filenames[ind], saved_blocks[ind]); \
+		disk_filenames[ind][0] = '\0'; }
+
+
+	DMRGBlock *sys;
+	DMRGBlock *env;
+
+	if (params->continue_run) { // use saved blocks
+
+		printf("Continuing run using saved blocks at '%s' ...\n", params->block_dir);
+
+		for (int i=0; i<L-3; i++) {
+			sprintf(disk_filenames[i], "%s/%05d.blk", params->block_dir, i);
+			saved_blocks[i] = mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
+			saved_blocks[i]->model = model;
+		}
+
+		int ret = readBlock(disk_filenames[L-4], saved_blocks[L-4]);
+		disk_filenames[L-4][0] = '\0';
+		if (ret != 0) {
+			errprintf("Could not load dmrg block.\n");
+			exit(1);
+		}
+		sys = saved_blocks[L-4];
+
+	} else { // build system normally
+
+		sys = createDMRGBlock(model);
+
+		// Note: saved_blocks[i] has length i+1
+		saved_blocks[0] = sys;
+
+		// Run infinite algorithm to build up system
+		while (2*sys->length < L) {
+			#ifndef NDEBUG
+			printGraphic(sys, sys);
+			#endif
+			sys = single_step(sys, sys, m_inf, 0, NULL, 0);
+			saved_blocks[sys->length-1] = sys;
+
+			// write old block to disk
+			int sys_old_index = sys->length-2;
+			SAVE_BLOCK_TO_DISK(sys_old_index);
+		}
 	}
+
 
 	// Setup psi0_guess
 	MAT_TYPE *psi0_guess = NULL;
@@ -642,14 +790,17 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 	meas_data_t *meas;
 	
 	// Finite Sweeps
-	DMRGBlock *env;
 	for (int i = 0; i < num_sweeps; i++) {
 		int m = ms[i];
 
 		while (1) {
 
-			env = saved_blocks[L - sys->length - 3];
-			DMRGBlock *env_enl = saved_blocks[L - sys->length - 2]; // block for creating psi0_guess
+			int env_index = L - sys->length - 3;
+			env = saved_blocks[env_index];
+			LOAD_BLOCK_FROM_DISK(env_index);
+
+			int env_enl_index = L - sys->length - 2;
+			DMRGBlock *env_enl = saved_blocks[env_enl_index];
 
 			if (env_enl->trans == NULL) {
 				if (*psi0_guessp != NULL) {
@@ -657,6 +808,9 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 					*psi0_guessp = NULL;
 				}
 			} else if (*psi0_guessp != NULL) {
+				// Load env_enl block for converting psi0_guess to the right basis
+				LOAD_BLOCK_FROM_DISK(env_enl_index);
+
 				// Transform psi0_guess into guess for next iteration
 				int d_block_env_enl = env_enl->d_block;
 				int d_trans_env_enl = env_enl->d_trans;
@@ -690,6 +844,9 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 					#endif
 				}
 				mkl_free(temp_guess);
+
+				// Save enl_block back to disk
+				SAVE_BLOCK_TO_DISK(env_enl_index);
 			}
 
 			// Switch sys and env if at the end of the chain
@@ -706,7 +863,7 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 
 			// measure and finish run
 			if (i == num_sweeps-1 && 2 * sys->length == L-2) {
-				printf("Done with sweep %d/%d\n", num_sweeps, num_sweeps);
+				printf("Done with sweep %d/%d with m=%d.\n", num_sweeps, num_sweeps, m);
 				printf("\nTaking measurements...\n");
 				meas = meas_step(sys, env, m, 0, psi0_guessp);
 				break;
@@ -719,12 +876,25 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 			logBlock(sys);
 
 			// Save new block
-			if (saved_blocks[sys->length-1]) { freeDMRGBlock(saved_blocks[sys->length-1]); }
-			saved_blocks[sys->length-1] = sys;
+			int sys_index = sys->length-1;
+			// if block saved to disk only free pointer. Otherwise free matrices too.
+			if (disk_filenames[sys_index][0] != '\0') {
+				mkl_free(saved_blocks[sys_index]);
+				disk_filenames[sys_index][0] = '\0';
+			} else if (saved_blocks[sys_index]) {
+				freeDMRGBlock(saved_blocks[sys_index]);
+			}
+			saved_blocks[sys_index] = sys;
+
+			// write old block when not on measuring sweep
+			if (sys->meas != 'M') {
+				int sys_old_index = sys->length-2;
+				SAVE_BLOCK_TO_DISK(sys_old_index);
+			} 
 
 			// Check if sweep is done
 			if (2 * sys->length == L) {
-				printf("Done with sweep %d/%d\n", i+1, num_sweeps);
+				printf("Done with sweep %d/%d with m=%d.\n", i+1, num_sweeps, m);
 				logSweepEnd();
 				break;
 			}
@@ -733,9 +903,11 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 
 	if (*psi0_guessp != NULL) { mkl_free(*psi0_guessp); }
 	for (int i = 0; i < L-3; i++) {
-		if (saved_blocks[i]) { freeDMRGBlock(saved_blocks[i]); }
+		if (disk_filenames[i][0] != '\0') { mkl_free(saved_blocks[i]); }
+		else if (saved_blocks[i]) { freeDMRGBlock(saved_blocks[i]); }
 	}
 	mkl_free(saved_blocks);
+	mkl_free(disk_filenames);
 
 	return meas;
 }
