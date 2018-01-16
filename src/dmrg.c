@@ -688,23 +688,48 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 		disk_filenames[ind][0] = '\0'; }
 
 
-	DMRGBlock *sys = createDMRGBlock(model);
+	DMRGBlock *sys;
+	DMRGBlock *env;
 
-	// Note: saved_blocks[i] has length i+1
-	saved_blocks[0] = sys;
+	if (params->continue_run) { // use saved blocks
 
-	// Run infinite algorithm to build up system
-	while (2*sys->length < L) {
-		#ifndef NDEBUG
-		printGraphic(sys, sys);
-		#endif
-		sys = single_step(sys, sys, m_inf, 0, NULL);
-		saved_blocks[sys->length-1] = sys;
+		printf("Continuing run using saved blocks at '%s' ...\n", params->block_dir);
 
-		// write old block to disk
-		int sys_old_index = sys->length-2;
-		SAVE_BLOCK_TO_DISK(sys_old_index);
+		for (int i=0; i<L-3; i++) {
+			sprintf(disk_filenames[i], "%s/%05d.blk", params->block_dir, i);
+			saved_blocks[i] = mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
+			saved_blocks[i]->model = model;
+		}
+
+		int ret = readBlock(disk_filenames[L-4], saved_blocks[L-4]);
+		disk_filenames[L-4][0] = '\0';
+		if (ret != 0) {
+			errprintf("Could not load dmrg block.");
+			exit(1);
+		}
+		sys = saved_blocks[L-4];
+
+	} else { // build system normally
+
+		sys = createDMRGBlock(model);
+
+		// Note: saved_blocks[i] has length i+1
+		saved_blocks[0] = sys;
+
+		// Run infinite algorithm to build up system
+		while (2*sys->length < L) {
+			#ifndef NDEBUG
+			printGraphic(sys, sys);
+			#endif
+			sys = single_step(sys, sys, m_inf, 0, NULL);
+			saved_blocks[sys->length-1] = sys;
+
+			// write old block to disk
+			int sys_old_index = sys->length-2;
+			SAVE_BLOCK_TO_DISK(sys_old_index);
+		}
 	}
+
 
 	// Setup psi0_guess
 	MAT_TYPE *psi0_guess = NULL;
@@ -713,7 +738,6 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 	meas_data_t *meas;
 	
 	// Finite Sweeps
-	DMRGBlock *env;
 	for (int i = 0; i < num_sweeps; i++) {
 		int m = ms[i];
 
