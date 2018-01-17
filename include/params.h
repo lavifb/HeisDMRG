@@ -15,6 +15,7 @@ typedef struct {
 	model_t *model; // model params for the simulation
 	int save_blocks; // option determines if you save blocks to disk during runtime or do the calculation entirely in RAM
 	int continue_run; // option determines if you continue an old saved run loaded from block_dir
+	int reflection; // option determines if you use reflection symmetry. Roughly cuts runtime in half. 
 
 	time_t *start_time;
 	time_t *end_time;

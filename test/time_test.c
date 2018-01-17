@@ -15,7 +15,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#define USAGE_STATEMENT fprintf(stderr, "usage: time_test [-sd] [-m num] [-w num] [-L num] [-c dir_path]\n"); exit(1);
+#define USAGE_STATEMENT fprintf(stderr, "usage: time_test [-sdr] [-m num] [-w num] [-L num] [-c dir_path]\n"); exit(1);
 
 int main(int argc, char *argv[]) {
 
@@ -24,6 +24,7 @@ int main(int argc, char *argv[]) {
 	int n_ms = 8;
 	int argsave = 0;
 	int argrunsave = 0;
+	int argrefl = 0;
 	char *cont_dir = "";
 
 	// Processing command line arguments
@@ -37,7 +38,7 @@ int main(int argc, char *argv[]) {
 				}
 				i++;
 			} else {
-				errprintf("time_test: option '-m' requires an arguement\n");
+				errprintf("time_test: option '-m' requires an argument\n");
 				USAGE_STATEMENT
 			}
 		} else if (strcmp(argv[i], "-w") == 0) {
@@ -49,7 +50,7 @@ int main(int argc, char *argv[]) {
 				}
 				i++;
 			} else {
-				errprintf("time_test: option '-w' requires an arguement\n");
+				errprintf("time_test: option '-w' requires an argument\n");
 				USAGE_STATEMENT
 			}
 		} else if (strcmp(argv[i], "-L") == 0) {
@@ -61,7 +62,7 @@ int main(int argc, char *argv[]) {
 				}
 				i++;
 			} else {
-				errprintf("time_test: option '-w' requires an arguement\n");
+				errprintf("time_test: option '-w' requires an argument\n");
 				USAGE_STATEMENT
 			}
 		} else if (strcmp(argv[i], "-c") == 0) {
@@ -70,15 +71,15 @@ int main(int argc, char *argv[]) {
 				argsave = 1;
 				argrunsave = 1;
 
-				// check if we have a vaild dir
+				// check if we have a valid dir
 				struct stat sb;
 			    if (stat(cont_dir, &sb) < 0 || !S_ISDIR(sb.st_mode)) {
-					errprintf("time_test: saved block path '%s' must be a vaild path to a directory\n", cont_dir);
+					errprintf("time_test: saved block path '%s' must be a valid path to a directory\n", cont_dir);
 					USAGE_STATEMENT
 				}
 				i++;
 			} else {
-				errprintf("time_test: option '-c' requires an arguement\n");
+				errprintf("time_test: option '-c' requires an argument\n");
 				USAGE_STATEMENT
 			}
 		} else if (argv[i][0] == '-') {
@@ -90,6 +91,9 @@ int main(int argc, char *argv[]) {
 						break;
 					case 'd': // save blocks during runtime but delete on completion
 						argrunsave = 1;
+						break;
+					case 'r': // use reflection symmetry
+						argrefl = 1;
 						break;
 					default:
 						errprintf("time_test: illegal option '-%c'\n", argv[i][j]);
@@ -116,6 +120,7 @@ int main(int argc, char *argv[]) {
 
 	params->model = model;
 	params->save_blocks = argrunsave;
+	params->reflection = argrefl;
 
 	time_t start_time = time(NULL);
 
@@ -136,7 +141,6 @@ int main(int argc, char *argv[]) {
 	struct timespec t_start, t_end;
 	clock_gettime(CLOCK_MONOTONIC, &t_start);
 
-	// meas_data_t *meas = fin_dmrgR(params);
 	meas_data_t *meas = fin_dmrg(params);
 
 	clock_gettime(CLOCK_MONOTONIC, &t_end);

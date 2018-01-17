@@ -393,7 +393,7 @@ void inf_dmrg(sim_params_t *params) {
 
 /*  Finite System DMRG Algorithm
 	
-	parmas : struct containing the parameters for simulation
+	params : struct containing the parameters for simulation
 		L      : Length of universe
 		m_inf  : truncation dimension size for infinite algorithm for building system
 		num_ms : number of finite system sweeps
@@ -408,15 +408,24 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 	model_t *model       = params->model;
 
 	DMRGBlock **saved_blocksL = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
-	DMRGBlock **saved_blocksR = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
 	char (*disk_filenamesL)[1024] = mkl_calloc((L-3), sizeof(char[1024]), MEM_DATA_ALIGN);
-	char (*disk_filenamesR)[1024] = mkl_calloc((L-3), sizeof(char[1024]), MEM_DATA_ALIGN);
+
+	DMRGBlock **saved_blocksR;
+	char (*disk_filenamesR)[1024];
+	if (params->reflection) {
+		saved_blocksR = saved_blocksL;
+		disk_filenamesR = disk_filenamesL;
+	} else {
+		saved_blocksR = mkl_calloc((L-3), sizeof(DMRGBlock *), MEM_DATA_ALIGN);
+		disk_filenamesR = mkl_calloc((L-3), sizeof(char[1024]), MEM_DATA_ALIGN);
+	}
 
 
 	// NOTE: These macros are unsafe (do not use something like x++ as the parameter)
 	// Macro to save block at index to disk
 	#define SAVE_SIDE_BLOCK_TO_DISK(ind, side) if (params->save_blocks) { \
-		sprintf(disk_filenames##side[ind], "%s/" #side "%05d.blk", params->block_dir, ind); \
+		char *refside = params->reflection ? "L" : #side; \
+		sprintf(disk_filenames##side[ind], "%s/%s%05d.blk", params->block_dir, refside, ind); \
 		saveBlock(disk_filenames##side[ind], saved_blocks##side[ind]); }
 
 	// Macro to read block from disk
@@ -440,11 +449,14 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 		for (int i=0; i<L-3; i++) {
 			sprintf(disk_filenamesL[i], "%s/L%05d.blk", params->block_dir, i);
-			sprintf(disk_filenamesR[i], "%s/R%05d.blk", params->block_dir, i);
 			saved_blocksL[i] = mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
-			saved_blocksR[i] = mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
 			saved_blocksL[i]->model = model;
-			saved_blocksR[i]->model = model;
+
+			if (!params->reflection) {
+				sprintf(disk_filenamesR[i], "%s/R%05d.blk", params->block_dir, i);
+				saved_blocksR[i] = mkl_malloc(sizeof(DMRGBlock), MEM_DATA_ALIGN);
+				saved_blocksR[i]->model = model;
+			}
 		}
 
 		int ret = readBlock(disk_filenamesL[L-4], saved_blocksL[L-4]);
@@ -461,8 +473,10 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 		// Note: saved_blocksL[i] has length i+1
 		saved_blocksL[0] = sys;
-		saved_blocksR[0] = copyDMRGBlock(sys);
-		saved_blocksR[0]->side = 'R';
+		if (!params->reflection) {
+			saved_blocksR[0] = copyDMRGBlock(sys);
+			saved_blocksR[0]->side = 'R';
+		}
 
 		// run infinite algorithm to build up system
 		while (2*sys->length < L) {
@@ -472,13 +486,17 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 			sys = single_step(sys, sys, m_inf, &step_params);
 
 			saved_blocksL[sys->length-1] = sys;
-			saved_blocksR[sys->length-1] = copyDMRGBlock(sys);
-			saved_blocksR[sys->length-1]->side = 'R';
+			if (!params->reflection) {
+				saved_blocksR[sys->length-1] = copyDMRGBlock(sys);
+				saved_blocksR[sys->length-1]->side = 'R';
+			}
 
 			// write old block to disk
 			int sys_old_index = sys->length-2;
 			SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, L);
-			SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, R);
+			if (!params->reflection) {
+				SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, R);
+			}
 		}
 	}
 
@@ -656,13 +674,17 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 		if (disk_filenamesL[i][0] != '\0') { mkl_free(saved_blocksL[i]); }
 		else if (saved_blocksL[i]) { freeDMRGBlock(saved_blocksL[i]); }
 
-		if (disk_filenamesR[i][0] != '\0') { mkl_free(saved_blocksR[i]); }
-		else if (saved_blocksR[i]) { freeDMRGBlock(saved_blocksR[i]); }
+		if (!params->reflection) {
+			if (disk_filenamesR[i][0] != '\0') { mkl_free(saved_blocksR[i]); }
+			else if (saved_blocksR[i]) { freeDMRGBlock(saved_blocksR[i]); }
+		}
 	}
 	mkl_free(saved_blocksL);
-	mkl_free(saved_blocksR);
 	mkl_free(disk_filenamesL);
-	mkl_free(disk_filenamesR);
+	if (!params->reflection) {
+		mkl_free(saved_blocksR);
+		mkl_free(disk_filenamesR);
+	}
 
 	return meas;
 }
