@@ -409,7 +409,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 		saveBlock(disk_filenames##side[ind], saved_blocks##side[ind]); }
 
 	// Macro to read block from disk
-	// Only reads if block not already laoded in RAM
+	// Only reads if block not already loaded in RAM
 	#define LOAD_SIDE_BLOCK_FROM_DISK(ind, side) if (params->save_blocks && disk_filenames##side[ind][0] != '\0') { \
 		readBlock(disk_filenames##side[ind], saved_blocks##side[ind]); \
 		disk_filenames##side[ind][0] = '\0'; }
