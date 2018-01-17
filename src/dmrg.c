@@ -19,13 +19,15 @@
 
 	m: truncation dimension size
 
-	psi0_guessp: pointer to guess for psi0. Calculated psi0 is returned in this pointer.
-				Set  psi0_guessp = NULL to not use eigenstate guessing and not return eigenstate.
-				Set *psi0_guessp = NULL to not use eigenstate guessing but return eigenstate for future guessing.
+	step_params:
+		target_mz: mz for ground state if symmetry is active
+
+		psi0_guessp: pointer to guess for psi0. Calculated psi0 is returned in this pointer.
+		             Set  psi0_guessp = NULL to not use eigenstate guessing and not return eigenstate.
+		             Set *psi0_guessp = NULL to not use eigenstate guessing but return eigenstate for future guessing.
 
    returns enlarged system block
 */
-// DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz, MAT_TYPE **const psi0_guessp) {
 DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, dmrg_step_params_t *step_params) {
 
 	int target_mz = step_params->target_mz;
