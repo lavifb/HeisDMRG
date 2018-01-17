@@ -165,6 +165,17 @@ DMRGBlock *enlargeBlock(const DMRGBlock *block) {
 		}
 	}
 
+
+	// if (2 * block->length == block->model->fullLength && block->psi == NULL) {
+	// 	kronI('L', d_block, d_model, block->model->Sz, enl_block->A);
+
+	// } else if (block->psi) {
+		
+	// }
+	// } else if (2 * block->length > block->model->fullLength) {
+	// 	kronI('R', d_block, d_model, block->A, enl_block->A);
+	// }
+
 	enl_block->d_trans = 0;
 	enl_block->trans = NULL;
 

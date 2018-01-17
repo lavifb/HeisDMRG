@@ -16,6 +16,10 @@ typedef struct {
 	int save_blocks; // option determines if you save blocks to disk during runtime or do the calculation entirely in RAM
 	int continue_run; // option determines if you continue an old saved run loaded from block_dir
 
+	// tdmrg parameters
+	double dtau // time advance per tdmrg sweep
+	int num_ts  // number of tdmrg sweeps
+
 	time_t *start_time;
 	time_t *end_time;
 	double runtime;
