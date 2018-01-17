@@ -5,7 +5,16 @@
 #include "meas.h"
 #include "params.h"
 
-DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz, MAT_TYPE **const psi0_guessp);
+typedef struct {
+	int target_mz; // mz for ground state if symmetry is active
+
+	MAT_TYPE ** psi0_guessp; // pointer to guess for ground state. psi0_guessp is NULL if there is no guess and no guess tracking. 
+	                         // *psi0_guessp is NULL when there is no guess but guess is returned.
+
+} dmrg_step_params_t;
+
+// DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz, MAT_TYPE **const psi0_guessp);
+DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, dmrg_step_params_t *step_params);
 
 meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz, MAT_TYPE **const psi0_guessp);
 

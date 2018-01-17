@@ -25,7 +25,11 @@
 
    returns enlarged system block
 */
-DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz, MAT_TYPE **const psi0_guessp) {
+// DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz, MAT_TYPE **const psi0_guessp) {
+DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, dmrg_step_params_t *step_params) {
+
+	int target_mz = step_params->target_mz;
+	MAT_TYPE ** psi0_guessp = step_params->psi0_guessp;
 
 	DMRGBlock *sys_enl, *env_enl;
 	sector_t *sys_enl_sectors, *env_enl_sectors;
@@ -366,13 +370,18 @@ void inf_dmrg(sim_params_t *params) {
 	const int m    = params->minf;
 	model_t *model = params->model;
 
+	// step params definition
+	dmrg_step_params_t step_params = {};
+	step_params.target_mz = 0;
+	step_params.psi0_guessp = NULL;
+
 	// TODO: measurement (copy from fin_dmrgR)
 	DMRGBlock *sys = createDMRGBlock(model);
 
 	while (2*sys->length < L) {
 		int currL = sys->length * 2 + 2;
 		printf("\nL = %d\n", currL);
-		sys = single_step(sys, sys, m, 0, NULL);
+		sys = single_step(sys, sys, m, &step_params);
 
 		printf("E/L = % .12f\n", sys->energy / currL);
 	}
@@ -415,6 +424,11 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 		disk_filenames##side[ind][0] = '\0'; }
 
 
+	// step params definition
+	dmrg_step_params_t step_params = {};
+	step_params.target_mz = 0;
+	step_params.psi0_guessp = NULL;
+
 	DMRGBlock *sys;
 	DMRGBlock *env;
 
@@ -453,7 +467,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 			#ifndef NDEBUG
 			printGraphic(sys, sys);
 			#endif
-			sys = single_step(sys, sys, m_inf, 0, NULL);
+			sys = single_step(sys, sys, m_inf, &step_params);
 
 			saved_blocksL[sys->length-1] = sys;
 			saved_blocksR[sys->length-1] = copyDMRGBlock(sys);
@@ -471,6 +485,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 	// Setup psi0_guess
 	MAT_TYPE *psi0_guess = NULL;
 	MAT_TYPE **psi0_guessp = &psi0_guess;
+	step_params.psi0_guessp = &psi0_guess;
 
 	meas_data_t *meas;
 
@@ -584,7 +599,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 			#ifndef NDEBUG
 			printGraphic(sys, env);
 			#endif
-			sys = single_step(sys, env, m, 0, psi0_guessp);
+			sys = single_step(sys, env, m, &step_params);
 			logBlock(sys);
 
 			// Save new block
@@ -688,6 +703,11 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 		disk_filenames[ind][0] = '\0'; }
 
 
+	// step params definition
+	dmrg_step_params_t step_params = {};
+	step_params.target_mz = 0;
+	step_params.psi0_guessp = NULL;
+
 	DMRGBlock *sys;
 	DMRGBlock *env;
 
@@ -721,7 +741,7 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 			#ifndef NDEBUG
 			printGraphic(sys, sys);
 			#endif
-			sys = single_step(sys, sys, m_inf, 0, NULL);
+			sys = single_step(sys, sys, m_inf, &step_params);
 			saved_blocks[sys->length-1] = sys;
 
 			// write old block to disk
@@ -734,6 +754,7 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 	// Setup psi0_guess
 	MAT_TYPE *psi0_guess = NULL;
 	MAT_TYPE **psi0_guessp = &psi0_guess;
+	step_params.psi0_guessp = &psi0_guess;
 
 	meas_data_t *meas;
 	
@@ -820,7 +841,7 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 			#ifndef NDEBUG
 			printGraphic(sys, env);
 			#endif
-			sys = single_step(sys, env, m, 0, psi0_guessp);
+			sys = single_step(sys, env, m, &step_params);
 			logBlock(sys);
 
 			// Save new block
