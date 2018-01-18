@@ -276,6 +276,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	returns enlarged system block
 */
 meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz, MAT_TYPE **const psi0_guessp) {
+	// TODO: move meas_step into singl_step with option and measurements into their own functions
 
 	DMRGBlock *sys_enl, *env_enl;
 	const model_t *model = sys->model;
