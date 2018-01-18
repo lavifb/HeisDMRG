@@ -231,6 +231,7 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 		// 	}
 		// }
 		// TODO: option for saving blocks
+		// TODO: option for reflection symmetry
 	}
 
 	fclose(fd);
