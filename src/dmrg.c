@@ -363,6 +363,43 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	return meas;
 }
 
+/*  Davidson transform to change basis for state psi for next iteration
+
+    psip: pointer to state psi
+*/
+void DavidsonTransform(DMRGBlock *sys, DMRGBlock *env_enl, MAT_TYPE **psip) {
+
+	int d_block_env_enl = env_enl->d_block;
+	int d_trans_env_enl = env_enl->d_trans;
+	int d_block_sys_enl = sys->d_block*sys->model->d_model;
+
+	MAT_TYPE *temp_guess = reorderKron(*psip, d_block_env_enl, sys->d_block, sys->model->d_model);
+	
+	*psip = mkl_realloc(*psip, d_block_sys_enl*d_trans_env_enl * sizeof(MAT_TYPE));
+	MAT_TYPE *trans_env = env_enl->trans;
+	if (env_enl->length > 2) {
+		// normal guess
+		#if COMPLEX
+		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_trans_env_enl, d_block_sys_enl, d_block_env_enl, 
+					&one, trans_env, d_trans_env_enl, temp_guess, d_block_sys_enl, &zero, *psip, d_trans_env_enl);
+		#else
+		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_trans_env_enl, d_block_sys_enl, d_block_env_enl, 
+					1.0, trans_env, d_trans_env_enl, temp_guess, d_block_sys_enl, 0.0, *psip, d_trans_env_enl);
+		#endif
+	} else {
+		// transpose of above to account for switching sys and env when the end of the chain is reached
+		#if COMPLEX
+		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_block_sys_enl, d_trans_env_enl, d_block_env_enl, 
+					&one, temp_guess, d_block_sys_enl, trans_env, d_trans_env_enl, &zero, *psip, d_block_sys_enl);
+		#else
+		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_block_sys_enl, d_trans_env_enl, d_block_env_enl, 
+					1.0, temp_guess, d_block_sys_enl, trans_env, d_trans_env_enl, 0.0, *psip, d_block_sys_enl);
+		#endif
+
+	}
+	mkl_free(temp_guess);
+}
+
 /*  Infinite System DMRG Algorithm
 
 	params : struct containing the parameters for simulation
@@ -560,36 +597,8 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 						break;
 				}
 
-				// Transform psi0_guess into guess for next iteration
-				int d_block_env_enl = env_enl->d_block;
-				int d_trans_env_enl = env_enl->d_trans;
-				int d_block_sys_enl = sys->d_block*model->d_model;
-
-				MAT_TYPE *temp_guess = reorderKron(*psi0_guessp, d_block_env_enl, sys->d_block, model->d_model);
-				
-				*psi0_guessp = mkl_realloc(*psi0_guessp, d_block_sys_enl*d_trans_env_enl * sizeof(MAT_TYPE));
-				MAT_TYPE *trans_env = env_enl->trans;
-				if (env->length > 1) {
-					// normal guess
-					#if COMPLEX
-					cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_trans_env_enl, d_block_sys_enl, d_block_env_enl, 
-								&one, trans_env, d_trans_env_enl, temp_guess, d_block_sys_enl, &zero, *psi0_guessp, d_trans_env_enl);
-					#else
-					cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_trans_env_enl, d_block_sys_enl, d_block_env_enl, 
-								1.0, trans_env, d_trans_env_enl, temp_guess, d_block_sys_enl, 0.0, *psi0_guessp, d_trans_env_enl);
-					#endif
-				} else {
-					// transpose of above to account for switching sys and env when the end of the chain is reached
-					#if COMPLEX
-					cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_block_sys_enl, d_trans_env_enl, d_block_env_enl, 
-								&one, temp_guess, d_block_sys_enl, trans_env, d_trans_env_enl, &zero, *psi0_guessp, d_block_sys_enl);
-					#else
-					cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_block_sys_enl, d_trans_env_enl, d_block_env_enl, 
-								1.0, temp_guess, d_block_sys_enl, trans_env, d_trans_env_enl, 0.0, *psi0_guessp, d_block_sys_enl);
-					#endif
-
-				}
-				mkl_free(temp_guess);
+				// convert psi0_guess into new basis
+				DavidsonTransform(sys, env_enl, psi0_guessp);
 
 				// Save enl_block back to disk
 				switch (sys->side) {
