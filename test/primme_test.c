@@ -16,7 +16,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-// TODO: move matrices into test/ for repeated testing
 int main(int argc, char *argv[]) {
 
 	int runs = 100;

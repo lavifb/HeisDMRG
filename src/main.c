@@ -110,7 +110,6 @@ int main(int argc, char *argv[]) {
 
 	// inf_dmrg(params);
 	meas = fin_dmrg(params);
-	// meas = fin_dmrgR(params);
 
 	// Record end time
 	clock_gettime(CLOCK_MONOTONIC, &t_end);
