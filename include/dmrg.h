@@ -21,7 +21,4 @@ meas_data_t *inf_dmrg(sim_params_t *params);
 
 meas_data_t *fin_dmrg(sim_params_t *params);
 
-// Depreciated fin_dmrg with reflection symmetry
-// meas_data_t *fin_dmrgR(sim_params_t *params);
-
 #endif
