@@ -363,7 +363,7 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 /*  Infinite System DMRG Algorithm
 
-	parmas : struct containing the parameters for simulation
+	params : struct containing the parameters for simulation
 		L    : Maximum length of system
 		minf : truncation dimension size
 */
@@ -378,7 +378,7 @@ void inf_dmrg(sim_params_t *params) {
 	step_params.target_mz = 0;
 	step_params.psi0_guessp = NULL;
 
-	// TODO: measurement (copy from fin_dmrgR)
+	// TODO: measurement (copy from fin_dmrg)
 	DMRGBlock *sys = createDMRGBlock(model);
 
 	while (2*sys->length < L) {
@@ -695,7 +695,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 	Reflection symmetry means assuming both left and right sides of the system
 	are the same so sweeps are only necessary in one direction, halving compute time.
 
-	parmas : struct containing the parameters for simulation
+	params : struct containing the parameters for simulation
 		L      : Length of universe
 		m_inf  : truncation dimension size for infinite algorithm for building system
 		num_ms : number of finite system sweeps
