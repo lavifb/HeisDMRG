@@ -15,9 +15,9 @@ typedef struct {
 
 DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, dmrg_step_params_t *step_params);
 
-meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz, MAT_TYPE **const psi0_guessp);
+meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, dmrg_step_params_t *step_params);
 
-void inf_dmrg(sim_params_t *params);
+meas_data_t *inf_dmrg(sim_params_t *params);
 
 meas_data_t *fin_dmrg(sim_params_t *params);
 

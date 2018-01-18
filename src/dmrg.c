@@ -275,8 +275,10 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	returns enlarged system block
 */
-meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, const int target_mz, MAT_TYPE **const psi0_guessp) {
+meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, dmrg_step_params_t *step_params) {
 	// TODO: move meas_step into singl_step with option and measurements into their own functions
+
+	MAT_TYPE ** psi0_guessp = step_params->psi0_guessp;
 
 	DMRGBlock *sys_enl, *env_enl;
 	const model_t *model = sys->model;
@@ -367,7 +369,7 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		L    : Maximum length of system
 		minf : truncation dimension size
 */
-void inf_dmrg(sim_params_t *params) {
+meas_data_t *inf_dmrg(sim_params_t *params) {
 
 	const int L    = params->L;
 	const int m    = params->minf;
@@ -378,10 +380,10 @@ void inf_dmrg(sim_params_t *params) {
 	step_params.target_mz = 0;
 	step_params.psi0_guessp = NULL;
 
-	// TODO: measurement (copy from fin_dmrg)
 	DMRGBlock *sys = createDMRGBlock(model);
+	startMeasBlock(sys);
 
-	while (2*sys->length < L) {
+	while (2*(sys->length-1) < L) {
 		int currL = sys->length * 2 + 2;
 		printf("\nL = %d\n", currL);
 		sys = single_step(sys, sys, m, &step_params);
@@ -389,7 +391,11 @@ void inf_dmrg(sim_params_t *params) {
 		printf("E/L = % .12f\n", sys->energy / currL);
 	}
 
+	meas_data_t *meas = meas_step(sys, sys, m, &step_params);
+
 	freeDMRGBlock(sys);
+
+	return meas;
 }
 
 /*  Finite System DMRG Algorithm
@@ -613,7 +619,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 			if (i == num_sweeps-1 && 2 * sys->length == L-2 && sys->side == 'L') {
 				printf("Done with sweep %d/%d\n", num_sweeps, num_sweeps);
 				printf("\nTaking measurements...\n");
-				meas = meas_step(sys, env, m, 0, psi0_guessp);
+				meas = meas_step(sys, env, m, &step_params);
 				break;
 			}
 			
@@ -859,7 +865,7 @@ meas_data_t *fin_dmrgR(sim_params_t *params) {
 			if (i == num_sweeps-1 && 2 * sys->length == L-2) {
 				printf("Done with sweep %d/%d with m=%d.\n", num_sweeps, num_sweeps, m);
 				printf("\nTaking measurements...\n");
-				meas = meas_step(sys, env, m, 0, psi0_guessp);
+				meas = meas_step(sys, env, m, &step_params);
 				break;
 			}
 
