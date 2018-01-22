@@ -373,6 +373,11 @@ void DavidsonTransform(DMRGBlock *sys, DMRGBlock *env_enl, MAT_TYPE **psip) {
 	int d_trans_env_enl = env_enl->d_trans;
 	int d_block_sys_enl = sys->d_block*sys->model->d_model;
 
+	#if COMPLEX
+	const MKL_Complex16 one = {.real=1.0, .imag=0.0};
+	const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+	#endif
+
 	MAT_TYPE *temp_guess = reorderKron(*psip, d_block_env_enl, sys->d_block, sys->model->d_model);
 	
 	*psip = mkl_realloc(*psip, d_block_sys_enl*d_trans_env_enl * sizeof(MAT_TYPE));
@@ -575,11 +580,6 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 					env_enl = saved_blocksL[env_enl_index];
 					break;
 			}
-
-			#if COMPLEX
-			const MKL_Complex16 one = {.real=1.0, .imag=0.0};
-			const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
-			#endif
 
 			if (env_enl->trans == NULL) {
 				if (*psi0_guessp != NULL) {
