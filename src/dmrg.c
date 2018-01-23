@@ -220,7 +220,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 			*psi0_guessp = mkl_malloc(mm*dimEnv * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		} else {
 			// Check overlap of guess and calculated eigenstate
-			// #define PRINT_OVERLAP
+			#define PRINT_OVERLAP
 			#ifdef PRINT_OVERLAP
 
 				#if COMPLEX
@@ -233,16 +233,16 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 				#endif
 				printf("Overlap <psi0|psi0_guess> = %.8f\n", overlap);
 
+
+			if (overlap < .9) {
+				printf("Guess is bad!!\n");
+				print_matrix("psi0_guess", dimEnv, dimSys, *psi0_guessp, dimEnv);
+				print_matrix("psi0"      , dimEnv, dimSys, psi0        , dimEnv);
+
+				printf("\ndimSys = %3d  dimEnv = %3d  dimSup = %3d\n", dimSys, dimEnv, dimSup);
+				exit(1);
+			}
 			#endif
-
-			// if (overlap < .9) {
-				// printf("Guess is bad!!\n");
-				// print_matrix("psi0_guess", dimEnv, dimSys, *psi0_guessp, dimEnv);
-				// print_matrix("psi0"      , dimEnv, dimSys, psi0        , dimEnv);
-
-				// printf("\ndimSys = %3d  dimEnv = %3d  dimSup = %3d\n", dimSys, dimEnv, dimSup);
-				// exit(1);
-			// }
 
 			*psi0_guessp = mkl_realloc(*psi0_guessp, mm*dimEnv * sizeof(MAT_TYPE));
 		}
@@ -617,6 +617,8 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 				DMRGBlock *tempBlock = sys;
 				sys = env;
 				env = tempBlock;
+
+				psi0_guess = NULL;
 
 				if (sys->side == 'L' && i == num_sweeps-1) {
 					startMeasBlock(sys);
