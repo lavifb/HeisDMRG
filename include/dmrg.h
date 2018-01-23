@@ -12,6 +12,7 @@ typedef struct {
 	                         // *psi0_guessp is NULL when there is no guess but guess is returned.
 
 	double tau; // time advance for TDMRG (set to 0 for normal dmrg)
+	MAT_TYPE ** psi_tp; // pointer to time dependent state
 
 } dmrg_step_params_t;
 
