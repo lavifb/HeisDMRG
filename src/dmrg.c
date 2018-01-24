@@ -64,7 +64,19 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
 
 	// Find lowest energy states
-	MAT_TYPE *psi0_r = getLowestEStates(sys_enl, env_enl, model, num_restr_ind, restr_basis_inds, 1, psi0_guessp, energies);
+	MAT_TYPE *psi0 = getLowestEStates(sys_enl, env_enl, model, 1, psi0_guessp, energies);
+	MAT_TYPE *psi0_r = restrictVec(psi0, num_restr_ind, restr_basis_inds);
+
+	if (step_params->measure) {
+		meas_data_t *meas = createMeas(sys_enl->num_ops - model->num_ops);
+		meas->energy = energies[0] / (sys_enl->length + env_enl->length);
+
+		measureSzs(sys_enl, dimEnv, psi0, model->num_ops, meas);
+		measureSSs(sys_enl, dimEnv, psi0, model->num_ops, meas);
+
+		step_params->meas = meas;
+	}
+	mkl_free(psi0);
 
 	sys_enl->energy = energies[0]; // record ground state energy
 	mkl_free(energies);
@@ -291,7 +303,7 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
 
 	// Find lowest energy states
-	MAT_TYPE *psi0 = getLowestEStates(sys_enl, env_enl, model, -1, NULL, 1, psi0_guessp, energies);
+	MAT_TYPE *psi0 = getLowestEStates(sys_enl, env_enl, model, 1, psi0_guessp, energies);
 
 	meas_data_t *meas = createMeas(sys_enl->num_ops - model->num_ops);
 	meas->energy = energies[0] / (sys_enl->length + env_enl->length);

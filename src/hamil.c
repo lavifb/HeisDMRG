@@ -18,74 +18,23 @@
 
 	returns  : ground state
 */
-MAT_TYPE *getLowestEStates(const DMRGBlock *sys_enl, const DMRGBlock *env_enl, const model_t* model, int num_restr_ind,
-	const int *restr_basis_inds, int num_states, MAT_TYPE **psi0_guessp, double *energies) {
+MAT_TYPE *getLowestEStates(const DMRGBlock *sys_enl, const DMRGBlock *env_enl, const model_t* model, int num_states, MAT_TYPE **psi0_guessp, double *energies) {
 
-	// Use the faster PRIMME library if available. Otherwise, default to LAPACK.
-	#if USE_PRIMME
-		int dimSup = sys_enl->d_block * env_enl->d_block;
+	int dimSup = sys_enl->d_block * env_enl->d_block;
 
-		// Setup ground state guess
-		MAT_TYPE *psi0 = mkl_malloc(dimSup * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		int numGuesses = 0;
-		if (psi0_guessp != NULL && *psi0_guessp != NULL) {
-			memcpy(psi0, *psi0_guessp, dimSup * sizeof(MAT_TYPE));
-			numGuesses = 1;
-		}
+	// Setup ground state guess
+	MAT_TYPE *psi0 = mkl_malloc(dimSup * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+	int numGuesses = 0;
+	if (psi0_guessp != NULL && *psi0_guessp != NULL) {
+		memcpy(psi0, *psi0_guessp, dimSup * sizeof(MAT_TYPE));
+		numGuesses = 1;
+	}
 
-		hamil_mats_t *hamils_mats = model->H_int_mats(model, sys_enl, env_enl);
-		primmeBlockWrapper(hamils_mats, dimSup, energies, psi0, num_states, numGuesses);
-		freehamil_mats_t(hamils_mats);
+	hamil_mats_t *hamils_mats = model->H_int_mats(model, sys_enl, env_enl);
+	primmeBlockWrapper(hamils_mats, dimSup, energies, psi0, num_states, numGuesses);
+	freehamil_mats_t(hamils_mats);
 
-		MAT_TYPE *psi0_r = psi0;
-		if (num_restr_ind >= 0) {
-			psi0_r = restrictVec(psi0, num_restr_ind, restr_basis_inds);
-			mkl_free(psi0);
-		}
-	#else
-		if (num_restr_ind < 0) {
-			num_restr_ind = sys_enl->d_block * env_enl->d_block;
-			restr_basis_inds = mkl_malloc(num_restr_ind * sizeof(int), MEM_DATA_ALIGN);
-			for (int i=0; i<num_restr_ind; i++) { restr_basis_inds[i] = i; }
-		}
-
-		// Restricted Superblock Hamiltonian
-		MAT_TYPE *Hs_r = model->H_int_r(model, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
-		kronI_r('R', dimSys, dimEnv, sys_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
-		kronI_r('L', dimSys, dimEnv, env_enl->ops[0], Hs_r, num_restr_ind, restr_basis_inds);
-
-		// Setup ground state guess
-		MAT_TYPE *psi0_r;
-		int numGuesses = 0;
-		if (psi0_guessp != NULL && *psi0_guessp != NULL) {
-			psi0_r  = restrictVec(*psi0_guessp, num_restr_ind, restr_basis_inds);
-			numGuesses = 1;
-		} else {
-			psi0_r = mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		}
-
-		int info = 0;
-		int num_es_found;
-		int *isuppz = mkl_malloc(2 * sizeof(int), MEM_DATA_ALIGN);
-
-		#if COMPLEX
-		info = LAPACKE_zheevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
-				0.0, 0.0, 1, num_states, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
-		#else
-		info = LAPACKE_dsyevr(LAPACK_COL_MAJOR, 'V', 'I', 'U', num_restr_ind, Hs_r, num_restr_ind, 
-				0.0, 0.0, 1, num_states, 0.0, &num_es_found, energies, psi0_r, num_restr_ind, isuppz);
-		#endif
-
-		if (info > 0) {
-			printf("Failed to find eigenvalues of Superblock Hamiltonian\n");
-			exit(1);
-		}
-		mkl_free(isuppz);
-		mkl_free(Hs_r);
-		if (num_restr_ind < 0) { mkl_free(restr_basis_inds); }
-	#endif
-
-	return psi0_r;
+	return psi0;
 }
 
 
