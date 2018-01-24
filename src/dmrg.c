@@ -597,7 +597,10 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 			if (i == num_sweeps-1 && 2 * sys->length == L-2 && sys->side == 'L') {
 				printf("Done with sweep %d/%d\n", num_sweeps, num_sweeps);
 				printf("\nTaking measurements...\n");
-				meas = meas_step(sys, env, m, &step_params);
+				step_params.measure = 1; // take measurements
+				DMRGBlock *sys_extra = single_step(sys, env, m, &step_params);
+				freeDMRGBlock(sys_extra);
+				meas = step_params.meas;
 				break;
 			}
 			
