@@ -266,7 +266,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		MAT_TYPE *psi0 = unrestrictVec(dimSup, psi0_r, num_restr_ind, restr_basis_inds);
 
 		if (*psi0_guessp == NULL) {
-			*psi0_guessp = mkl_malloc(mm*dimEnv * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+			*psi0_guessp = mkl_malloc(dimSup * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		} else {
 			// Check overlap of guess and calculated eigenstate
 			// #define PRINT_OVERLAP
@@ -282,27 +282,21 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 				#endif
 				printf("Overlap <psi0|psi0_guess> = %.8f\n", overlap);
 
-			#endif
 
 			// if (overlap < .9) {
-				// printf("Guess is bad!!\n");
-				// print_matrix("psi0_guess", dimEnv, dimSys, *psi0_guessp, dimEnv);
-				// print_matrix("psi0"      , dimEnv, dimSys, psi0        , dimEnv);
+			// 	printf("Guess is bad!!\n");
+			// 	print_matrix("psi0_guess", dimEnv, dimSys, *psi0_guessp, dimEnv);
+			// 	print_matrix("psi0"      , dimEnv, dimSys, psi0        , dimEnv);
 
-				// printf("\ndimSys = %3d  dimEnv = %3d  dimSup = %3d\n", dimSys, dimEnv, dimSup);
-				// exit(1);
+			// 	printf("\ndimSys = %3d  dimEnv = %3d  dimSup = %3d\n", dimSys, dimEnv, dimSup);
+			// 	exit(1);
 			// }
+			#endif
 
-			*psi0_guessp = mkl_realloc(*psi0_guessp, mm*dimEnv * sizeof(MAT_TYPE));
+			*psi0_guessp = mkl_realloc(*psi0_guessp, dimSup * sizeof(MAT_TYPE));
 		}
 
-		#if COMPLEX
-		const MKL_Complex16 one = {.real=1.0, .imag=0.0};
-		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
-		cblas_zgemm(CblasColMajor, CblasConjTrans, CblasTrans, mm, dimEnv, dimSys, &one, trans, dimSys, psi0, dimEnv, &zero, *psi0_guessp, mm);
-		#else
-		cblas_dgemm(CblasColMajor, CblasConjTrans, CblasTrans, mm, dimEnv, dimSys, 1.0 , trans, dimSys, psi0, dimEnv, 0.0  , *psi0_guessp, mm);
-		#endif
+		memcpy(*psi0_guessp, psi0, dimSup * sizeof(MAT_TYPE));
 		mkl_free(psi0);
 	}
 
@@ -423,40 +417,49 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 */
 void DavidsonTransform(DMRGBlock *sys, DMRGBlock *env_enl, MAT_TYPE **psip) {
 
+	// TODO: fix transform in 1 case when using reflection symmetry
+
+	int d_model = sys->model->d_model;
+	int d_trans_sys = sys->d_trans;
 	int d_block_env_enl = env_enl->d_block;
 	int d_trans_env_enl = env_enl->d_trans;
-	int d_block_sys_enl = sys->d_block*sys->model->d_model;
+	int d_block_sys_enl = sys->d_block*d_model;
+
+	MAT_TYPE *psi_temp = mkl_malloc(d_block_env_enl*d_model*d_trans_sys  * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 	#if COMPLEX
 	const MKL_Complex16 one = {.real=1.0, .imag=0.0};
 	const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+	cblas_zgemm(CblasColMajor, CblasConjTrans, CblasTrans, sys->d_block, d_block_env_enl*d_model, d_trans_sys, &one, sys->trans, d_trans_sys, *psip, d_block_env_enl*d_model, &zero, psi_temp, sys->d_block);
+	#else
+	cblas_dgemm(CblasColMajor, CblasConjTrans, CblasTrans, sys->d_block, d_block_env_enl*d_model, d_trans_sys, 1.0 , sys->trans, d_trans_sys, *psip, d_block_env_enl*d_model, 0.0  , psi_temp, sys->d_block);
 	#endif
 
-	MAT_TYPE *temp_guess = reorderKron(*psip, d_block_env_enl, sys->d_block, sys->model->d_model);
+	MAT_TYPE *psi_temp2 = reorderKron(psi_temp, d_block_env_enl, sys->d_block, d_model);
 	
 	*psip = mkl_realloc(*psip, d_block_sys_enl*d_trans_env_enl * sizeof(MAT_TYPE));
-	MAT_TYPE *trans_env = env_enl->trans;
 	if (env_enl->length > 2) {
 		// normal guess
 		#if COMPLEX
 		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_trans_env_enl, d_block_sys_enl, d_block_env_enl, 
-					&one, trans_env, d_trans_env_enl, temp_guess, d_block_sys_enl, &zero, *psip, d_trans_env_enl);
+					&one, env_enl->trans, d_trans_env_enl, psi_temp2, d_block_sys_enl, &zero, *psip, d_trans_env_enl);
 		#else
 		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_trans_env_enl, d_block_sys_enl, d_block_env_enl, 
-					1.0, trans_env, d_trans_env_enl, temp_guess, d_block_sys_enl, 0.0, *psip, d_trans_env_enl);
+					1.0, env_enl->trans, d_trans_env_enl, psi_temp2, d_block_sys_enl, 0.0, *psip, d_trans_env_enl);
 		#endif
 	} else {
 		// transpose of above to account for switching sys and env when the end of the chain is reached
 		#if COMPLEX
 		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_block_sys_enl, d_trans_env_enl, d_block_env_enl, 
-					&one, temp_guess, d_block_sys_enl, trans_env, d_trans_env_enl, &zero, *psip, d_block_sys_enl);
+					&one, psi_temp2, d_block_sys_enl, env_enl->trans, d_trans_env_enl, &zero, *psip, d_block_sys_enl);
 		#else
 		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, d_block_sys_enl, d_trans_env_enl, d_block_env_enl, 
-					1.0, temp_guess, d_block_sys_enl, trans_env, d_trans_env_enl, 0.0, *psip, d_block_sys_enl);
+					1.0, psi_temp2, d_block_sys_enl, env_enl->trans, d_trans_env_enl, 0.0, *psip, d_block_sys_enl);
 		#endif
 
 	}
-	mkl_free(temp_guess);
+	mkl_free(psi_temp);
+	mkl_free(psi_temp2);
 }
 
 /*  Infinite System DMRG Algorithm
@@ -635,7 +638,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 					break;
 			}
 
-			if (env_enl->trans == NULL) {
+			if (env_enl->trans == NULL || sys->trans == NULL) {
 				if (*psi0_guessp != NULL) {
 					mkl_free(*psi0_guessp);
 					*psi0_guessp = NULL;
