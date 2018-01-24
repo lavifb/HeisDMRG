@@ -272,56 +272,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	return sys_enl;
 }
-/*  DMRG step that records measurements.
-	Use on the last half sweep to measure operators as the system builds.
-
-	m: truncation dimension size
-
-	returns enlarged system block
-*/
-meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, dmrg_step_params_t *step_params) {
-	// TODO: move meas_step into singl_step with option and measurements into their own functions
-
-	MAT_TYPE ** psi0_guessp = step_params->psi0_guessp;
-
-	DMRGBlock *sys_enl, *env_enl;
-	const model_t *model = sys->model;
-
-	sys_enl = enlargeBlock(sys);
-	if (sys == env) { // Don't recalculate
-		env_enl = sys_enl;
-	}
-	else {
-		env_enl = enlargeBlock(env);
-	}
-
-	int dimSys = sys_enl->d_block;
-	int dimEnv = env_enl->d_block;
-	int dimSup = dimSys * dimEnv;
-
-	// Find ground state
-	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
-
-	// Find lowest energy states
-	MAT_TYPE *psi0 = getLowestEStates(sys_enl, env_enl, model, 1, psi0_guessp, energies);
-
-	meas_data_t *meas = createMeas(sys_enl->num_ops - model->num_ops);
-	meas->energy = energies[0] / (sys_enl->length + env_enl->length);
-	mkl_free(energies);
-
-	// Free enlarged environment block
-	if (sys != env) {
-		freeDMRGBlock(env_enl);
-	}
-
-	measureSzs(sys_enl, dimEnv, psi0, model->num_ops, meas);
-	measureSSs(sys_enl, dimEnv, psi0, model->num_ops, meas);
-
-	freeDMRGBlock(sys_enl);
-	mkl_free(psi0);
-
-	return meas;
-}
 
 /*  Davidson transform to change basis for state psi for next iteration
 
@@ -402,11 +352,13 @@ meas_data_t *inf_dmrg(sim_params_t *params) {
 		printf("E/L = % .12f\n", sys->energy / currL);
 	}
 
-	meas_data_t *meas = meas_step(sys, sys, m, &step_params);
+	step_params.measure = 1; // take measurements
+	DMRGBlock *sys_extra = single_step(sys, sys, m, &step_params);
+	freeDMRGBlock(sys_extra);
 
 	freeDMRGBlock(sys);
 
-	return meas;
+	return step_params.meas;
 }
 
 /*  Finite System DMRG Algorithm
