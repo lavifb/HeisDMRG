@@ -302,52 +302,8 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		freeDMRGBlock(env_enl);
 	}
 
-	// Make Measurements
-	#if COMPLEX
-	const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
-	const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
-	#endif
-
-	// <S_i> spins
-	for (int i = 0; i<meas->num_sites; i++) {
-		MAT_TYPE* temp = mkl_malloc(dimEnv*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-
-		#if COMPLEX
-		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, &one, psi0, dimEnv, sys_enl->ops[i + model->num_ops], dimSys, &zero, temp, dimEnv);
-		MKL_Complex16 Szi;
-		cblas_zdotc_sub(dimSup, psi0, 1, temp, 1, &Szi);
-		meas->Szs[i] = Szi.real;
-		#else
-		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, 1.0, psi0, dimEnv, sys_enl->ops[i + model->num_ops], dimSys, 0.0, temp, dimEnv);
-		double Szi = cblas_ddot(dimSup, psi0, 1, temp, 1);
-		meas->Szs[i] = Szi;
-		#endif
-
-		mkl_free(temp);
-	}
-
-	// <S_i S_j> correlations
-	for (int i = 0; i<meas->num_sites; i++) {
-		MAT_TYPE* SSop = mkl_malloc(dimSys*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		MAT_TYPE* temp = mkl_malloc(dimEnv*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-
-
-		#if COMPLEX
-		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, &one, sys_enl->ops[i + model->num_ops], dimSys, sys_enl->ops[1], dimSys, &zero, SSop, dimSys);
-		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, &one, psi0, dimEnv, SSop, dimSys, &zero, temp, dimEnv);
-		MKL_Complex16 SSi;
-		cblas_zdotc_sub(dimSup, psi0, 1, temp, 1, &SSi);
-		meas->SSs[i] = SSi.real;
-		#else
-		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, 1.0, sys_enl->ops[i + model->num_ops], dimSys, sys_enl->ops[1], dimSys, 0.0, SSop, dimSys);
-		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, 1.0, psi0, dimEnv, SSop, dimSys, 0.0, temp, dimEnv);
-		double SSi = cblas_ddot(dimSup, psi0, 1, temp, 1);
-		meas->SSs[i] = SSi;
-		#endif
-
-		mkl_free(temp);
-		mkl_free(SSop);
-	}
+	measureSzs(sys_enl, dimEnv, psi0, model->num_ops, meas);
+	measureSSs(sys_enl, dimEnv, psi0, model->num_ops, meas);
 
 	freeDMRGBlock(sys_enl);
 	mkl_free(psi0);
