@@ -371,8 +371,6 @@ void DavidsonTransform(DMRGBlock *sys, DMRGBlock *env_enl, MAT_TYPE **psip) {
 
 	MAT_TYPE *psi_temp = mkl_malloc(d_block_env_enl*d_model*d_trans_sys  * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
-	// print_matrix("psi0", d_block_env_enl, d_trans_sys, *psip, d_block_env_enl);
-
 	#if COMPLEX
 	const MKL_Complex16 one = {.real=1.0, .imag=0.0};
 	const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
@@ -382,9 +380,6 @@ void DavidsonTransform(DMRGBlock *sys, DMRGBlock *env_enl, MAT_TYPE **psip) {
 	#endif
 
 	MAT_TYPE *psi_temp2 = reorderKron(psi_temp, d_block_env_enl, sys->d_block, d_model);
-	
-	// print_matrix("psi1", sys->d_block, d_block_env_enl*d_model, psi_temp, sys->d_block);
-	// print_matrix("psi2", d_block_sys_enl, d_block_env_enl, psi_temp2, d_block_sys_enl);
 	
 	*psip = mkl_realloc(*psip, d_block_sys_enl*d_trans_env_enl * sizeof(MAT_TYPE));
 	if (env_enl->length > 2) {
@@ -539,9 +534,6 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 			printGraphic(sys, sys);
 			#endif
 			sys = single_step(sys, sys, m_inf, &step_params);
-
-			mkl_free(sys->trans);
-			sys->trans = NULL;
 
 			saved_blocksL[sys->length-1] = sys;
 			if (!params->reflection) {

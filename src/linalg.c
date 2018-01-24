@@ -646,10 +646,10 @@ MAT_TYPE *reorderKron(MAT_TYPE *v, const int dimSys, const int dimEnv, const int
 
 	MAT_TYPE *new_v = mkl_malloc(dimSys*dimEnv*dimSite * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
-	for (int i=0; i<dimSys; i++) {
-		for (int j=0; j<dimEnv; j++) {
+	for (int i=0; i<dimEnv; i++) {
+		for (int j=0; j<dimSys; j++) {
 			for (int k=0; k<dimSite; k++) {
-				new_v[(j*dimSys + i)*dimSite + k] = v[(j*dimSite + k)*dimSys + i];
+				new_v[(j*dimEnv + i)*dimSite + k] = v[(j*dimSite + k)*dimEnv + i];
 			}
 		}
 	}
@@ -700,9 +700,9 @@ void print_matrix(char* desc, int m, int n, MAT_TYPE *a, int lda) {
 	for (int i = 0; i < m; i++) {
 		for (int j = 0; j < n; j++) {
 			#if COMPLEX
-			printf(" % 6.2f %+6.2fI", a[i+j*lda].real, a[i+j*lda].imag);
+			printf(" % 6.8f %+6.8fI", a[i+j*lda].real, a[i+j*lda].imag);
 			#else
-			printf(" % 6.2f", a[i+j*lda]);
+			printf(" % 6.8f", a[i+j*lda]);
 			#endif
 		}
 		printf("\n");
