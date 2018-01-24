@@ -220,7 +220,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 			*psi0_guessp = mkl_malloc(dimSup * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		} else {
 			// Check overlap of guess and calculated eigenstate
-			#define PRINT_OVERLAP
+			// #define PRINT_OVERLAP
 			#ifdef PRINT_OVERLAP
 
 				#if COMPLEX
@@ -362,6 +362,8 @@ meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
     psip: pointer to state psi
 */
 void DavidsonTransform(DMRGBlock *sys, DMRGBlock *env_enl, MAT_TYPE **psip) {
+
+	// TODO: fix transform in 1 case when using reflection symmetry
 
 	int d_model = sys->model->d_model;
 	int d_trans_sys = sys->d_trans;
