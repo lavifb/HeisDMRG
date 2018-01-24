@@ -35,10 +35,17 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	int target_mz = step_params->target_mz;
 	MAT_TYPE ** psi0_guessp = step_params->psi0_guessp;
 	double tau = step_params->tau;
+	MAT_TYPE **psi_tp = step_params->psi_tp;
+
+	if (tau != 0.0 && (psi_tp == NULL || *psi_tp == NULL)) {
+		errprintf("No time dep state psi_t provided.\nContinuing without time evolution...");
+		tau = 0;
+	}
 
 	#ifndef COMPLEX
 	if (tau != 0.0) {
-		errprintf("Cannot advance time with real matrices. To use tau please compile with -DCOMPLEX flag.\n");
+		errprintf("Cannot advance time with real matrices. To use tau please compile with -DCOMPLEX flag.\nContinuing without time evolution...");
+		tau = 0;
 	}
 	#endif
 
@@ -76,10 +83,9 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	MAT_TYPE *psi0_r = getLowestEStates(sys_enl, env_enl, model, num_restr_ind, restr_basis_inds, 1, psi0_guessp, energies);
 
 	// time tracked state psi
-	#if COMPLEX
 	MAT_TYPE *psiT_r;
 	if (tau != 0) {
-		MAT_TYPE *psiTprev_r = restrictVec(sys_enl->psi, num_restr_ind, restr_basis_inds);
+		MAT_TYPE *psiTprev_r = restrictVec(*psi_tp, num_restr_ind, restr_basis_inds);
 
 		MAT_TYPE *H_int_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
 
@@ -102,7 +108,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 			cpsi0_r[j] = cexp(-1*tau*energies[0]) * cpsi0_r[j];
 		}
 	}
-	#endif
 
 	sys_enl->energy = energies[0]; // record ground state energy
 	mkl_free(energies);
@@ -139,22 +144,18 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 		// target states
 		int num_targets = 1;
-		#if COMPLEX
 		if (tau != 0) {
 			num_targets = 2;
 		}
-		#endif
 
 		MAT_TYPE **targets = mkl_malloc(num_targets * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
 
 		// define target states
 		targets[0] = restrictVec(psi0_r, n_sec, sec->inds); // ground state
 		// tdmrg also track target state
-		#if COMPLEX
 		if (tau != 0) {
 			targets[1] = restrictVec(psiT_r, n_sec, sec->inds); // tracked state
 		}
-		#endif
 
 		// Density matrix rho_sec
 		MAT_TYPE *rho_sec = mkl_calloc(dimSys_sec*dimSys_sec, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
@@ -168,7 +169,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		#if COMPLEX
 		const MKL_Complex16 one = {.real=1.0, .imag=0.0};
 		const MKL_Complex16 zalpha = {.real=alpha, .imag=0.0};
-		#else
 		#endif
 
 		for (int i=0; i<num_targets; i++) {
@@ -271,7 +271,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 			// Check overlap of guess and calculated eigenstate
 			// #define PRINT_OVERLAP
 			#ifdef PRINT_OVERLAP
-
 				#if COMPLEX
 				complex double zoverlap;
 				cblas_zdotc_sub(dimSup, psi0, 1, *psi0_guessp, 1, &zoverlap);
@@ -300,13 +299,17 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		mkl_free(psi0);
 	}
 
+	if (tau != 0.0) {
+		MAT_TYPE *psi_t = unrestrictVec(dimSup, psiT_r, num_restr_ind, restr_basis_inds);
+		mkl_free(psiT_r);
+		*psi_tp = mkl_realloc(*psi_tp, dimSup * sizeof(MAT_TYPE));
+
+		memcpy(*psi_tp, psi_t, dimSup * sizeof(MAT_TYPE));
+		mkl_free(psi_t);
+	}
+
 	mkl_free(restr_basis_inds);
 	mkl_free(psi0_r);
-	#if COMPLEX
-	if (tau != 0) {
-		mkl_free(psiT_r);
-	}
-	#endif
 	freeSectors(sys_enl_sectors);
 	// Free enlarged environment block
 	if (sys != env) {
