@@ -5,10 +5,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <complex.h>
-
-#if USE_PRIMME
 #include "primme.h"
-#endif
+
 
 #define ZERO_TOLERANCE 1e-9
 
@@ -474,8 +472,6 @@ MAT_TYPE *unrestrictVec(const int m, const MAT_TYPE *v_r, const int num_ind, con
 	return v;
 }
 
-// If PRIMME lib is available define wrapper for finding eigenvalues
-#if USE_PRIMME
 void primme_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *blockSize, primme_params *primme, int *err) {
 
 	int N = primme->n;
@@ -656,8 +652,6 @@ MAT_TYPE *reorderKron(MAT_TYPE *v, const int dimSys, const int dimEnv, const int
 
 	return new_v;
 }
-#endif
-
 
 // Pointer comparison for sort below
 int dcmp(const void *pa, const void *pb){

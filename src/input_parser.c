@@ -223,11 +223,8 @@ int parseInputFile(const char *filename, sim_params_t *params) {
 		// 	if (strcmp(vals[0], "Heisenberg") == 0) {
 		// 		// Set Hamiltonian interaction functions
 		// 		params->model->H_int = &HeisenH_int;
-		// 		#if USE_PRIMME
 		// 		params->model->H_int_mats = &HeisenH_int_mats;
-		// 		#else
 		// 		params->model->H_int_r = &HeisenH_int_r;
-		// 		#endif
 		// 	}
 		// }
 		// TODO: option for saving blocks

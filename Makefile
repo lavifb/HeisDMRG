@@ -29,7 +29,6 @@ INCDIRS = -I${INC}/
 
 
 ifdef PRIMMEDIR
-	CCOPTS += -DUSE_PRIMME
 	LIB += -lprimme -L${PRIMMEDIR}/lib/
 	INCDIRS += -I${PRIMMEDIR}/include/
 endif

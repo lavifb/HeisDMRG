@@ -264,11 +264,9 @@ MKL_INT64 estimateBlockMemFootprint(int d_block, int num_ops) {
 	nbytes += d_block * sizeof(MAT_TYPE);
 	// mzs
 	nbytes += d_block * sizeof(MAT_TYPE);
-
-	#if USE_PRIMME
+	
 	// trans
 	nbytes += d_block*2*d_block * sizeof(MAT_TYPE);
-	#endif
 	
 	return nbytes;
 }

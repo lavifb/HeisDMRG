@@ -23,8 +23,6 @@ void kronI(const char side, const int m, const int n, const MAT_TYPE *restrict A
 
 void kronI_r(const char side, const int m, const int n, const MAT_TYPE *restrict A, MAT_TYPE *restrict C, const int num_ind, const int *restrict inds);
 
-// TODO: remove all the USE_PRIMME questions because PRIMME is a full prerequisite
-#if USE_PRIMME
 void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, const int numEvals, const int initSize);
 
 typedef struct hamil_mats_t {
@@ -44,7 +42,6 @@ typedef struct hamil_mats_t {
 void primmeBlockWrapper(hamil_mats_t *hamil_mats, int N, double *evals, MAT_TYPE *evecs, const int numEvals, const int initSize);
 
 MAT_TYPE *reorderKron(MAT_TYPE *v, const int dimSys, const int dimEnv, const int dimSite);
-#endif
 
 MAT_TYPE *identity(const int N);
 
