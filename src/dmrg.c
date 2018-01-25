@@ -619,16 +619,15 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 				printf("Done with sweep %d/%d\n", num_sweeps, num_sweeps);
 				printf("\nTaking measurements...\n");
 				step_params.measure = 1; // take measurements
-				DMRGBlock *sys_extra = single_step(sys, env, m, &step_params);
-				freeDMRGBlock(sys_extra);
+				sys = single_step(sys, env, m, &step_params);
 				meas = step_params.meas;
-				break;
+			} else { // normal step
+				#ifndef NDEBUG
+				printGraphic(sys, env);
+				#endif
+				sys = single_step(sys, env, m, &step_params);
 			}
 			
-			#ifndef NDEBUG
-			printGraphic(sys, env);
-			#endif
-			sys = single_step(sys, env, m, &step_params);
 			logBlock(sys);
 
 			// Save new block
