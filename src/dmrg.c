@@ -347,7 +347,10 @@ meas_data_t *inf_dmrg(sim_params_t *params) {
 	while (2*(sys->length-1) < L) {
 		int currL = sys->length * 2 + 2;
 		printf("\nL = %d\n", currL);
-		sys = single_step(sys, sys, m, &step_params);
+		DMRGBlock *new_sys = single_step(sys, sys, m, &step_params);
+		
+		freeDMRGBlock(sys);
+		sys = new_sys;
 
 		printf("E/L = % .12f\n", sys->energy / currL);
 	}
