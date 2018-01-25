@@ -244,9 +244,12 @@ MAT_TYPE **enlargeOps(const DMRGBlock *block) {
 */
 void startMeasBlock(DMRGBlock *block) {
 
-	// assert(block->length == 1);
-	block->meas = 'M';
+	if (block->length != 1) {
+		errprintf("startMeasBlock only works when block->length == 1!");
+		return;
+	}
 
+	block->meas = 'M';
 	int dim = block->d_block;
 
 	block->ops[block->num_ops] = mkl_malloc(dim*dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
@@ -254,6 +257,26 @@ void startMeasBlock(DMRGBlock *block) {
 	memcpy(block->ops[block->num_ops], block->ops[1], dim*dim * sizeof(MAT_TYPE));
 
 	block->num_ops++;
+}
+
+/* Removes all measurement matrices from block to not drag them around in memory when necessary
+*/
+void dropMeasurements(DMRGBlock *block) {
+
+	if (block->meas = 'M') {
+		
+		block->meas = 'N';
+		int numOps = block->model->num_ops;
+
+		int dim = block->d_block;
+
+		for (int i=block->num_ops-1; i >= numOps; i--) {
+			mkl_free(block->ops[i]);
+		}
+
+		block->ops = mkl_realloc(block->ops, numOps * sizeof(MAT_TYPE *));
+		block->num_ops = numOps;
+	}
 }
 
 /* Returns roughly the memory footprint of a DMRGBlock with given d_block.

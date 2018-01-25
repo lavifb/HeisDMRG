@@ -435,7 +435,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 	const int L          = params->L;
 	const int m_inf      = params->minf;
-	const int num_sweeps = params->num_ms;
+	const int num_sweeps = params->num_ms + params->num_ts;
 	const int *ms        = params->ms;
 	model_t *model       = params->model;
 
@@ -543,7 +543,14 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 	// Finite Sweeps
 	for (int i = 0; i < num_sweeps; i++) {
-		int m = ms[i];
+		
+		int m;
+
+		if (i < params->num_ms) {
+			m = ms[i];
+		} else {
+			m = ms[params->num_ms-1];
+		}
 
 		while (1) {
 
@@ -608,7 +615,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 			}
 
 			// measure and finish run
-			if (i == num_sweeps-1 && 2 * sys->length == L-2 && sys->side == 'L') {
+			if (sys->meas == 'M' && sys->length == env->length) {
 				printf("Done with sweep %d/%d\n", num_sweeps, num_sweeps);
 				printf("\nTaking measurements...\n");
 				step_params.measure = 1; // take measurements
@@ -626,6 +633,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 			// Save new block
 			int sys_index = sys->length-1;
+			int sys_old_index = sys->length-2;
 			switch (sys->side) {
 				case 'L':
 					// if block saved to disk only free pointer. Otherwise free matrices too.
@@ -638,10 +646,8 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 					saved_blocksL[sys_index] = sys;
 
 					// write old block when not on measuring sweep
-					if (sys->meas != 'M') {
-						int sys_old_index = sys->length-2;
-						SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, L);
-					} 
+					dropMeasurements(saved_blocksL[sys_old_index]);
+					SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, L);
 					break;
 
 				case 'R':
@@ -655,10 +661,8 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 					saved_blocksR[sys_index] = sys;
 
 					// write old block when not on measuring sweep
-					if (sys->meas != 'M') {
-						int sys_old_index = sys->length-2;
-						SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, R);
-					} 
+					dropMeasurements(saved_blocksR[sys_old_index]);
+					SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, R);
 					break;
 			}
 

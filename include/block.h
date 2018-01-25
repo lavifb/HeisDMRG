@@ -42,6 +42,8 @@ MAT_TYPE **enlargeOps(const DMRGBlock *block);
 
 void startMeasBlock(DMRGBlock *block);
 
+void dropMeasurements(DMRGBlock *block);
+
 MKL_INT64 estimateBlockMemFootprint(int d_block, int num_ops);
 
 MKL_INT64 getSavedBlockMemFootprint(DMRGBlock *block);
