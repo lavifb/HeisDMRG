@@ -80,7 +80,20 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	// Find ground state
 	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
 
-	MAT_TYPE *psi0_r = getLowestEStates(sys_enl, env_enl, model, num_restr_ind, restr_basis_inds, 1, psi0_guessp, energies);
+	// Find lowest energy states
+	MAT_TYPE *psi0 = getLowestEStates(sys_enl, env_enl, model, 1, psi0_guessp, energies);
+	MAT_TYPE *psi0_r = restrictVec(psi0, num_restr_ind, restr_basis_inds);
+
+	if (step_params->measure) {
+		meas_data_t *meas = createMeas(sys_enl->num_ops - model->num_ops);
+		meas->energy = energies[0] / (sys_enl->length + env_enl->length);
+
+		measureSzs(sys_enl, dimEnv, psi0, model->num_ops, meas);
+		measureSSs(sys_enl, dimEnv, psi0, model->num_ops, meas);
+
+		step_params->meas = meas;
+	}
+	mkl_free(psi0);
 
 	// time tracked state psi
 	MAT_TYPE *psiT_r;
@@ -281,15 +294,14 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 				#endif
 				printf("Overlap <psi0|psi0_guess> = %.8f\n", overlap);
 
+				// if (overlap < .9) {
+				// 	printf("Guess is bad!!\n");
+				// 	print_matrix("psi0_guess", dimEnv, dimSys, *psi0_guessp, dimEnv);
+				// 	print_matrix("psi0"      , dimEnv, dimSys, psi0        , dimEnv);
 
-			// if (overlap < .9) {
-			// 	printf("Guess is bad!!\n");
-			// 	print_matrix("psi0_guess", dimEnv, dimSys, *psi0_guessp, dimEnv);
-			// 	print_matrix("psi0"      , dimEnv, dimSys, psi0        , dimEnv);
-
-			// 	printf("\ndimSys = %3d  dimEnv = %3d  dimSup = %3d\n", dimSys, dimEnv, dimSup);
-			// 	exit(1);
-			// }
+				// 	printf("\ndimSys = %3d  dimEnv = %3d  dimSup = %3d\n", dimSys, dimEnv, dimSup);
+				// 	exit(1);
+				// }
 			#endif
 
 			*psi0_guessp = mkl_realloc(*psi0_guessp, dimSup * sizeof(MAT_TYPE));
@@ -318,100 +330,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	}
 
 	return sys_enl;
-}
-/*  DMRG step that records measurements.
-	Use on the last half sweep to measure operators as the system builds.
-
-	m: truncation dimension size
-
-	returns enlarged system block
-*/
-meas_data_t *meas_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, dmrg_step_params_t *step_params) {
-	// TODO: move meas_step into singl_step with option and measurements into their own functions
-
-	MAT_TYPE ** psi0_guessp = step_params->psi0_guessp;
-
-	DMRGBlock *sys_enl, *env_enl;
-	const model_t *model = sys->model;
-
-	sys_enl = enlargeBlock(sys);
-	if (sys == env) { // Don't recalculate
-		env_enl = sys_enl;
-	}
-	else {
-		env_enl = enlargeBlock(env);
-	}
-
-	int dimSys = sys_enl->d_block;
-	int dimEnv = env_enl->d_block;
-	int dimSup = dimSys * dimEnv;
-
-	// Find ground state
-	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
-
-	// Find lowest energy states
-	MAT_TYPE *psi0 = getLowestEStates(sys_enl, env_enl, model, -1, NULL, 1, psi0_guessp, energies);
-
-	meas_data_t *meas = createMeas(sys_enl->num_ops - model->num_ops);
-	meas->energy = energies[0] / (sys_enl->length + env_enl->length);
-	mkl_free(energies);
-
-	// Free enlarged environment block
-	if (sys != env) {
-		freeDMRGBlock(env_enl);
-	}
-
-	// Make Measurements
-	#if COMPLEX
-	const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
-	const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
-	#endif
-
-	// <S_i> spins
-	for (int i = 0; i<meas->num_sites; i++) {
-		MAT_TYPE* temp = mkl_malloc(dimEnv*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-
-		#if COMPLEX
-		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, &one, psi0, dimEnv, sys_enl->ops[i + model->num_ops], dimSys, &zero, temp, dimEnv);
-		MKL_Complex16 Szi;
-		cblas_zdotc_sub(dimSup, psi0, 1, temp, 1, &Szi);
-		meas->Szs[i] = Szi.real;
-		#else
-		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, 1.0, psi0, dimEnv, sys_enl->ops[i + model->num_ops], dimSys, 0.0, temp, dimEnv);
-		double Szi = cblas_ddot(dimSup, psi0, 1, temp, 1);
-		meas->Szs[i] = Szi;
-		#endif
-
-		mkl_free(temp);
-	}
-
-	// <S_i S_j> correlations
-	for (int i = 0; i<meas->num_sites; i++) {
-		MAT_TYPE* SSop = mkl_malloc(dimSys*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		MAT_TYPE* temp = mkl_malloc(dimEnv*dimSys * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-
-
-		#if COMPLEX
-		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, &one, sys_enl->ops[i + model->num_ops], dimSys, sys_enl->ops[1], dimSys, &zero, SSop, dimSys);
-		cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, &one, psi0, dimEnv, SSop, dimSys, &zero, temp, dimEnv);
-		MKL_Complex16 SSi;
-		cblas_zdotc_sub(dimSup, psi0, 1, temp, 1, &SSi);
-		meas->SSs[i] = SSi.real;
-		#else
-		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, dimSys, dimSys, dimSys, 1.0, sys_enl->ops[i + model->num_ops], dimSys, sys_enl->ops[1], dimSys, 0.0, SSop, dimSys);
-		cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, 1.0, psi0, dimEnv, SSop, dimSys, 0.0, temp, dimEnv);
-		double SSi = cblas_ddot(dimSup, psi0, 1, temp, 1);
-		meas->SSs[i] = SSi;
-		#endif
-
-		mkl_free(temp);
-		mkl_free(SSop);
-	}
-
-	freeDMRGBlock(sys_enl);
-	mkl_free(psi0);
-
-	return meas;
 }
 
 /*  Davidson transform to change basis for state psi for next iteration
@@ -493,11 +411,13 @@ meas_data_t *inf_dmrg(sim_params_t *params) {
 		printf("E/L = % .12f\n", sys->energy / currL);
 	}
 
-	meas_data_t *meas = meas_step(sys, sys, m, &step_params);
+	step_params.measure = 1; // take measurements
+	DMRGBlock *sys_extra = single_step(sys, sys, m, &step_params);
+	freeDMRGBlock(sys_extra);
 
 	freeDMRGBlock(sys);
 
-	return meas;
+	return step_params.meas;
 }
 
 /*  Finite System DMRG Algorithm
@@ -688,7 +608,10 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 			if (i == num_sweeps-1 && 2 * sys->length == L-2 && sys->side == 'L') {
 				printf("Done with sweep %d/%d\n", num_sweeps, num_sweeps);
 				printf("\nTaking measurements...\n");
-				meas = meas_step(sys, env, m, &step_params);
+				step_params.measure = 1; // take measurements
+				DMRGBlock *sys_extra = single_step(sys, env, m, &step_params);
+				freeDMRGBlock(sys_extra);
+				meas = step_params.meas;
 				break;
 			}
 			

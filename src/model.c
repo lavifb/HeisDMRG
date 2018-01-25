@@ -48,10 +48,8 @@ void compileParams(model_t *model) {
 
 	// Set Hamiltonian interaction function
 	model->H_int   = &HeisenH_int;
-	model->H_int_r = &HeisenH_int_r;
-	#if USE_PRIMME
 	model->H_int_mats = &HeisenH_int_mats;
-	#endif
+	model->H_int_r = &HeisenH_int_r;
 }
 
 /* Nulls out model parameters
@@ -122,10 +120,8 @@ model_t *newHeis2Model() {
 	memcpy(model->Sp, Sp, N*N * sizeof(MAT_TYPE));
 
 	model->H_int = &HeisenH_int;
-	model->H_int_r = &HeisenH_int_r;
-	#if USE_PRIMME
 	model->H_int_mats = &HeisenH_int_mats;
-	#endif
+	model->H_int_r = &HeisenH_int_r;
 
 	model->Id = NULL;
 	model->init_mzs = NULL;
