@@ -102,7 +102,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 		MAT_TYPE *H_int_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
 
-		MAT_TYPE *expH_r = matExp(num_restr_ind, H_int_r, -1*tau);
+		MAT_TYPE *expH_r = matExp(num_restr_ind, H_int_r, -.5*tau);
 		mkl_free(H_int_r);
 
 		const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
@@ -118,7 +118,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		// time evolve psi_0(t)
 		complex double *cpsi0_r = (complex double *)psi0_r;
 		for (int j=0; j<num_restr_ind; j++) {
-			cpsi0_r[j] = cexp(-1*tau*energies[0]) * cpsi0_r[j];
+			cpsi0_r[j] = cexp(-.5*tau*energies[0]) * cpsi0_r[j];
 		}
 	}
 
@@ -548,8 +548,31 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 		if (i < params->num_ms) {
 			m = ms[i];
-		} else {
+		} else { // tdmrg sweeps
 			m = ms[params->num_ms-1];
+
+
+			// create time tracked state psi_t
+			int env_index = L - sys->length - 3;
+			env = saved_blocksR[env_index];
+			LOAD_SIDE_BLOCK_FROM_DISK(env_index, R);
+
+			int dimSys = sys->d_block * sys->model->d_model;
+			int dimEnv = env->d_block * sys->model->d_model;
+			int dimSup = dimSys * dimEnv;
+
+			MAT_TYPE *psi_t = mkl_malloc(dimSup * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+
+			// Create matrix to apply Sp to central spin
+			MAT_TYPE *Sp_sys = mkl_calloc(d_enl*d_enl, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+			kronI('L', d_block, d_model, model->Sp, Sp_sys);
+
+			// Apply Sp to central spin
+			const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
+			const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+			cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, &one, *step_params.psi0_guessp, dimEnv, Sp_sys, dimSys, &one, psi_t, dimEnv);
+			
+			step_params->psi_tp = &psi_t;
 		}
 
 		while (1) {
