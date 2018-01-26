@@ -28,14 +28,11 @@ void freeMeas(meas_data_t *meas) {
 
 /*  Write measure data to files in path
 */
-int outputMeasData(const char* path, meas_data_t *meas) {
+int outputMeasData(const char* filepath, meas_data_t *meas) {
 	
-	char filename[1024];
-	sprintf(filename, "%smeasurements.dat", path); 
-
-	FILE *m_f = fopen(filename, "w");
+	FILE *m_f = fopen(filepath, "w");
 	if (m_f == NULL) {
-		errprintf("Cannot open file '%s'.\n", filename);
+		errprintf("Cannot open file '%s'.\n", filepath);
 		return -1;
 	}
 

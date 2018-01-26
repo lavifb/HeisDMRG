@@ -21,7 +21,7 @@ meas_data_t *createMeas(int num_sites);
 
 void freeMeas(meas_data_t *meas);
 
-int outputMeasData(const char* path, meas_data_t *meas);
+int outputMeasData(const char* filepath, meas_data_t *meas);
 
 void measureSzs(DMRGBlock *sys_enl, int dimEnv, MAT_TYPE *psi, int Sz_mat_offset, meas_data_t *meas);
 

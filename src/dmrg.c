@@ -548,31 +548,32 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 		if (i < params->num_ms) {
 			m = ms[i];
-		} else { // tdmrg sweeps
+		} else {
+			// prepare TDMRG sweeps
 			m = ms[params->num_ms-1];
-
 
 			// create time tracked state psi_t
 			int env_index = L - sys->length - 3;
 			env = saved_blocksR[env_index];
 			LOAD_SIDE_BLOCK_FROM_DISK(env_index, R);
 
-			int dimSys = sys->d_block * sys->model->d_model;
-			int dimEnv = env->d_block * sys->model->d_model;
+			int dimSys = sys->d_block * model->d_model;
+			int dimEnv = env->d_block * model->d_model;
 			int dimSup = dimSys * dimEnv;
 
 			MAT_TYPE *psi_t = mkl_malloc(dimSup * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 			// Create matrix to apply Sp to central spin
-			MAT_TYPE *Sp_sys = mkl_calloc(d_enl*d_enl, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-			kronI('L', d_block, d_model, model->Sp, Sp_sys);
+			MAT_TYPE *Sp_sys = mkl_calloc(dimSys*dimSys, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+			kronI('L', sys->d_block, model->d_model, model->Sp, Sp_sys);
 
 			// Apply Sp to central spin
 			const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
 			const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
 			cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, &one, *step_params.psi0_guessp, dimEnv, Sp_sys, dimSys, &one, psi_t, dimEnv);
 			
-			step_params->psi_tp = &psi_t;
+			step_params.psi_tp = &psi_t;
+			step_params.tau = params->dtau;
 		}
 
 		while (1) {
@@ -644,6 +645,11 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 				step_params.measure = 1; // take measurements
 				sys = single_step(sys, env, m, &step_params);
 				meas = step_params.meas;
+				if (params->num_ts > 0) {
+					char measFilename[1024];
+					sprintf(measFilename, "%smeas_t%f.dat", params->block_dir, params->dtau*(i-params->num_ms+1));
+					outputMeasData(measFilename, step_params.meas);
+				}
 			} else { // normal step
 				#ifndef NDEBUG
 				printGraphic(sys, env);

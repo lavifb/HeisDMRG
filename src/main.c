@@ -137,7 +137,9 @@ int main(int argc, char *argv[]) {
 	fclose(plog_f);
 
 	// Save Measurements
-	outputMeasData(out_dir, meas);
+	char measFilename[1024];
+	sprintf(measFilename, "%smeasurements.dat", out_dir);
+	outputMeasData(measFilename, meas);
 	freeMeas(meas);
 
 	// Delete temporary files
