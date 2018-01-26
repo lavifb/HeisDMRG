@@ -753,9 +753,9 @@ void print_matrix(char* desc, int m, int n, MAT_TYPE *a, int lda) {
 	for (int i = 0; i < m; i++) {
 		for (int j = 0; j < n; j++) {
 			#if COMPLEX
-			printf(" % 6.8f %+6.8fI", a[i+j*lda].real, a[i+j*lda].imag);
+			printf(" % 6.2f %+6.2fI", a[i+j*lda].real, a[i+j*lda].imag);
 			#else
-			printf(" % 6.8f", a[i+j*lda]);
+			printf(" % 6.2f", a[i+j*lda]);
 			#endif
 		}
 		printf("\n");

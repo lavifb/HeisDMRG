@@ -18,6 +18,11 @@
 
 int main(int argc, char *argv[]) {
 
+	#ifndef COMPLEX
+	errprintf("Please compile with the -DCOMPLEX tag to get time evolution.");
+	exit(1);
+	#endif
+
 	int L    = 32;
 	int mm   = 20;
 	int n_ms = 8;

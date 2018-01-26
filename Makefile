@@ -118,6 +118,9 @@ ${BIN}/time_test_debug: ${TEST}/time_test.c ${objsD}
 
 ${BIN}/zquick_test_debug: ${TEST}/quick_test.c ${zobjsD}
 	${CC} ${INCDIRS} ${CCOPTSD} -DCOMPLEX ${zobjsD} ${TEST}/quick_test.c ${LIB} -o ${BIN}/zquick_test_debug
+
+${BIN}/ztdmrg_test_debug: ${TEST}/tdmrg_test.c ${zobjsD}
+	${CC} ${INCDIRS} ${CCOPTSD} -DCOMPLEX ${zobjsD} ${TEST}/tdmrg_test.c ${LIB} -o ${BIN}/ztdmrg_test_debug
 	 
 ${BIN}/%: ${TEST}/%.c ${objs}
 	${CC} ${INCDIRS} ${CCOPTSR} $< ${objs} ${LIB} -o $@

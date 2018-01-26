@@ -84,25 +84,14 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	MAT_TYPE *psi0 = getLowestEStates(sys_enl, env_enl, model, 1, psi0_guessp, energies);
 	MAT_TYPE *psi0_r = restrictVec(psi0, num_restr_ind, restr_basis_inds);
 
-	if (step_params->measure) {
-		meas_data_t *meas = createMeas(sys_enl->num_ops - model->num_ops);
-		meas->energy = energies[0] / (sys_enl->length + env_enl->length);
-
-		measureSzs(sys_enl, dimEnv, psi0, model->num_ops, meas);
-		measureSSs(sys_enl, dimEnv, psi0, model->num_ops, meas);
-
-		step_params->meas = meas;
-	}
-	mkl_free(psi0);
-
 	// time tracked state psi
 	MAT_TYPE *psiT_r;
 	if (tau != 0) {
 		MAT_TYPE *psiTprev_r = restrictVec(*psi_tp, num_restr_ind, restr_basis_inds);
 
-		MAT_TYPE *H_int_r = model->H_int_r(model->H_params, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
+		MAT_TYPE *H_int_r = model->H_int_r(model, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
 
-		MAT_TYPE *expH_r = matExp(num_restr_ind, H_int_r, -.5*tau);
+		MAT_TYPE *expH_r = matExp(num_restr_ind, H_int_r, -.5*I*tau);
 		mkl_free(H_int_r);
 
 		const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
@@ -113,14 +102,27 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		cblas_zgemv(CblasColMajor, CblasNoTrans, num_restr_ind, num_restr_ind, &one, expH_r, num_restr_ind, 
 			psiTprev_r, num_restr_ind, &zero, psiT_r, num_restr_ind);
 
+		mkl_free(psiTprev_r);
 		mkl_free(expH_r);
 
 		// time evolve psi_0(t)
-		complex double *cpsi0_r = (complex double *)psi0_r;
-		for (int j=0; j<num_restr_ind; j++) {
-			cpsi0_r[j] = cexp(-.5*tau*energies[0]) * cpsi0_r[j];
-		}
+        complex double *cpsi0_r = (complex double *)psi0_r;
+        complex double time_rot = cexp(-.5*I*tau*energies[0]);
+        for (int j=0; j<num_restr_ind; j++) {
+            cpsi0_r[j] = time_rot * cpsi0_r[j];
+        }
 	}
+
+	if (step_params->measure) {
+		meas_data_t *meas = createMeas(sys_enl->num_ops - model->num_ops);
+		meas->energy = energies[0] / (sys_enl->length + env_enl->length);
+
+		measureSzs(sys_enl, dimEnv, psi0, model->num_ops, meas);
+		measureSSs(sys_enl, dimEnv, psi0, model->num_ops, meas);
+
+		step_params->meas = meas;
+	}
+	mkl_free(psi0);
 
 	sys_enl->energy = energies[0]; // record ground state energy
 	mkl_free(energies);
@@ -282,7 +284,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 			*psi0_guessp = mkl_malloc(dimSup * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		} else {
 			// Check overlap of guess and calculated eigenstate
-			// #define PRINT_OVERLAP
+			#define PRINT_OVERLAP
 			#ifdef PRINT_OVERLAP
 				#if COMPLEX
 				complex double zoverlap;
@@ -294,14 +296,14 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 				#endif
 				printf("Overlap <psi0|psi0_guess> = %.8f\n", overlap);
 
-				// if (overlap < .9) {
-				// 	printf("Guess is bad!!\n");
-				// 	print_matrix("psi0_guess", dimEnv, dimSys, *psi0_guessp, dimEnv);
-				// 	print_matrix("psi0"      , dimEnv, dimSys, psi0        , dimEnv);
+				if (overlap < .9) {
+					printf("Guess is bad!!\n");
+					print_matrix("psi0_guess", dimEnv, dimSys, *psi0_guessp, dimEnv);
+					print_matrix("psi0"      , dimEnv, dimSys, psi0        , dimEnv);
 
-				// 	printf("\ndimSys = %3d  dimEnv = %3d  dimSup = %3d\n", dimSys, dimEnv, dimSup);
-				// 	exit(1);
-				// }
+					printf("\ndimSys = %3d  dimEnv = %3d  dimSup = %3d\n", dimSys, dimEnv, dimSup);
+					// exit(1);
+				}
 			#endif
 
 			*psi0_guessp = mkl_realloc(*psi0_guessp, dimSup * sizeof(MAT_TYPE));
@@ -613,6 +615,10 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 				// convert psi0_guess into new basis
 				DavidsonTransform(sys, env_enl, psi0_guessp);
+				// convert psi_t during tdmrg sweeps
+				if (i >= params->num_ms) {
+					DavidsonTransform(sys, env_enl, step_params.psi_tp);
+				}
 
 				// Save enl_block back to disk
 				switch (sys->side) {
