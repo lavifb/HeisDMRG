@@ -550,7 +550,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 		if (i < params->num_ms) {
 			m = ms[i];
-		} else {
+		} else if (i == params->num_ms) {
 			// prepare TDMRG sweeps
 			m = ms[params->num_ms-1];
 
@@ -576,6 +576,8 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 			
 			step_params.psi_tp = &psi_t;
 			step_params.tau = params->dtau;
+		} else {
+			m = ms[params->num_ms-1];
 		}
 
 		while (1) {
