@@ -15,7 +15,7 @@ PRIMMEDIR = ../primme
 
 
 # compiler options
-CCOPTS  = -Wall -xHost -restrict -std=gnu99 -DMEM_DATA_ALIGN=64 -DVERSION=\"$(shell git describe --always)\"
+CCOPTS  = -Wall -xHost -restrict -std=c11 -DMEM_DATA_ALIGN=64 -DVERSION=\"$(shell git describe --always)\"
 # add openmp for some parallelization improvements
 CCOPTS += -qopenmp
 

@@ -73,9 +73,23 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	int *restr_basis_inds = mkl_malloc(dimSup * sizeof(int), MEM_DATA_ALIGN);
 	int num_restr_ind;
 
-	// Get restricted basis
 	// sup_sectors stores sectors for superblock
-	sector_t *sup_sectors = getRestrictedBasis(sys_enl_sectors, env_enl_sectors, target_mz, dimEnv, &num_restr_ind, restr_basis_inds);
+	sector_t *sup_sectors;
+
+	if (step_params->abelianSectorize) {
+		// Get restricted basis and set restr_basis_inds and num_restr_ind
+		sup_sectors = getRestrictedBasis(sys_enl_sectors, env_enl_sectors, target_mz, dimEnv, &num_restr_ind, restr_basis_inds);
+	} else {
+		sup_sectors = NULL;
+		// placeholder that isn't really used
+		sector_t *sec = createSector(0);
+		for (int i=0; i<dimSup; i++) {
+			sectorPush(sec, i);
+			restr_basis_inds[i] = i;
+		}
+		num_restr_ind = dimSup;
+		HASH_ADD_INT(sup_sectors, id, sec);
+	}
 
 	// Find ground state
 	double *energies = mkl_malloc(sizeof(double), MEM_DATA_ALIGN);
@@ -140,22 +154,30 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	// Loop over sectors to find what basis inds to keep
 	for (sector_t *sec=sup_sectors; sec != NULL; sec=sec->hh.next) {
-		int mz = sec->id;
-		// printf("mz = %d\n", mz);
-		int env_mz = target_mz - mz;
-		int n_sec = sec->num_ind;
 
+		int mz;
+		int n_sec = sec->num_ind;
+		int dimSys_sec = dimSys;
+		int dimEnv_sec = dimEnv;
 		sector_t *sys_enl_mz, *env_enl_mz;
-		HASH_FIND_INT(sys_enl_sectors, &mz    , sys_enl_mz);
-		HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_mz);
-		assert(sys_enl_mz != NULL);
-		// Skip if environment does not have corresponding state
-		if (env_enl_mz == NULL) {
-			continue;
+
+
+		if (step_params->abelianSectorize) {
+			mz = sec->id;
+			// printf("mz = %d\n", mz);
+			int env_mz = target_mz - mz;
+
+			HASH_FIND_INT(sys_enl_sectors, &mz    , sys_enl_mz);
+			HASH_FIND_INT(env_enl_sectors, &env_mz, env_enl_mz);
+			assert(sys_enl_mz != NULL);
+			// Skip if environment does not have corresponding state
+			if (env_enl_mz == NULL) {
+				continue;
+			}
+			dimSys_sec = sys_enl_mz->num_ind;
+			dimEnv_sec = env_enl_mz->num_ind;
+			assert(dimSys_sec * dimEnv_sec == n_sec);
 		}
-		int dimSys_sec = sys_enl_mz->num_ind;
-		int dimEnv_sec = env_enl_mz->num_ind;
-		assert(dimSys_sec * dimEnv_sec == n_sec);
 
 		// target states
 		int num_targets = 1;
@@ -164,13 +186,13 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		}
 
 		MAT_TYPE **targets = mkl_malloc(num_targets * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
-
 		// define target states
 		targets[0] = restrictVec(psi0_r, n_sec, sec->inds); // ground state
 		// tdmrg also track target state
 		if (tau != 0) {
 			targets[1] = restrictVec(psiT_r, n_sec, sec->inds); // tracked state
 		}
+
 
 		// Density matrix rho_sec
 		MAT_TYPE *rho_sec = mkl_calloc(dimSys_sec*dimSys_sec, sizeof(MAT_TYPE), MEM_DATA_ALIGN);
@@ -231,10 +253,18 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		for (int i = 0; i < mm_sec; i++) {
 			for (int j = 0; j < dimSys_sec; j++) {
 				// copy value using proper index basis
-				trans_full[lamb_i*dimSys + sys_enl_mz->inds[j]] = trans_sec[i*dimSys_sec + j];
+				if (step_params->abelianSectorize) {
+					trans_full[lamb_i*dimSys + sys_enl_mz->inds[j]] = trans_sec[i*dimSys_sec + j];
+				} else {
+					trans_full[lamb_i*dimSys + j] = trans_sec[i*dimSys_sec + j];
+				}
 			}
-			// keep track of mzs for the enlarged block
-			sys_mzs_full[lamb_i] = mz;
+			if (step_params->abelianSectorize) {
+				// keep track of mzs for the enlarged block
+				sys_mzs_full[lamb_i] = mz;
+			} else {
+				sys_mzs_full[lamb_i] = sys_enl->mzs[lamb_i];
+			}
 			lamb_i++;
 		}
 		
@@ -399,6 +429,7 @@ meas_data_t *inf_dmrg(sim_params_t *params) {
 
 	// step params definition
 	dmrg_step_params_t step_params = {};
+	step_params.abelianSectorize = 1;
 	step_params.target_mz = 0;
 	step_params.psi0_guessp = NULL;
 
@@ -471,6 +502,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 	// step params definition
 	dmrg_step_params_t step_params = {};
+	step_params.abelianSectorize = 1;
 	step_params.target_mz = 0;
 	step_params.psi0_guessp = NULL;
 
