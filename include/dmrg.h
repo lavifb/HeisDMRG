@@ -7,6 +7,7 @@
 
 typedef struct {
 	int abelianSectorize; // option determines whether to use abelian mz symmetry to only search for the ground state where mz = target_mz
+						  // NOTE: if this is turned off it cannot really be turned on for later sweeps
 	int target_mz; // mz for ground state if symmetry is active
 
 	MAT_TYPE ** psi0_guessp; // pointer to guess for ground state. psi0_guessp is NULL if there is no guess and no guess tracking. 
