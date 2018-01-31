@@ -57,12 +57,13 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 	int num_restr_ind;
 
 	// sup_sectors stores sectors for superblock
-	sector_t *sup_sectors = NULL;
+	sector_t *sup_sectors;
 
 	if (step_params->abelianSectorize) {
 		// Get restricted basis and set restr_basis_inds and num_restr_ind
 		sup_sectors = getRestrictedBasis(sys_enl_sectors, env_enl_sectors, target_mz, dimEnv, &num_restr_ind, restr_basis_inds);
 	} else {
+		sup_sectors = NULL;
 		// placeholder that isn't really used
 		sector_t *sec = createSector(0);
 		for (int i=0; i<dimSup; i++) {
@@ -114,9 +115,6 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		int dimEnv_sec = dimEnv;
 		sector_t *sys_enl_mz, *env_enl_mz;
 
-		// target states
-		int num_targets = 1;
-		MAT_TYPE **targets = mkl_malloc(num_targets * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
 
 		if (step_params->abelianSectorize) {
 			mz = sec->id;
@@ -135,10 +133,12 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 			assert(dimSys_sec * dimEnv_sec == n_sec);
 		}
 
+		// target states
+		int num_targets = 1;
+		MAT_TYPE **targets = mkl_malloc(num_targets * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
 		// define target states
 		targets[0] = restrictVec(psi0_r, n_sec, sec->inds); // ground state
 		// targets[1] = restrictVec(psi_r, n_sec, sec->inds); // tracked state
-		// printf("in loop\n");
 
 
 		// Density matrix rho_sec
@@ -441,7 +441,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 	// step params definition
 	dmrg_step_params_t step_params = {};
-	step_params.abelianSectorize = 0;
+	step_params.abelianSectorize = 1;
 	step_params.target_mz = 0;
 	step_params.psi0_guessp = NULL;
 
