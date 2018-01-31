@@ -6,6 +6,7 @@
 #include "params.h"
 
 typedef struct {
+	int abelianSectorize; // option determines whether to use abelian mz symmetry to only search for the ground state where mz = target_mz
 	int target_mz; // mz for ground state if symmetry is active
 
 	MAT_TYPE ** psi0_guessp; // pointer to guess for ground state. psi0_guessp is NULL if there is no guess and no guess tracking. 
@@ -13,6 +14,7 @@ typedef struct {
 
 	int measure; // option determines if you take measurements and return the results in meas
 	meas_data_t *meas; // struct to hold measurements that may be returned by single_step
+
 
 } dmrg_step_params_t;
 
