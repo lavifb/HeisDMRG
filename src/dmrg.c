@@ -114,7 +114,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		// time evolve psi(t)
 		psiT_r = mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		cblas_zgemv(CblasColMajor, CblasNoTrans, num_restr_ind, num_restr_ind, &one, expH_r, num_restr_ind, 
-			psiTprev_r, num_restr_ind, &zero, psiT_r, num_restr_ind);
+			psiTprev_r, 1, &zero, psiT_r, 1);
 
 		mkl_free(psiTprev_r);
 		mkl_free(expH_r);
