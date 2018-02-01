@@ -131,12 +131,18 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		meas_data_t *meas = createMeas(sys_enl->num_ops - model->num_ops);
 		meas->energy = energies[0] / (sys_enl->length + env_enl->length);
 
-		measureSzs(sys_enl, dimEnv, psi0, model->num_ops, meas);
-		measureSSs(sys_enl, dimEnv, psi0, model->num_ops, meas);
+		if (tau == 0) {
+			measureSzs(sys_enl, dimEnv, psi0, model->num_ops, meas);
+			measureSSs(sys_enl, dimEnv, psi0, model->num_ops, meas);
+		} else {
+			MAT_TYPE *psiT = unrestrictVec(dimSup, psiT_r, num_restr_ind, restr_basis_inds);
+			measureSzs(sys_enl, dimEnv, psiT, model->num_ops, meas);
+			measureSSs(sys_enl, dimEnv, psiT, model->num_ops, meas);
+			mkl_free(psiT);
+		}
 
 		step_params->meas = meas;
 	}
-	mkl_free(psi0);
 
 	sys_enl->energy = energies[0]; // record ground state energy
 	mkl_free(energies);
@@ -307,24 +313,22 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	// realloc and return psi0_guessp for later guess
 	if (psi0_guessp != NULL) {
-		// full psi0 for later eigenstate prediction
-		MAT_TYPE *psi0 = unrestrictVec(dimSup, psi0_r, num_restr_ind, restr_basis_inds);
-
 		if (*psi0_guessp == NULL) {
 			*psi0_guessp = mkl_malloc(dimSup * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 		} else {
 			// Check overlap of guess and calculated eigenstate
-			#define PRINT_OVERLAP
+			// #define PRINT_OVERLAP
 			#ifdef PRINT_OVERLAP
 				#if COMPLEX
-				complex double zoverlap;
+				MKL_Complex16 zoverlap;
 				cblas_zdotc_sub(dimSup, psi0, 1, *psi0_guessp, 1, &zoverlap);
-				double overlap = cabs(zoverlap);
+				double overlap = sqrt(zoverlap.real*zoverlap.real + zoverlap.imag*zoverlap.imag);
+				printf("<psi0|psi0_guess> = % .4f%+.4f   mag: %.4f\n", zoverlap.real, zoverlap.imag, overlap);
 				#else
 				double overlap = fabs(cblas_ddot(dimSup, psi0, 1, *psi0_guessp, 1));
 				// overlap /= cblas_dnrm2(dimSup, psi0, 1) * cblas_dnrm2(dimSup, *psi0_guessp, 1);
-				#endif
 				printf("Overlap <psi0|psi0_guess> = %.8f\n", overlap);
+				#endif
 
 				if (overlap < .9) {
 					printf("Guess is bad!!\n");
@@ -340,8 +344,8 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		}
 
 		memcpy(*psi0_guessp, psi0, dimSup * sizeof(MAT_TYPE));
-		mkl_free(psi0);
 	}
+	mkl_free(psi0);
 
 	if (tau != 0.0) {
 		MAT_TYPE *psi_t = unrestrictVec(dimSup, psiT_r, num_restr_ind, restr_basis_inds);
@@ -505,6 +509,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 	step_params.abelianSectorize = 1;
 	step_params.target_mz = 0;
 	step_params.psi0_guessp = NULL;
+	step_params.meas = NULL;
 
 	DMRGBlock *sys;
 	DMRGBlock *env;
@@ -605,9 +610,14 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 			const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
 			const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
 			cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, &one, *step_params.psi0_guessp, dimEnv, Sp_sys, dimSys, &one, psi_t, dimEnv);
+			mkl_free(Sp_sys);
 			
 			step_params.psi_tp = &psi_t;
 			step_params.tau = params->dtau;
+			step_params.abelianSectorize = 0;
+
+			printf("\nPerforming TDMRG sweeps...\n");
+
 		} else {
 			m = ms[params->num_ms-1];
 		}
@@ -672,7 +682,8 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 				sys = env;
 				env = tempBlock;
 
-				if (sys->side == 'L' && i == num_sweeps-1) {
+				// if (sys->side == 'L' && i == num_sweeps-1) {
+				if (sys->side == 'L' && i >= params->num_ms-1) {
 					startMeasBlock(sys);
 					printf("Keeping track of measurements...\n");
 				}
@@ -680,16 +691,23 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 			// measure and finish run
 			if (sys->meas == 'M' && sys->length == env->length) {
-				printf("Done with sweep %d/%d\n", num_sweeps, num_sweeps);
-				printf("\nTaking measurements...\n");
+				printf("Taking measurements...\n");
+
+				// free old measurements
+				if (step_params.meas != NULL) {
+					freeMeas(step_params.meas);
+					step_params.meas = NULL;
+				}
+
 				step_params.measure = 1; // take measurements
 				sys = single_step(sys, env, m, &step_params);
-				meas = step_params.meas;
+				// meas = step_params.meas;
 				if (params->num_ts > 0) {
 					char measFilename[1024];
-					sprintf(measFilename, "%smeas_t%f.dat", params->block_dir, params->dtau*(i-params->num_ms+1));
+					sprintf(measFilename, "%s/meas_t%f.dat", params->block_dir, params->dtau*(i-params->num_ms+1));
 					outputMeasData(measFilename, step_params.meas);
 				}
+				dropMeasurements(sys);
 			} else { // normal step
 				#ifndef NDEBUG
 				printGraphic(sys, env);
@@ -744,6 +762,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 	}
 
 	if (*psi0_guessp != NULL) { mkl_free(*psi0_guessp); }
+	if (params->num_ts > 0) { mkl_free(*step_params.psi_tp); }
 	for (int i = 0; i < L-3; i++) {
 		if (disk_filenamesL[i][0] != '\0') { mkl_free(saved_blocksL[i]); }
 		else if (saved_blocksL[i]) { freeDMRGBlock(saved_blocksL[i]); }
@@ -760,5 +779,5 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 		mkl_free(disk_filenamesR);
 	}
 
-	return meas;
+	return step_params.meas;
 }

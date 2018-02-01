@@ -180,12 +180,6 @@ int main(int argc, char *argv[]) {
 
 	printf("M=%d finished in %.3f seconds.\n\n", mm, runtime);
 
-
-	// Delete temporary files
-	if (!argsave) {
-		rmrf(params->block_dir);
-	}
-
 	int success = 0;
 
 	freeMeas(meas);
