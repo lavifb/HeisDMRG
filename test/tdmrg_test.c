@@ -158,7 +158,7 @@ int main(int argc, char *argv[]) {
 	time_t start_time = time(NULL);
 
 	// setup path for continuing run
-	if (cont_dir != "") {
+	if (cont_dir[0] != '\0') {
 		params->continue_run = 1;
 		sprintf(params->block_dir, cont_dir);
 	}
