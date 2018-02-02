@@ -601,13 +601,8 @@ void primmeWrapper(MAT_TYPE *A, const int N, double *evals, MAT_TYPE *evecs, con
 	primme_free(&primme);
 }
 
-void block_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *blockSize, primme_params *primme, int *err) {
+void mat_vec(hamil_mats_t *hamil_mats, MAT_TYPE *xvec, MAT_TYPE *yvec) {
 
-	int N = primme->n;
-	MAT_TYPE *xvec = x;
-	MAT_TYPE *yvec = y;
-
-	hamil_mats_t *hamil_mats = primme->matrix;
 	int dimSys = hamil_mats->dimSys;
 	int dimEnv = hamil_mats->dimEnv;
 
@@ -638,6 +633,17 @@ void block_matvec(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *block
 		}
 	#endif
 	mkl_free(temp);
+}
+
+void primme_matvec_wrapper(void *x, PRIMME_INT *ldx, void *y, PRIMME_INT *ldy, int *blockSize, primme_params *primme, int *err) {
+
+	int N = primme->n;
+	MAT_TYPE *xvec = x;
+	MAT_TYPE *yvec = y;
+
+	hamil_mats_t *hamil_mats = primme->matrix;
+
+	mat_vec(hamil_mats, xvec, yvec);
 
 	*err = 0;
 }
@@ -665,7 +671,7 @@ void primmeBlockWrapper(hamil_mats_t *hamil_mats, int N, double *evals, MAT_TYPE
 	primme_initialize(&primme);
 
 	/* Set problem matrix */
-	primme.matrixMatvec = block_matvec;
+	primme.matrixMatvec = primme_matvec_wrapper;
 	primme.matrix = hamil_mats;
 
 	primme.n = N;

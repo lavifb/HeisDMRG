@@ -39,6 +39,8 @@ typedef struct hamil_mats_t {
 	
 } hamil_mats_t;
 
+void mat_vec(hamil_mats_t *hamil_mats, MAT_TYPE *xvec, MAT_TYPE *yvec);
+
 void primmeBlockWrapper(hamil_mats_t *hamil_mats, int N, double *evals, MAT_TYPE *evecs, const int numEvals, const int initSize);
 
 MAT_TYPE *reorderKron(MAT_TYPE *v, const int dimSys, const int dimEnv, const int dimSite);

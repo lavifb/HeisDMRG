@@ -96,36 +96,61 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 	// Find lowest energy states
 	MAT_TYPE *psi0 = getLowestEStates(sys_enl, env_enl, model, 1, psi0_guessp, energies);
-	MAT_TYPE *psi0_r = restrictVec(psi0, num_restr_ind, restr_basis_inds);
 
 	// time tracked state psi
+	MAT_TYPE *psiT;
 	MAT_TYPE *psiT_r;
 	if (tau != 0) {
-		MAT_TYPE *psiTprev_r = restrictVec(*psi_tp, num_restr_ind, restr_basis_inds);
+		// MAT_TYPE *psiTprev_r = restrictVec(*psi_tp, num_restr_ind, restr_basis_inds);
 
-		MAT_TYPE *H_int_r = model->H_int_r(model, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
+		// MAT_TYPE *H_int_r = model->H_int_r(model, sys_enl, env_enl, num_restr_ind, restr_basis_inds);
+		hamil_mats_t *hamils_mats = model->H_int_mats(model, sys_enl, env_enl);
 
-		MAT_TYPE *expH_r = matExp(num_restr_ind, H_int_r, -.5*I*tau);
-		mkl_free(H_int_r);
+		// MAT_TYPE *expH_r = matExp(num_restr_ind, H_int_r, -.5*I*tau);
+		// mkl_free(H_int_r);
 
-		const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
-		const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
+		// const MKL_Complex16 one  = {.real=1.0, .imag=0.0};
+		// const MKL_Complex16 zero = {.real=0.0, .imag=0.0};
 
 		// time evolve psi(t)
-		psiT_r = mkl_malloc(num_restr_ind * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-		cblas_zgemv(CblasColMajor, CblasNoTrans, num_restr_ind, num_restr_ind, &one, expH_r, num_restr_ind, 
-			psiTprev_r, 1, &zero, psiT_r, 1);
+		// cblas_zgemv(CblasColMajor, CblasNoTrans, num_restr_ind, num_restr_ind, &one, expH_r, num_restr_ind, 
+		// 	psiTprev_r, 1, &zero, psiT_r, 1);
 
-		mkl_free(psiTprev_r);
-		mkl_free(expH_r);
+		// mkl_free(psiTprev_r);
+		// mkl_free(expH_r);
+
+
+		psiT = mkl_malloc(dimSup * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		complex double *HpsiT = mkl_malloc(dimSup * sizeof(complex double), MEM_DATA_ALIGN);
+		mat_vec(hamils_mats, *psi_tp, (MAT_TYPE *)HpsiT);
+		freehamil_mats_t(hamils_mats);
+
+		complex double *cpsiT = (complex double *)psiT;
+		complex double *cpsiT_old = (complex double *)*psi_tp;
+        for (int j=0; j<dimSup; j++) {
+            cpsiT[j] = cpsiT_old[j] + -.5*I*tau*HpsiT[j];
+        }
+
+        MKL_Complex16 norm;
+        cblas_zdotc_sub(dimSup, psiT, 1, psiT, 1, &norm);
+        for (int j=0; j<dimSup; j++) {
+            cpsiT[j] /= norm.real;
+        }
+
+
+        mkl_free(HpsiT);
 
 		// time evolve psi_0(t)
-        complex double *cpsi0_r = (complex double *)psi0_r;
+        complex double *cpsi0 = (complex double *)psi0;
         complex double time_rot = cexp(-.5*I*tau*energies[0]);
-        for (int j=0; j<num_restr_ind; j++) {
-            cpsi0_r[j] = time_rot * cpsi0_r[j];
+        for (int j=0; j<dimSup; j++) {
+            cpsi0[j] = time_rot * cpsi0[j];
         }
+
+		psiT_r = restrictVec(psiT, num_restr_ind, restr_basis_inds);
 	}
+
+	MAT_TYPE *psi0_r = restrictVec(psi0, num_restr_ind, restr_basis_inds);
 
 	if (step_params->measure) {
 		meas_data_t *meas = createMeas(sys_enl->num_ops - model->num_ops);
@@ -135,10 +160,8 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 			measureSzs(sys_enl, dimEnv, psi0, model->num_ops, meas);
 			measureSSs(sys_enl, dimEnv, psi0, model->num_ops, meas);
 		} else {
-			MAT_TYPE *psiT = unrestrictVec(dimSup, psiT_r, num_restr_ind, restr_basis_inds);
 			measureSzs(sys_enl, dimEnv, psiT, model->num_ops, meas);
 			measureSSs(sys_enl, dimEnv, psiT, model->num_ops, meas);
-			mkl_free(psiT);
 		}
 
 		step_params->meas = meas;
@@ -345,19 +368,19 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 
 		memcpy(*psi0_guessp, psi0, dimSup * sizeof(MAT_TYPE));
 	}
-	mkl_free(psi0);
 
 	if (tau != 0.0) {
-		MAT_TYPE *psi_t = unrestrictVec(dimSup, psiT_r, num_restr_ind, restr_basis_inds);
-		mkl_free(psiT_r);
+		// MAT_TYPE *psi_t = unrestrictVec(dimSup, psiT_r, num_restr_ind, restr_basis_inds);
 		*psi_tp = mkl_realloc(*psi_tp, dimSup * sizeof(MAT_TYPE));
-
-		memcpy(*psi_tp, psi_t, dimSup * sizeof(MAT_TYPE));
-		mkl_free(psi_t);
+		memcpy(*psi_tp, psiT, dimSup * sizeof(MAT_TYPE));
+		mkl_free(psiT);
+		mkl_free(psiT_r);
+		// mkl_free(psi_t);
 	}
 
-	mkl_free(restr_basis_inds);
+	mkl_free(psi0);
 	mkl_free(psi0_r);
+	mkl_free(restr_basis_inds);
 	freeSectors(sys_enl_sectors);
 	// Free enlarged environment block
 	if (sys != env) {
@@ -578,7 +601,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 	MAT_TYPE **psi0_guessp = &psi0_guess;
 	step_params.psi0_guessp = &psi0_guess;
 
-	meas_data_t *meas;
+	printf("\nPerforming DMRG sweeps...\n");
 
 	// Finite Sweeps
 	for (int i = 0; i < num_sweeps; i++) {
@@ -681,11 +704,12 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 				DMRGBlock *tempBlock = sys;
 				sys = env;
 				env = tempBlock;
+				// dropMeasurements(sys);
 
 				// if (sys->side == 'L' && i == num_sweeps-1) {
 				if (sys->side == 'L' && i >= params->num_ms-1) {
 					startMeasBlock(sys);
-					printf("Keeping track of measurements...\n");
+					// printf("Keeping track of measurements...\n");
 				}
 			}
 
@@ -707,6 +731,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 					sprintf(measFilename, "%s/meas_t%f.dat", params->block_dir, params->dtau*(i-params->num_ms+1));
 					outputMeasData(measFilename, step_params.meas);
 				}
+				step_params.measure = 0;
 				// dropMeasurements(sys);
 			} else { // normal step
 				#ifndef NDEBUG
@@ -754,7 +779,11 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 
 			// Check if sweep is done
 			if (sys->side == 'L' && 2 * sys->length == L) {
-				printf("Done with sweep %d/%d with m=%d.\n", i+1, num_sweeps, m);
+				if (i < params->num_ms) {
+					printf("Done with sweep %d/%d with m=%d.\n", i+1, params->num_ms, m);
+				} else {
+					printf("Done with TDMRG sweep %d/%d with m=%d.\n", i-params->num_ms+1, params->num_ts, m);
+				}
 				logSweepEnd();
 				break;
 			}

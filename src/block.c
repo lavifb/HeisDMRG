@@ -249,14 +249,16 @@ void startMeasBlock(DMRGBlock *block) {
 		return;
 	}
 
-	block->meas = 'M';
-	int dim = block->d_block;
+	if (block->meas != 'M') {
+		block->meas = 'M';
+		int dim = block->d_block;
 
-	block->ops[block->num_ops] = mkl_malloc(dim*dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
-	// New S_i is same as conn_Sz
-	memcpy(block->ops[block->num_ops], block->ops[1], dim*dim * sizeof(MAT_TYPE));
+		block->ops[block->num_ops] = mkl_malloc(dim*dim * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
+		// New S_i is same as conn_Sz
+		memcpy(block->ops[block->num_ops], block->ops[1], dim*dim * sizeof(MAT_TYPE));
 
-	block->num_ops++;
+		block->num_ops++;
+	}
 }
 
 /* Removes all measurement matrices from block to not drag them around in memory when necessary
@@ -270,11 +272,18 @@ void dropMeasurements(DMRGBlock *block) {
 
 		int dim = block->d_block;
 
-		for (int i=block->num_ops-1; i >= numOps; i--) {
-			mkl_free(block->ops[i]);
+		MAT_TYPE **newOps = mkl_malloc(numOps * sizeof(MAT_TYPE *), MEM_DATA_ALIGN);
+
+		for (int i=0; i < block->num_ops; i++) {
+			if (i < numOps) {
+				newOps[i] = block->ops[i];
+			} else {
+				mkl_free(block->ops[i]);
+			}
 		}
 
-		block->ops = mkl_realloc(block->ops, numOps * sizeof(MAT_TYPE *));
+		mkl_free(block->ops);
+		block->ops = newOps;
 		block->num_ops = numOps;
 	}
 }
