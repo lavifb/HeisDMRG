@@ -683,7 +683,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 				env = tempBlock;
 
 				// if (sys->side == 'L' && i == num_sweeps-1) {
-				if (sys->side == 'L' && i >= params->num_ms) {
+				if (sys->side == 'L' && i >= params->num_ms-1) {
 					startMeasBlock(sys);
 					printf("Keeping track of measurements...\n");
 				}
