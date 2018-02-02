@@ -726,9 +726,9 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 				step_params.measure = 1; // take measurements
 				sys = single_step(sys, env, m, &step_params);
 				// meas = step_params.meas;
-				if (params->num_ts > 0) {
+				if (i >= params->num_ms) {
 					char measFilename[1024];
-					sprintf(measFilename, "%s/tdmrg/meas_t%f.dat", params->block_dir, params->dtau*(i-params->num_ms+1));
+					sprintf(measFilename, "%s/meas_t%.3f.dat", params->block_dir, params->dtau*(i-params->num_ms+1));
 					outputMeasData(measFilename, step_params.meas);
 				}
 				step_params.measure = 0;
