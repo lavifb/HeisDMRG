@@ -683,7 +683,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 				env = tempBlock;
 
 				// if (sys->side == 'L' && i == num_sweeps-1) {
-				if (sys->side == 'L' && i >= params->num_ms-1) {
+				if (sys->side == 'L' && i >= params->num_ms) {
 					startMeasBlock(sys);
 					printf("Keeping track of measurements...\n");
 				}
@@ -707,7 +707,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 					sprintf(measFilename, "%s/meas_t%f.dat", params->block_dir, params->dtau*(i-params->num_ms+1));
 					outputMeasData(measFilename, step_params.meas);
 				}
-				dropMeasurements(sys);
+				// dropMeasurements(sys);
 			} else { // normal step
 				#ifndef NDEBUG
 				printGraphic(sys, env);
@@ -732,7 +732,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 					saved_blocksL[sys_index] = sys;
 
 					// write old block when not on measuring sweep
-					dropMeasurements(saved_blocksL[sys_old_index]);
+					// dropMeasurements(saved_blocksL[sys_old_index]);
 					SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, L);
 					break;
 
@@ -747,7 +747,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 					saved_blocksR[sys_index] = sys;
 
 					// write old block when not on measuring sweep
-					dropMeasurements(saved_blocksR[sys_old_index]);
+					// dropMeasurements(saved_blocksR[sys_old_index]);
 					SAVE_SIDE_BLOCK_TO_DISK(sys_old_index, R);
 					break;
 			}
