@@ -639,9 +639,6 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 			cblas_zgemm(CblasColMajor, CblasNoTrans, CblasTrans, dimEnv, dimSys, dimSys, &one, *step_params.psi0_guessp, dimEnv, Sp_sys, dimSys, &one, psi_t, dimEnv);
 			mkl_free(Sp_sys);
 			
-			step_params.psi_tp = &psi_t;
-			step_params.tau = params->dtau;
-			step_params.abelianSectorize = 0;
 
 			// print_matrix("psi0", dimEnv, dimSys, *step_params.psi0_guessp, dimEnv);
 			// print_matrix("psiT", dimEnv, dimSys, psi_t                   , dimEnv);
@@ -652,6 +649,10 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 			step_params.measure = 1; // take measurements
 			DMRGBlock *tempsys = single_step(sys, env, m, &step_params);
 			freeDMRGBlock(tempsys);
+			
+			step_params.psi_tp = &psi_t;
+			step_params.tau = params->dtau;
+			step_params.abelianSectorize = 0;
 
 			// measureSzs(sys, dimEnv, *step_params.psi0_guessp, model->num_ops, meas0);
 			// measureSSs(sys, dimEnv, *step_params.psi0_guessp, model->num_ops, meas0);
