@@ -165,6 +165,7 @@ DMRGBlock *single_step(const DMRGBlock *sys, const DMRGBlock *env, const int m, 
 		}
 
 		step_params->meas = meas;
+		step_params->measure = 0;
 	}
 
 	sys_enl->energy = energies[0]; // record ground state energy
@@ -615,14 +616,17 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 			m = ms[params->num_ms-1];
 
 			// create time tracked state psi_t
-			int env_index = L - sys->length - 3;
-			env = saved_blocksR[env_index];
-			LOAD_SIDE_BLOCK_FROM_DISK(env_index, R);
+			int env_enl_index = L - sys->length - 2;
+			DMRGBlock *env_enl = saved_blocksR[env_enl_index];
+			LOAD_SIDE_BLOCK_FROM_DISK(env_enl_index, R);
 
-			int dimSys = sys->d_block * model->d_model;
-			int dimEnv = env->d_block * model->d_model;
+			DavidsonTransform(sys, env_enl, psi0_guessp);
+
+			int dimSys = sys->d_trans;
+			int dimEnv = env_enl->d_block * model->d_model;
 			int dimSup = dimSys * dimEnv;
 
+			sys = saved_blocksL[sys->length-2];
 			MAT_TYPE *psi_t = mkl_malloc(dimSup * sizeof(MAT_TYPE), MEM_DATA_ALIGN);
 
 			// Create matrix to apply Sp to central spin
@@ -639,6 +643,31 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 			step_params.tau = params->dtau;
 			step_params.abelianSectorize = 0;
 
+			// print_matrix("psi0", dimEnv, dimSys, *step_params.psi0_guessp, dimEnv);
+			// print_matrix("psiT", dimEnv, dimSys, psi_t                   , dimEnv);
+
+			// meas_data_t *meas0 = createMeas(sys->length);
+			// meas_data_t *measT = createMeas(sys->length);
+
+			step_params.measure = 1; // take measurements
+			DMRGBlock *tempsys = single_step(sys, env, m, &step_params);
+			freeDMRGBlock(tempsys);
+
+			// measureSzs(sys, dimEnv, *step_params.psi0_guessp, model->num_ops, meas0);
+			// measureSSs(sys, dimEnv, *step_params.psi0_guessp, model->num_ops, meas0);
+			// measureSzs(sys, dimEnv, psi_t, model->num_ops, measT);
+			// measureSSs(sys, dimEnv, psi_t, model->num_ops, measT);
+
+			char measFilename[1024];
+			sprintf(measFilename, "%s/psi0.dat", params->block_dir);
+			outputMeasData(measFilename, step_params.meas);
+			// char measFilenameT[1024];
+			// sprintf(measFilenameT, "%s/psiT.dat", params->block_dir);
+			// outputMeasData(measFilenameT, measT);
+
+			// freeMeas(measT);
+			// step_params.meas = meas0;
+			// break;
 			printf("\nPerforming TDMRG sweeps...\n");
 
 		} else {
@@ -731,7 +760,7 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 					sprintf(measFilename, "%s/meas_t%.3f.dat", params->block_dir, params->dtau*(i-params->num_ms+1));
 					outputMeasData(measFilename, step_params.meas);
 				}
-				step_params.measure = 0;
+				// step_params.measure = 0;
 				// dropMeasurements(sys);
 			} else { // normal step
 				#ifndef NDEBUG
@@ -784,6 +813,10 @@ meas_data_t *fin_dmrg(sim_params_t *params) {
 				} else {
 					printf("Done with TDMRG sweep %d/%d with m=%d.\n", i-params->num_ms+1, params->num_ts, m);
 				}
+				logSweepEnd();
+				break;
+			} else if (sys->side == 'L' && 2 * (sys->length+1) == L && i == params->num_ms-1) {
+				printf("Done with sweep %d/%d with m=%d.\n", i+1, params->num_ms, m);
 				logSweepEnd();
 				break;
 			}

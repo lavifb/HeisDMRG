@@ -16,6 +16,8 @@ typedef struct {
 	int measure; // option determines if you take measurements and return the results in meas
 	meas_data_t *meas; // struct to hold measurements that may be returned by single_step
 
+	int applySz;
+
 	double tau; // time advance for TDMRG (set to 0 for normal dmrg)
 	MAT_TYPE ** psi_tp; // pointer to time dependent state
 
